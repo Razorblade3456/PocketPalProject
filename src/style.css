@@ -2914,3 +2914,1025 @@ dialog {
   border-top: 1px solid var(--line);
   margin-top: 28px;
 }
+/* Boutique navigation stays quiet until a little shopping adventure is opened. */
+.game-nav {
+  max-width: 490px;
+  margin: 18px auto -12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+.game-nav button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: transparent;
+  color: #91977f;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  min-height: 40px;
+}
+.game-nav button[aria-pressed="true"] {
+  background: #e9eddc;
+  border-color: #d7dfc4;
+  color: #768b62;
+}
+.game-nav button:hover {
+  background: #e6eadb;
+}
+.task-counters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+  font-size: 8px;
+  line-height: 1.4;
+}
+.task-counters > span {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.success-count {
+  color: #83996e;
+}
+.miss-count {
+  color: #b18c7f;
+}
+.repeat-controls {
+  grid-column: 1/-1;
+}
+.task-goal {
+  margin-top: 9px;
+}
+.task-goal > span,
+.unlimited-note {
+  font-size: 8px;
+  color: #9a9e86;
+}
+.task-goal > div {
+  height: 4px;
+  background: #e2e7d2;
+  border-radius: 5px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+.task-goal > div > span {
+  height: 100%;
+  background: #a7b98a;
+  display: block;
+  border-radius: 5px;
+  transition: width 0.4s;
+}
+.unlimited-note {
+  display: block;
+  margin-top: 7px;
+}
+.outcome-card .outcome-buttons {
+  gap: 5px;
+}
+.outcome-card .outcome-buttons button {
+  width: 30px;
+  height: 32px;
+}
+.outcome-card .outcome-buttons .outcome-undo {
+  width: 23px;
+}
+.entry-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.entry-heading > small {
+  white-space: nowrap;
+  font-size: 9px;
+  color: #99a087;
+}
+.entry-actions {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+.modal .entry-actions label {
+  margin: 4px 0 0;
+  font-size: 0;
+  flex: 1;
+}
+.entry-actions select {
+  font-size: 11px !important;
+  padding: 10px !important;
+}
+.delete-entry {
+  display: grid;
+  place-items: center;
+  background: transparent;
+  color: #b28a7b;
+  width: 38px;
+  min-height: 38px;
+  border-radius: 8px;
+}
+.delete-entry:hover {
+  background: #eadbd0;
+}
+.transaction-journal {
+  margin: 22px 0;
+  font-size: 11px;
+  color: #929a80;
+}
+.transaction-journal summary {
+  cursor: pointer;
+  padding: 10px 0;
+  border-top: 1px dashed #d6ddc6;
+}
+.transaction-journal > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid #e4e5d6;
+}
+.transaction-journal small {
+  color: #a19d7c;
+}
+.shelf-links {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin: 8px 0 12px;
+}
+.shelf-links button {
+  background: #e8ecdb;
+  color: #7e8d6a;
+  border: 1px solid #d8dfc5;
+  border-radius: 8px;
+  padding: 9px 4px;
+  font-size: 9px;
+  min-height: 36px;
+}
+.balls {
+  gap: var(--jar-ball-gap, 2px);
+}
+.balls .ball,
+.balls .ball:nth-child(3n) {
+  width: var(--jar-ball-size, 24px);
+  height: var(--jar-ball-size, 24px);
+}
+.boutique-dialog {
+  width: min(850px, 94vw);
+}
+.boutique-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+}
+.boutique-heading h2 {
+  font-size: 34px;
+  margin-bottom: 9px;
+}
+.boutique-heading p {
+  margin: 0;
+}
+.boutique-wallet {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #eeead4;
+  color: #a08f5d;
+  border: 1px solid #ddd6b7;
+  border-radius: 13px;
+  padding: 12px 15px;
+  font: 22px Georgia;
+  white-space: nowrap;
+}
+.boutique-wallet small {
+  font:
+    10px "Trebuchet MS",
+    sans-serif;
+}
+.boutique-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.3fr;
+  gap: 7px;
+  margin: 25px 0 12px;
+  border-bottom: 1px solid #e1e3d1;
+  padding-bottom: 12px;
+}
+.boutique-tabs button {
+  background: #f0eee2;
+  color: #95967e;
+  padding: 12px 8px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  font-size: 11px;
+  min-height: 42px;
+}
+.boutique-tabs [aria-selected="true"] {
+  background: #e5ecd7;
+  border-color: #c5d3af;
+  color: #748762;
+}
+.shop-tools {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  margin-bottom: 17px;
+}
+.shop-tools button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  color: #8a9778;
+  font-size: 10px;
+  padding: 5px 0;
+}
+.boutique-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 15px;
+}
+.boutique-card {
+  background: #faf7ec;
+  border: 1px solid #e0decc;
+  border-radius: 15px;
+  padding: 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 3px 0 #eae6d7;
+  position: relative;
+  overflow: hidden;
+}
+.boutique-art {
+  width: 100%;
+  height: 113px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef0df;
+  border-radius: 50% 50% 15px 15px;
+  position: relative;
+  margin-bottom: 13px;
+}
+.boutique-card:nth-child(3n + 2) .boutique-art {
+  background: #efe6e2;
+}
+.boutique-card:nth-child(3n) .boutique-art {
+  background: #e8e5ee;
+}
+.item-art {
+  overflow: visible;
+  flex-shrink: 0;
+  filter: drop-shadow(0 5px 3px #716c5310);
+  pointer-events: none;
+}
+.boutique-art .item-art {
+  transition: transform 0.3s;
+}
+.boutique-card:hover .boutique-art .item-art {
+  transform: translateY(-4px) rotate(-3deg);
+}
+.boutique-card h3 {
+  font: 18px Georgia;
+  margin: 0;
+  line-height: 1.3;
+}
+.modal .boutique-card p {
+  font-size: 10px;
+  line-height: 1.65;
+  margin: 9px 0;
+  min-height: 48px;
+  flex: 1;
+}
+.item-effect {
+  font-size: 8px;
+  color: #9aa283;
+  line-height: 1.5;
+  min-height: 25px;
+  margin-bottom: 10px;
+}
+.shop-buy {
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  background: #dfe7cf;
+  border: 1px solid #c7d5b1;
+  color: #74895e;
+  border-radius: 9px;
+  padding: 11px;
+  font-size: 12px;
+  min-height: 40px;
+}
+.shop-buy:not(:disabled):hover {
+  background: #d2dfbe;
+}
+.shop-buy:disabled {
+  background: #edeadf;
+  border-color: #e0dccb;
+  color: #a6a38a;
+  cursor: default;
+}
+.coins-needed {
+  font-size: 8px;
+  color: #a9a18b;
+  margin-top: 7px;
+}
+.owned-stamp {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  font-size: 8px;
+  background: #f5f7e8;
+  color: #8b9d70;
+  padding: 4px 6px;
+  border-radius: 10px;
+}
+.modal .boutique-note {
+  font-size: 10px;
+  text-align: center;
+  padding: 10px;
+  color: #969b82;
+}
+.wardrobe-preview {
+  background: #eef0df;
+  border: 1px solid #d7dec5;
+  border-radius: 100px 100px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 18px auto 20px;
+  padding: 10px 0 17px;
+  max-width: 350px;
+}
+.wardrobe-preview .pet-preview {
+  width: 210px;
+  height: 220px;
+}
+.wardrobe-preview > span {
+  font: italic 12px Georgia;
+  color: #93a07c;
+}
+.wardrobe-toolbar {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.wardrobe-toolbar button:disabled {
+  opacity: 0.4;
+}
+.wardrobe-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 13px;
+}
+.wardrobe-grid article {
+  text-align: center;
+  border: 1px solid #dedfc9;
+  border-radius: 13px;
+  background: #f6f3e6;
+  padding: 15px 9px;
+}
+.wardrobe-grid article.worn {
+  background: #e8eedc;
+  border-color: #b7cba1;
+}
+.wardrobe-grid h3 {
+  font: 16px Georgia;
+  margin: 7px 0;
+}
+.wardrobe-grid small {
+  font-size: 9px;
+  color: #9ba085;
+  display: block;
+  margin-bottom: 13px;
+}
+.wardrobe-grid button {
+  font-size: 10px;
+  padding: 10px;
+  min-height: 38px;
+}
+.closet-empty {
+  text-align: center;
+  padding: 25px;
+  color: #9ba78b;
+  border: 1px dashed #cdd6ba;
+  border-radius: 14px;
+}
+.closet-empty svg {
+  margin: auto auto 12px;
+}
+.closet-empty h3 {
+  font: 19px Georgia;
+  margin: 0;
+}
+.modal .closet-empty p {
+  font-size: 11px;
+  max-width: 300px;
+  margin: 9px auto;
+}
+.inventory-drawer {
+  position: fixed;
+  right: 22px;
+  top: 130px;
+  width: 280px;
+  max-height: 75vh;
+  z-index: 35;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #fbf8ee;
+  border: 1px solid #d3dbc0;
+  border-radius: 17px;
+  box-shadow: 0 15px 55px #35452525;
+  padding: 17px;
+  color: #536146;
+}
+.inventory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+}
+.inventory-heading .eyebrow {
+  font-size: 6px;
+  letter-spacing: 1.3px;
+}
+.inventory-heading h2 {
+  font-size: 22px;
+  margin-top: 8px;
+}
+.inventory-heading .icon-button {
+  width: 32px;
+  min-width: 32px;
+  height: 34px;
+  min-height: 34px;
+}
+.inventory-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin: 17px 0 8px;
+}
+.inventory-tabs button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: #f0eee0;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  color: #969a80;
+  padding: 10px 4px;
+  font-size: 10px;
+}
+.inventory-tabs [aria-pressed="true"] {
+  border-color: #bdcda7;
+  background: #e6edd8;
+  color: #819769;
+}
+.inventory-help {
+  font-size: 9px;
+  color: #98a084;
+  line-height: 1.7;
+  margin: 10px 0;
+}
+.pantry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 11px;
+}
+.pantry-item {
+  text-align: center;
+  padding: 8px;
+  background: #f4f1e4;
+  border: 1px solid #e0e2cc;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
+.draggable-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  border-radius: 10px;
+  width: 100%;
+  min-height: 67px;
+}
+.draggable-item:active {
+  cursor: grabbing;
+}
+.draggable-item:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+.draggable-item > span {
+  position: absolute;
+  bottom: 0;
+  right: 2px;
+  font-size: 10px;
+  background: #fcfaed;
+  color: #94a079;
+  border-radius: 8px;
+  padding: 3px 5px;
+  border: 1px solid #dce1c6;
+}
+.pantry-item > b {
+  font-size: 9px;
+  line-height: 1.5;
+  margin: 7px 0;
+  flex: 1;
+}
+.feed-button {
+  background: #dce7cc;
+  border: 1px solid #c6d5af;
+  border-radius: 7px;
+  color: #758f61;
+  min-height: 34px;
+  padding: 7px;
+  width: 100%;
+  font-size: 10px;
+}
+.feed-button:disabled {
+  opacity: 0.4;
+}
+.inventory-shop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: transparent;
+  color: #879b6c;
+  border: 1px dashed #c4d0ac;
+  border-radius: 9px;
+  min-height: 39px;
+  width: 100%;
+  margin-top: 15px;
+  font-size: 10px;
+}
+.pantry-empty {
+  text-align: center;
+  border: 1px dashed #d3dcc2;
+  padding: 20px;
+  border-radius: 11px;
+  color: #9ba78a;
+}
+.pantry-empty svg {
+  margin: 0 auto 8px;
+}
+.pantry-empty p,
+.pantry-wardrobe > p {
+  font-size: 10px;
+  line-height: 1.8;
+}
+.pantry-wardrobe {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.pantry-wardrobe article {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #dee3cb;
+  border-radius: 9px;
+  padding: 6px;
+}
+.pantry-wardrobe span {
+  font-size: 10px;
+  flex: 1;
+}
+.pantry-wardrobe button {
+  background: #e4ecd5;
+  color: #7c9069;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 9px;
+  min-height: 34px;
+  min-width: 35px;
+}
+.drag-food-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 7px #48543325);
+}
+.pet-button.food-approach {
+  outline: 2px dashed #c7d4aa;
+  outline-offset: 6px;
+  border-radius: 45%;
+}
+.pet-button.food-approach:not(.stage-5) .pet-art {
+  animation: food-notice 0.7s ease-in-out infinite;
+}
+.pet-button.is-eating .mouth {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pet-chew 0.22s ease-in-out 6;
+}
+.pet-button.favorite-reaction:not(.stage-5) .pet-art {
+  animation: favorite-wiggle 0.35s ease-in-out 5;
+}
+@keyframes food-notice {
+  50% {
+    transform: translateY(-5px) rotate(2deg);
+  }
+}
+@keyframes pet-chew {
+  50% {
+    transform: scale(0.85, 0.65);
+  }
+}
+@keyframes favorite-wiggle {
+  25% {
+    transform: rotate(-4deg) translateY(-4px);
+  }
+  75% {
+    transform: rotate(4deg) translateY(-4px);
+  }
+}
+.night .game-nav button {
+  color: #b3bda4;
+}
+.night .game-nav button[aria-pressed="true"] {
+  background: #43523e;
+  border-color: #607252;
+  color: #d2dec0;
+}
+.night .game-nav button:hover {
+  background: #3c4c3c;
+}
+.night .success-count {
+  color: #b4c99e;
+}
+.night .miss-count {
+  color: #d0a799;
+}
+.night .task-goal > span,
+.night .unlimited-note {
+  color: #abb89a;
+}
+.night .task-goal > div {
+  background: #4e5d45;
+}
+.night .shelf-links button {
+  background: #44563c;
+  border-color: #607050;
+  color: #c3d5aa;
+}
+.night .transaction-journal {
+  color: #bcc7ad;
+}
+.night .transaction-journal summary,
+.night .transaction-journal > div {
+  border-color: #4b5f46;
+}
+.night .boutique-wallet {
+  background: #5a5840;
+  color: #ded0a2;
+  border-color: #797657;
+}
+.night .boutique-tabs {
+  border-color: #516148;
+}
+.night .boutique-tabs button {
+  background: #39484c;
+  color: #b5bea7;
+}
+.night .boutique-tabs [aria-selected="true"] {
+  background: #4c6042;
+  color: #d3dfbd;
+  border-color: #72855d;
+}
+.night .shop-tools button {
+  color: #b2c698;
+}
+.night .boutique-card {
+  background: #35434c;
+  border-color: #54604e;
+  box-shadow: 0 3px 0 #24313a;
+}
+.night .boutique-art {
+  background: #495547;
+}
+.night .boutique-card:nth-child(3n + 2) .boutique-art {
+  background: #5c4e50;
+}
+.night .boutique-card:nth-child(3n) .boutique-art {
+  background: #4b4b5e;
+}
+.night .item-effect,
+.night .coins-needed {
+  color: #b8c0a2;
+}
+.night .shop-buy {
+  background: #536948;
+  color: #dce6ca;
+  border-color: #718660;
+}
+.night .shop-buy:disabled {
+  background: #465044;
+  color: #929e86;
+  border-color: #5c6853;
+}
+.night .boutique-note {
+  color: #b7c2a6;
+}
+.night .wardrobe-preview {
+  background: #42523f;
+  border-color: #687c55;
+}
+.night .wardrobe-preview > span {
+  color: #c0cdae;
+}
+.night .wardrobe-grid article {
+  background: #35464b;
+  border-color: #55644c;
+}
+.night .wardrobe-grid article.worn {
+  background: #4c6041;
+  border-color: #8aa375;
+}
+.night .wardrobe-grid small {
+  color: #b5c19e;
+}
+.night .closet-empty {
+  border-color: #667a54;
+  color: #b7c5a6;
+}
+.night .inventory-drawer {
+  background: #303e4b;
+  border-color: #718161;
+  color: #d9e2cb;
+  box-shadow: 0 15px 55px #11192660;
+}
+.night .inventory-tabs button {
+  background: #3d4b4b;
+  color: #bcc5ae;
+}
+.night .inventory-tabs [aria-pressed="true"] {
+  background: #536947;
+  border-color: #81966c;
+  color: #d9e5c6;
+}
+.night .inventory-help {
+  color: #bac7a6;
+}
+.night .pantry-item {
+  background: #3c4b48;
+  border-color: #596b4e;
+}
+.night .draggable-item > span {
+  background: #566249;
+  border-color: #83916b;
+  color: #e1e7d2;
+}
+.night .feed-button {
+  background: #5b724c;
+  border-color: #7a936b;
+  color: #e0e9cf;
+}
+.night .inventory-shop {
+  color: #c6d7aa;
+  border-color: #81926a;
+}
+.night .pantry-empty {
+  border-color: #70845e;
+  color: #b5c9a1;
+}
+.night .pantry-wardrobe article {
+  border-color: #586b4e;
+}
+.night .pantry-wardrobe button {
+  background: #5d714e;
+  color: #dce9c6;
+}
+@media (max-width: 1100px) {
+  .boutique-card h3 {
+    font-size: 17px;
+  }
+  .task-counters {
+    font-size: 8px;
+    gap: 3px 5px;
+  }
+  .outcome-card .outcome-buttons {
+    gap: 3px;
+  }
+  .outcome-card .outcome-buttons button {
+    width: 27px;
+  }
+  .outcome-card .outcome-buttons .outcome-undo {
+    width: 22px;
+  }
+}
+@media (max-width: 800px) {
+  .game-nav {
+    margin-top: 12px;
+    margin-bottom: -8px;
+  }
+  .boutique-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .boutique-dialog .modal {
+    padding: 32px 23px;
+  }
+  .boutique-heading h2 {
+    font-size: 28px;
+  }
+  .boutique-wallet {
+    font-size: 19px;
+    padding: 10px;
+  }
+  .inventory-drawer {
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-height: 34vh;
+    border-radius: 16px;
+    padding: 12px 15px;
+  }
+  .inventory-heading h2 {
+    font-size: 18px;
+    margin-top: 3px;
+  }
+  .inventory-heading .eyebrow {
+    font-size: 6px;
+  }
+  .inventory-tabs {
+    margin: 8px 0;
+  }
+  .inventory-help {
+    font-size: 9px;
+    margin: 7px 0;
+  }
+  .pantry-grid {
+    grid-template-columns: repeat(4, minmax(90px, 1fr));
+    overflow-x: auto;
+    gap: 8px;
+  }
+  .pantry-item {
+    padding: 6px;
+    min-width: 90px;
+  }
+  .pantry-item .item-art {
+    width: 50px;
+    height: 50px;
+  }
+  .draggable-item {
+    min-height: 51px;
+  }
+  .feed-button {
+    min-height: 44px;
+  }
+  .inventory-shop {
+    min-height: 40px;
+    margin-top: 10px;
+  }
+  .pantry-wardrobe {
+    grid-template-columns: 1fr 1fr;
+  }
+  .outcome-card .outcome-buttons button {
+    width: 40px;
+    height: 40px;
+  }
+  .outcome-card .outcome-buttons .outcome-undo {
+    width: 32px;
+  }
+  .task-counters {
+    font-size: 9px;
+  }
+  .transaction-journal > div {
+    font-size: 10px;
+  }
+}
+@media (max-width: 460px) {
+  .game-nav {
+    gap: 3px;
+    max-width: 100%;
+    justify-content: space-between;
+  }
+  .game-nav button {
+    padding: 9px 8px;
+    font-size: 10px;
+    gap: 5px;
+    min-height: 44px;
+  }
+  .boutique-heading {
+    gap: 9px;
+    align-items: start;
+  }
+  .boutique-heading h2 {
+    font-size: 25px;
+    line-height: 1.2;
+    margin-top: 12px;
+  }
+  .boutique-heading .eyebrow {
+    font-size: 6px;
+    letter-spacing: 1.5px;
+  }
+  .boutique-heading p {
+    font-size: 10px;
+  }
+  .boutique-wallet {
+    font-size: 18px;
+    gap: 4px;
+    padding: 9px;
+  }
+  .boutique-wallet small {
+    display: none;
+  }
+  .boutique-tabs {
+    gap: 4px;
+    grid-template-columns: 0.9fr 1fr 1.25fr;
+    margin-top: 20px;
+  }
+  .boutique-tabs button {
+    font-size: 9px;
+    line-height: 1.5;
+    padding: 8px 5px;
+    min-height: 44px;
+  }
+  .boutique-grid {
+    gap: 10px;
+  }
+  .boutique-card {
+    padding: 10px 8px;
+    border-radius: 12px;
+  }
+  .boutique-art {
+    height: 90px;
+  }
+  .boutique-card h3 {
+    font-size: 15px;
+  }
+  .modal .boutique-card p {
+    font-size: 9px;
+    min-height: 56px;
+  }
+  .item-effect {
+    font-size: 8px;
+    min-height: 30px;
+  }
+  .shop-buy {
+    min-height: 44px;
+    font-size: 11px;
+  }
+  .shop-tools {
+    gap: 16px;
+    justify-content: space-between;
+  }
+  .shop-tools button {
+    font-size: 10px;
+    min-height: 35px;
+  }
+  .wardrobe-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .wardrobe-grid h3 {
+    font-size: 15px;
+  }
+  .wardrobe-grid button {
+    min-height: 44px;
+  }
+  .outcome-card .outcome-buttons button {
+    width: 44px;
+    height: 44px;
+  }
+  .outcome-card .outcome-buttons .outcome-undo {
+    width: 34px;
+  }
+  .outcome-card .outcome-buttons {
+    gap: 6px;
+  }
+  .task-counters {
+    font-size: 9px;
+    gap: 3px 7px;
+  }
+  .pantry-wardrobe {
+    grid-template-columns: 1fr;
+  }
+  .repeat-controls .task-goal > span {
+    font-size: 9px;
+  }
+}

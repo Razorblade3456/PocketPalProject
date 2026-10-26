@@ -24,11 +24,24 @@ import {
   ChevronRight,
   Trophy,
   Coins,
+  Home,
+  ShoppingBag,
+  Shirt,
+  PackageOpen,
 } from "lucide-react";
 import {
   categories,
   SUPPLIES,
-  buySupply,
+  buyItem,
+  recordAttempt,
+  correctAttempt,
+  deleteAttempt,
+  taskCounts,
+  goalFor,
+  rewardKey,
+  equipOutfit,
+  type Outfit,
+  type ShopItem,
   useSupply,
   headPat,
   petRhythm,
@@ -59,6 +72,9 @@ import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
 import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
 import { PetNeeds } from "./PetNeeds";
 import { Supplies } from "./Supplies";
+import { Boutique, Wardrobe } from "./Boutique";
+import { Inventory, type IncomingFood } from "./Inventory";
+import { favorites, itemName } from "./catalog";
 const icons = { food: Apple, water: Droplets, clean: Sparkles, happy: Heart };
 function tone(enabled: boolean, kind = 0) {
   if (!enabled) return;
@@ -86,8 +102,22 @@ function tone(enabled: boolean, kind = 0) {
 export default function App() {
   const [s, setS] = useState<State>(load);
   const [panel, setPanel] = useState<
-    "settings" | "history" | "rewards" | "tasks" | "onboard" | "health" | null
+    | "settings"
+    | "history"
+    | "rewards"
+    | "tasks"
+    | "onboard"
+    | "health"
+    | "shop"
+    | "wardrobe"
+    | null
   >(() => (s.name ? null : "onboard"));
+  const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [incoming, setIncoming] = useState<IncomingFood | null>(null);
+  const [feeding, setFeeding] = useState<Supply | null>(null);
+  const [feedToken, setFeedToken] = useState(0);
+  const petRef = useRef<HTMLButtonElement>(null);
+  const actionLocks = useRef(new Map<string, number>());
   const [edit, setEdit] = useState<Task | null | undefined>();
   const [message, setMessage] = useState("");
   const [reaction, setReaction] = useState("");
@@ -111,12 +141,21 @@ export default function App() {
   const rhythm = petRhythm(now);
   const todayTasks = s.tasks.filter((t) => due(t, now));
   const earned = s.completions.filter((c) => c.date === today);
-  const done = todayTasks.filter((t) =>
-    earned.some((c) => c.taskId === t.id),
-  ).length;
-  const percent = todayTasks.length
-    ? Math.round((done / todayTasks.length) * 100)
-    : 0;
+  const dailyTarget = todayTasks.reduce((sum, t) => sum + goalFor(t), 0);
+  const done = earned.length;
+  const percent = dailyTarget
+    ? Math.round(
+        (todayTasks.reduce(
+          (sum, t) =>
+            sum + Math.min(goalFor(t), taskCounts(s, t.id, today).completed),
+          0,
+        ) /
+          dailyTarget) *
+          100,
+      )
+    : earned.length
+      ? 100
+      : 0;
   useEffect(() => {
     try {
       localStorage.setItem("pocketpal-v1", JSON.stringify(s));
@@ -145,8 +184,7 @@ export default function App() {
       .filter(
         (t) =>
           t.time <= time &&
-          (!outcomeFor(s, t.id, today) ||
-            outcomeFor(s, t.id, today)?.status === "pending"),
+          taskCounts(s, t.id, today).completed < (goalFor(t) || 1),
       )
       .forEach((t) => {
         const key = t.id + today;
@@ -181,66 +219,92 @@ export default function App() {
     setPanel(null);
     setEdit(undefined);
   };
+  const openShop = () => {
+    setInventoryOpen(false);
+    setIncoming(null);
+    setPanel("shop");
+  };
+  const openPantry = () => {
+    setPanel(null);
+    setEdit(undefined);
+    setInventoryOpen(true);
+    requestAnimationFrame(() => {
+      const r = petRef.current?.getBoundingClientRect();
+      if (
+        r &&
+        (window.innerWidth < 800 || r.top < 70 || r.bottom > window.innerHeight)
+      )
+        petRef.current?.scrollIntoView({
+          block: "center",
+          behavior: "instant",
+        });
+    });
+  };
   const reward = (
     t: Task,
-    status: OutcomeStatus,
+    status: "completed" | "missed",
     date = today,
     source?: RewardSource,
   ) => {
-    if ((outcomeFor(s, t.id, date)?.status || "pending") === status) return;
-    const next = setOutcome(s, t.id, date, status);
-    setS((p) => setOutcome(p, t.id, date, status));
-    const key = occurrenceKey(t.id, date);
-    setFlights((prev) => prev.filter((f) => f.key !== key));
-    if (status === "completed" && date === today && !panel) {
-      const origin = source || {
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
-      };
+    const at = Date.now(),
+      lock = "task:" + t.id;
+    if (at - (actionLocks.current.get(lock) || 0) < 350) return;
+    actionLocks.current.set(lock, at);
+    const id = crypto.randomUUID(),
+      next = recordAttempt(s, t.id, date, status, at, id);
+    const entry = next.outcomes.find((o) => o.id === id);
+    if (!entry) return;
+    setS((p) => recordAttempt(p, t.id, date, status, at, id));
+    if (status === "completed" && date === today && !panel)
       setFlights((prev) => [
         ...prev,
         {
-          key,
-          token: crypto.randomUUID(),
-          category: t.category,
-          source: origin,
+          key: entry.ballId,
+          token: id,
+          category: entry.category,
+          source: source || {
+            x: window.innerWidth / 2,
+            y: window.innerHeight / 2,
+          },
         },
       ]);
-    }
-    const difference =
-      Math.round((next.care[t.category] - s.care[t.category]) * 10) / 10;
-    const indicator =
-      (difference > 0 ? "+" : difference < 0 ? "−" : "") +
-      Math.abs(difference) +
-      " " +
-      labels[t.category];
+    const difference = Math.max(
+      0,
+      Math.round((s.care[entry.category] - next.care[entry.category]) * 10) /
+        10,
+    );
     setReaction(
-      status === "pending"
-        ? "↶ care restored"
-        : status === "missed"
-          ? "−" + Math.abs(difference) + " " + labels[t.category]
-          : "+5 coins · a little win!",
+      status === "completed"
+        ? "+5 coins · another little win!"
+        : "−" + difference + " " + labels[entry.category],
     );
-    tone(
-      s.settings.sound,
-      status === "completed" ? 1 : status === "missed" ? -3 : 0,
-    );
+    tone(s.settings.sound, status === "completed" ? 1 : -3);
     setMessage(
-      status === "pending"
-        ? next.debt > 0
-          ? `Back to pending. ${next.debt} coins reserved from future wins; supplies stay yours.`
-          : "Back to pending. Coins, care and jar rewards recalculated."
-        : date !== today
-          ? next.debt > 0
-            ? `Past result corrected. ${next.debt} coins reserved from future wins.`
-            : "Past result corrected. Coins, care and jar rewards recalculated."
-          : status === "completed"
-            ? next.debt > 0
-              ? `+5 coins earned · ${next.debt} still reserved from future wins.`
-              : "+5 coins · A little win! Pick up a supply to care for your pal."
-            : difference === 0
-              ? "Miss recorded. Your daily care cushion softened the damage."
-              : indicator + " · Tomorrow is another little beginning.",
+      status === "completed"
+        ? next.debt
+          ? "+5 coins earned · " +
+            next.debt +
+            " still reserved from future wins."
+          : "+5 coins · Every little moment counts."
+        : difference
+          ? "−" +
+            difference +
+            " " +
+            labels[entry.category] +
+            " · A missed attempt, a fresh next step."
+          : "Missed attempt recorded. Your daily care cushion softened the damage.",
+    );
+  };
+  const correct = (id: string, status: OutcomeStatus) => {
+    setS((p) => correctAttempt(p, id, status));
+    setMessage(
+      "That entry has been corrected. Its date stays the same; care, coins and jar rewards are recalculated.",
+    );
+  };
+  const removeEntry = (id: string) => {
+    setS((p) => deleteAttempt(p, id));
+    setMessage(
+      "Just that entry was removed. Bought items stay yours; any coin shortfall is reserved from future wins.",
     );
   };
   const land = (flight: JarFlight) => {
@@ -254,25 +318,28 @@ export default function App() {
       const next = prev.filter((f) =>
         s.outcomes.some(
           (o) =>
-            occurrenceKey(o.taskId, o.date) === f.key &&
-            o.status === "completed",
+            rewardKey(o) === f.key && o.status === "completed" && !o.deleted,
         ),
       );
       return next.length === prev.length ? prev : next;
     });
   }, [s.outcomes]);
-  const purchase = (item: Supply) => {
-    const next = buySupply(s, item);
+  const purchase = (item: ShopItem) => {
+    const at = Date.now(),
+      lock = "buy:" + item;
+    if (at - (actionLocks.current.get(lock) || 0) < 350) return;
+    actionLocks.current.set(lock, at);
+    const id = crypto.randomUUID(),
+      next = buyItem(s, item, at, id);
     if (next.careEvents.length === s.careEvents.length) {
-      setMessage("A few more little wins will stock this shelf.");
+      setMessage(
+        "Save up a few more little wins, or find this outfit in your wardrobe.",
+      );
       return;
     }
-    setS((p) => buySupply(p, item));
+    setS((p) => buyItem(p, item, at, id));
     tone(s.settings.sound, 0);
-    setMessage(
-      SUPPLIES[item].name +
-        " tucked onto your shelf. Use it whenever your pal needs care.",
-    );
+    setMessage(itemName(item) + " is yours. Find it in your inventory.");
   };
   const pat = () => {
     if (level === 5) return;
@@ -285,35 +352,65 @@ export default function App() {
     setReaction(gain ? "♥ +" + gain + " happiness" : "♥ happy as can be!");
     tone(s.settings.sound, 2);
   };
-  const careFor = (item: Supply) => {
-    const next = useSupply(s, item);
+  useEffect(() => {
+    if (!feeding) return;
+    const timer = setTimeout(() => setFeeding(null), 1500);
+    return () => clearTimeout(timer);
+  }, [feedToken]);
+  useEffect(() => {
+    if (!inventoryOpen) return;
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setInventoryOpen(false);
+        setIncoming(null);
+      }
+    };
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [inventoryOpen]);
+  const careFor = (item: Supply): boolean => {
+    const at = Date.now(),
+      lock = "use:" + item;
+    if (at - (actionLocks.current.get(lock) || 0) < 350) return false;
+    actionLocks.current.set(lock, at);
+    const id = crypto.randomUUID(),
+      next = useSupply(s, item, at, id);
     if (next.careEvents.length === s.careEvents.length) {
       setMessage(
         level === 5
-          ? "Revive your pal before using a supply."
-          : "Your shelf needs a refill first.",
+          ? "Revive your pal before feeding."
+          : "Your pantry needs a refill first.",
       );
-      return;
+      return false;
     }
-    setS((p) => useSupply(p, item));
+    setS((p) => useSupply(p, item, at, id));
     const v = SUPPLIES[item],
-      gain = Math.round((next.care[v.category] - s.care[v.category]) * 10) / 10;
+      gain = Math.max(
+        0,
+        Math.round((next.care[v.category] - s.care[v.category]) * 10) / 10,
+      );
+    const favorite = (favorites[s.pet] as readonly Supply[]).includes(item);
+    setFeeding(item);
+    setFeedToken((t) => t + 1);
     setReaction(
-      { food: "🍎", water: "💧", soap: "✨" }[item] +
-        " +" +
-        Math.max(0, gain) +
+      (favorite ? "A favorite! " : "Yum! ") +
+        "+" +
+        gain +
         " " +
         labels[v.category],
     );
     tone(s.settings.sound, 1);
     setMessage(
       v.name +
-        " used · +" +
-        Math.max(0, gain) +
+        " enjoyed · +" +
+        gain +
         " " +
         labels[v.category] +
-        " and a little happiness.",
+        " and +" +
+        Math.max(0, Math.round(next.care.happy - s.care.happy)) +
+        " happiness.",
     );
+    return true;
   };
   return (
     <MotionConfig reducedMotion={s.settings.motion ? "user" : "always"}>
@@ -367,6 +464,44 @@ export default function App() {
             </button>
           </nav>
         </header>
+        <nav className="game-nav" aria-label="PocketPal pages">
+          <button
+            aria-pressed={!panel && !inventoryOpen}
+            onClick={() => {
+              close();
+              setInventoryOpen(false);
+              setIncoming(null);
+            }}
+          >
+            <Home size={14} />
+            Home
+          </button>
+          <button aria-pressed={panel === "shop"} onClick={openShop}>
+            <ShoppingBag size={14} />
+            Shop
+          </button>
+          <button
+            aria-pressed={panel === "wardrobe"}
+            onClick={() => {
+              setInventoryOpen(false);
+              setPanel("wardrobe");
+            }}
+          >
+            <Shirt size={14} />
+            Wardrobe
+          </button>
+          <button
+            aria-pressed={inventoryOpen}
+            onClick={() =>
+              inventoryOpen
+                ? (setInventoryOpen(false), setIncoming(null))
+                : openPantry()
+            }
+          >
+            <PackageOpen size={14} />
+            Inventory
+          </button>
+        </nav>
         <main>
           <div className="intro">
             <div>
@@ -394,7 +529,7 @@ export default function App() {
                   Today's little things <span>✦</span>
                 </h2>
                 <span className="count">
-                  {done}/{todayTasks.length}
+                  {done}/{dailyTarget || "∞"}
                 </span>
               </div>
               <p className="section-note">
@@ -412,7 +547,12 @@ export default function App() {
                 ) : (
                   todayTasks.map((t) => {
                     const Icon = icons[t.category],
-                      status = outcomeFor(s, t.id, today)?.status || "pending";
+                      counts = taskCounts(s, t.id, today),
+                      status = counts.completed
+                        ? "completed"
+                        : counts.missed
+                          ? "missed"
+                          : "pending";
                     return (
                       <motion.article
                         layout
@@ -446,7 +586,12 @@ export default function App() {
                           )}
                         </div>
                         <OutcomeControls
-                          status={status}
+                          counts={counts}
+                          goal={goalFor(t)}
+                          canUndo={!!counts.latest}
+                          onUndo={() => {
+                            if (counts.latest) removeEntry(counts.latest.id);
+                          }}
                           name={t.name}
                           onChange={(status, source) =>
                             reward(t, status, today, source)
@@ -517,6 +662,10 @@ export default function App() {
                 <Pet
                   level={level}
                   kind={s.pet}
+                  petRef={petRef}
+                  equipped={s.equipped}
+                  incoming={incoming}
+                  feeding={feeding}
                   sleep={rhythm.sleeping && level < 3}
                   calm={rhythm.calm}
                   reaction={reaction}
@@ -556,17 +705,15 @@ export default function App() {
                 s={s}
                 onPat={pat}
                 onSupplies={() =>
-                  document
-                    .getElementById("supplies")
-                    ?.scrollIntoView({
-                      behavior:
-                        s.settings.motion &&
-                        !window.matchMedia("(prefers-reduced-motion: reduce)")
-                          .matches
-                          ? "smooth"
-                          : "instant",
-                      block: "center",
-                    })
+                  document.getElementById("supplies")?.scrollIntoView({
+                    behavior:
+                      s.settings.motion &&
+                      !window.matchMedia("(prefers-reduced-motion: reduce)")
+                        .matches
+                        ? "smooth"
+                        : "instant",
+                    block: "center",
+                  })
                 }
               />
               {level === 5 && (
@@ -619,7 +766,7 @@ export default function App() {
               <div className="jar-progress">
                 <strong>
                   {done}
-                  <span> / {todayTasks.length}</span>
+                  <span> / {dailyTarget || "∞"}</span>
                 </strong>
                 <p>little things, big feelings</p>
                 <div className="progress-track">
@@ -646,7 +793,13 @@ export default function App() {
                   );
                 })}
               </div>
-              <Supplies s={s} onBuy={purchase} onUse={careFor} />
+              <Supplies
+                s={s}
+                onBuy={purchase}
+                onUse={careFor}
+                onShop={openShop}
+                onInventory={openPantry}
+              />
             </section>
           </div>
           <footer>
@@ -692,7 +845,24 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        {inventoryOpen && (
+          <Inventory
+            s={s}
+            petRef={petRef}
+            onClose={() => {
+              setInventoryOpen(false);
+              setIncoming(null);
+            }}
+            onShop={openShop}
+            onFeed={careFor}
+            onEquip={(item) => setS((p) => equipOutfit(p, item))}
+            onApproach={setIncoming}
+          />
+        )}
         <dialog
+          className={
+            panel === "shop" || panel === "wardrobe" ? "boutique-dialog" : ""
+          }
           ref={dialog}
           onCancel={(e) => {
             if (panel === "onboard") {
@@ -964,6 +1134,19 @@ export default function App() {
                   <Plus size={16} /> Add a little thing
                 </button>
               </>
+            ) : panel === "shop" ? (
+              <Boutique
+                s={s}
+                onBuy={purchase}
+                onInventory={openPantry}
+                onWardrobe={() => setPanel("wardrobe")}
+              />
+            ) : panel === "wardrobe" ? (
+              <Wardrobe
+                s={s}
+                onEquip={(item) => setS((p) => equipOutfit(p, item))}
+                onShop={() => setPanel("shop")}
+              />
             ) : panel === "health" ? (
               <LifeGuide kind={s.pet} actual={level} />
             ) : panel === "history" ? (
@@ -1002,7 +1185,11 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <OutcomeHistory s={s} onChange={reward} />
+                <OutcomeHistory
+                  s={s}
+                  onCorrect={correct}
+                  onDelete={removeEntry}
+                />
                 <h3>Your past jars</h3>
                 <div className="history-grid">
                   {[...new Set(s.outcomes.map((c) => c.date))]
@@ -1039,7 +1226,7 @@ export default function App() {
                   earned.map((c) => {
                     const Icon = icons[c.category];
                     return (
-                      <div className="reward-entry" key={c.at + c.taskId}>
+                      <div className="reward-entry" key={rewardKey(c)}>
                         <span className={`category-tag ${c.category}`}>
                           <Icon size={18} />
                         </span>
@@ -1089,6 +1276,8 @@ function TaskEditor({
       days: [1, 2, 3, 4, 5],
       date: dateKey(),
       category: "happy",
+      repetitions: "once",
+      dailyGoal: 1,
     },
   );
   const [manual, setManual] = useState(!!task);
@@ -1196,7 +1385,39 @@ function TaskEditor({
         </fieldset>
       )}
       <label>
-        Give your pal
+        Daily entries
+        <select
+          value={t.repetitions || "once"}
+          onChange={(e) =>
+            update({ repetitions: e.target.value as Task["repetitions"] })
+          }
+        >
+          <option value="once">Once per day</option>
+          <option value="multiple">Multiple times per day</option>
+          <option value="goal">Custom daily goal</option>
+          <option value="unlimited">Unlimited repetitions</option>
+        </select>
+      </label>
+      {t.repetitions === "goal" && (
+        <label>
+          Daily goal
+          <input
+            type="number"
+            min={1}
+            max={100}
+            required
+            value={t.dailyGoal || 1}
+            onChange={(e) => update({ dailyGoal: Number(e.target.value) })}
+          />
+        </label>
+      )}
+      <p className="fine">
+        Daily goals are gentle targets, never limits. You can keep adding
+        moments after reaching them. Unlimited tasks never receive automatic
+        misses.
+      </p>
+      <label>
+        Care category
         <select
           value={t.category}
           onChange={(e) => {
@@ -1212,7 +1433,8 @@ function TaskEditor({
         </select>
       </label>
       <p className="fine">
-        Suggested from your task name. Choose any reward that feels right.
+        Every success earns 5 coins. The category chooses its jar color and the
+        need affected by a missed attempt.
       </p>
       <div className="button-row">
         <button

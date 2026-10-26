@@ -2,6 +2,19 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   initial,
+  recordAttempt,
+  correctAttempt,
+  deleteAttempt,
+  undoLatest,
+  taskCounts,
+  goalFor,
+  rewardKey,
+  buyItem,
+  equipOutfit,
+  OUTFITS,
+  OUTFIT_IDS,
+  SUPPLY_IDS,
+  emptyInventory,
   decay,
   complete,
   due,
@@ -625,7 +638,7 @@ test("head pats give only happiness and persist without changing wallet or inven
   assert.deepEqual(s.care, { food: 50, water: 50, clean: 50, happy: 53 });
   assert.equal(s.coins, 0);
   assert.equal(s.completions.length, 0);
-  assert.deepEqual(s.inventory, { food: 0, water: 0, soap: 0 });
+  assert.deepEqual(s.inventory, emptyInventory());
   assert.ok(validState(s));
   assert.deepEqual(reload(s).care, s.care);
 });
@@ -704,4 +717,264 @@ test("re-completing version-1 history never restores its old food, water or happ
   assert.equal(s.coins, 5);
   assert.ok(validState(s));
   assert.deepEqual(reload(s).care, s.care);
+});
+function earn(s: State, count: number, n = now) {
+  for (let i = 0; i < count; i++)
+    s = recordAttempt(s, "a", dateKey(n), "completed", n, "earn-" + i);
+  return s;
+}
+test("each intentional positive and negative press is a unique independent entry", () => {
+  let s = setup();
+  for (let i = 0; i < 3; i++)
+    s = recordAttempt(s, "a", dateKey(now), "completed", now, "positive-" + i);
+  s = recordAttempt(s, "a", dateKey(now), "missed", now, "negative");
+  assert.equal(s.coins, 15);
+  assert.equal(s.completions.length, 3);
+  assert.equal(s.care.water, 77);
+  assert.equal(taskCounts(s, "a", dateKey(now)).completed, 3);
+  assert.equal(taskCounts(s, "a", dateKey(now)).missed, 1);
+  assert.equal(new Set(s.outcomes.map((o) => o.id)).size, 4);
+  assert.equal(new Set(s.completions.map(rewardKey)).size, 3);
+  assert.ok(validState(s));
+  assert.deepEqual(reload(s), s);
+});
+test("replaying the same press ID cannot duplicate an entry, including after deletion", () => {
+  let s = recordAttempt(
+    setup(),
+    "a",
+    dateKey(now),
+    "completed",
+    now,
+    "request",
+  );
+  s = recordAttempt(s, "a", dateKey(now), "completed", now, "request");
+  assert.equal(s.coins, 5);
+  s = deleteAttempt(s, "request", now);
+  s = recordAttempt(s, "a", dateKey(now), "completed", now, "request");
+  assert.equal(s.coins, 0);
+  assert.equal(s.outcomes.length, 1);
+});
+test("undo removes only the latest entry and preserves previous jar balls", () => {
+  let s = earn(setup(), 3);
+  s = recordAttempt(s, "a", dateKey(now), "missed", now, "miss");
+  s = undoLatest(s, "a", dateKey(now), now);
+  assert.equal(s.care.water, 85);
+  assert.equal(s.coins, 15);
+  assert.equal(s.completions.length, 3);
+  s = undoLatest(s, "a", dateKey(now), now);
+  assert.equal(s.coins, 10);
+  assert.equal(s.completions.length, 2);
+  assert.equal(taskCounts(s, "a", dateKey(now)).completed, 2);
+});
+test("correcting or deleting a particular entry changes only that entry", () => {
+  let s = earn(setup(), 3);
+  const firstBall = s.outcomes[0].ballId;
+  s = correctAttempt(s, "earn-1", "missed", now);
+  assert.equal(s.coins, 10);
+  assert.equal(s.care.water, 77);
+  assert.equal(s.completions.length, 2);
+  assert.equal(s.completions[0].ballId, firstBall);
+  s = correctAttempt(s, "earn-1", "completed", now);
+  assert.equal(s.coins, 15);
+  assert.equal(s.care.water, 85);
+  s = deleteAttempt(s, "earn-0", now);
+  assert.equal(s.coins, 10);
+  assert.equal(s.completions.length, 2);
+  assert.equal(s.outcomes[0].deleted, true);
+  assert.equal(s.outcomes[1].date, dateKey(now));
+});
+test("custom goals generate only unaccounted missing slots once at local day end", () => {
+  let s = setup();
+  s.tasks[0] = { ...s.tasks[0], repetitions: "goal", dailyGoal: 8 };
+  s = earn(s, 3);
+  s = recordAttempt(s, "a", dateKey(now), "missed", now, "manual-miss");
+  const tomorrow = +localDate(shiftDate(dateKey(now), 1));
+  s = decay(s, tomorrow);
+  assert.equal(s.outcomes.filter((o) => o.automatic).length, 4);
+  assert.equal(s.outcomes.length, 8);
+  assert.equal(s.coins, 15);
+  assert.equal(taskCounts(s, "a", dateKey(tomorrow)).completed, 0);
+  assert.equal(taskCounts(s, "a", dateKey(now)).missed, 5);
+  assert.deepEqual(reload(s, tomorrow), s);
+});
+test("unlimited tasks never generate automatic missed attempts, even over many days", () => {
+  const s = setup();
+  s.tasks[0].repetitions = "unlimited";
+  const after = decay(s, now + 10 * 86400000);
+  assert.equal(goalFor(s.tasks[0]), 0);
+  assert.equal(after.outcomes.length, 0);
+});
+test("once and multiple modes have a daily minimum but allow intentional entries beyond it", () => {
+  for (const repetitions of ["once", "multiple"] as const) {
+    let s = setup();
+    s.tasks[0].repetitions = repetitions;
+    s = earn(s, 4);
+    s = decay(s, +localDate(shiftDate(dateKey(now), 1)));
+    assert.equal(s.completions.length, 4);
+    assert.equal(s.coins, 20);
+    assert.equal(s.outcomes.filter((o) => o.automatic).length, 0);
+  }
+});
+test("goals reached or exceeded have no extra automatic penalties", () => {
+  let s = setup();
+  s.tasks[0] = { ...s.tasks[0], repetitions: "goal", dailyGoal: 3 };
+  s = earn(s, 5);
+  s = decay(s, +localDate(shiftDate(dateKey(now), 1)));
+  assert.equal(s.outcomes.length, 5);
+  assert.equal(s.coins, 25);
+});
+test("a manually missed once-per-day goal is not penalized again at midnight", () => {
+  let s = recordAttempt(setup(), "a", dateKey(now), "missed", now, "manual");
+  s = decay(s, +localDate(shiftDate(dateKey(now), 1)));
+  assert.equal(s.outcomes.length, 1);
+  assert.equal(s.outcomes[0].automatic, false);
+});
+test("goal changes settle earlier days under their original configuration", () => {
+  let s = setup();
+  s.tasks[0] = { ...s.tasks[0], repetitions: "goal", dailyGoal: 3 };
+  const tomorrow = +localDate(shiftDate(dateKey(now), 1));
+  s = saveTask(s, { ...s.tasks[0], dailyGoal: 8 }, tomorrow);
+  assert.equal(s.outcomes.length, 3);
+  assert.ok(s.outcomes.every((o) => o.task.dailyGoal === 3));
+  s = decay(s, +localDate(shiftDate(dateKey(now), 2)));
+  assert.equal(s.outcomes.length, 11);
+});
+test("premium foods consume one item and apply their own care and happiness effects", () => {
+  for (const item of [
+    "burger",
+    "pizza",
+    "cake",
+    "icecream",
+    "cookie",
+    "smoothie",
+    "pancakes",
+  ] as const) {
+    let s = earn(setup(now, { food: 20, water: 20, clean: 20, happy: 20 }), 6);
+    s = buySupply(s, item, now);
+    assert.equal(s.inventory[item], 1);
+    const coins = s.coins;
+    s = useSupply(s, item, now);
+    assert.equal(s.inventory[item], 0);
+    assert.equal(s.care[SUPPLIES[item].category], 20 + SUPPLIES[item].boost);
+    assert.equal(s.care.happy, 20 + SUPPLIES[item].morale);
+    assert.equal(s.coins, coins);
+    assert.ok(validState(s));
+    assert.deepEqual(reload(s), s);
+  }
+});
+test("purchase and consumption request IDs are idempotent and stock cannot go below zero", () => {
+  let s = earn(setup(), 5);
+  s = buySupply(s, "burger", now, "buy-request");
+  s = buySupply(s, "burger", now, "buy-request");
+  assert.equal(s.coins, 10);
+  assert.equal(s.inventory.burger, 1);
+  s = useSupply(s, "burger", now, "use-request");
+  const after = s.careEvents.length;
+  s = useSupply(s, "burger", now, "use-request");
+  s = useSupply(s, "burger", now, "other-use");
+  assert.equal(s.inventory.burger, 0);
+  assert.equal(s.careEvents.length, after);
+});
+test("outfits remain owned after refresh, cannot be purchased twice, and require ownership to equip", () => {
+  let s = earn(setup(), 30);
+  const before = s.coins;
+  s = equipOutfit(s, "crown", now);
+  assert.deepEqual(s.equipped, {});
+  s = buyItem(s, "beanie", now);
+  assert.equal(s.coins, before - 25);
+  assert.deepEqual(s.ownedOutfits, ["beanie"]);
+  const paid = s.coins;
+  s = buyItem(s, "beanie", now);
+  assert.equal(s.coins, paid);
+  s = equipOutfit(s, "beanie", now);
+  assert.equal(s.equipped.head, "beanie");
+  assert.deepEqual(reload(s), s);
+});
+test("compatible wardrobe combinations persist and same-slot outfits replace one another", () => {
+  let s = earn(setup(), 60);
+  for (const item of [
+    "beanie",
+    "scarf",
+    "crown",
+    "backpack",
+    "pajamas",
+  ] as const)
+    s = buyItem(s, item, now);
+  for (const item of ["beanie", "scarf", "backpack", "pajamas"] as const)
+    s = equipOutfit(s, item, now);
+  assert.equal(Object.keys(s.equipped).length, 4);
+  s = equipOutfit(s, "crown", now);
+  assert.equal(s.equipped.head, "crown");
+  assert.equal(s.equipped.neck, "scarf");
+  s = equipOutfit(s, "scarf", now);
+  assert.equal(s.equipped.neck, undefined);
+  assert.equal(s.equipped.head, "crown");
+  assert.deepEqual(reload(s).equipped, s.equipped);
+  s = equipOutfit(s, null, now);
+  assert.deepEqual(s.equipped, {});
+});
+test("undoing a funding occurrence preserves bought clothing and used food, and reserves spent coins", () => {
+  let s = earn(setup(), 6);
+  s = buyItem(s, "beanie", now);
+  s = buySupply(s, "food", now);
+  s = useSupply(s, "food", now);
+  s = equipOutfit(s, "beanie", now);
+  s = deleteAttempt(s, "earn-0", now);
+  assert.equal(s.coins, 0);
+  assert.equal(s.debt, 5);
+  assert.equal(s.care.food, 100);
+  assert.equal(s.equipped.head, "beanie");
+  assert.equal(s.ownedOutfits.length, 1);
+  s = correctAttempt(s, "earn-1", "missed", now);
+  assert.equal(s.debt, 10);
+  assert.equal(s.inventory.food, 0);
+  assert.ok(validState(s));
+});
+test("version-3 saves migrate single results, purchased essentials and head pats without data loss", () => {
+  let s = headPat(buySupply(complete(setup(), "a", now), "water", now), now);
+  const { ownedOutfits, equipped, ...old } = s;
+  const raw = {
+    ...old,
+    version: 3,
+    inventory: { food: 0, water: 1, soap: 0 },
+    outcomes: s.outcomes.map(({ id, ballId, penalty, deleted, ...o }) => o),
+    completions: s.completions.map(({ id, ballId, ...c }) => c),
+  };
+  const migrated = parseState(raw, now)!;
+  assert.ok(migrated);
+  assert.equal(migrated.version, 4);
+  assert.equal(migrated.coins, 1);
+  assert.equal(migrated.inventory.water, 1);
+  assert.equal(migrated.inventory.burger, 0);
+  assert.deepEqual(migrated.care, s.care);
+  assert.equal(migrated.outcomes.length, 1);
+  assert.ok(migrated.outcomes[0].id);
+  assert.ok(validState(migrated));
+  assert.deepEqual(reload(migrated), migrated);
+});
+test("every outfit renders on all three species through all six health stages", () => {
+  for (const kind of ["mochi", "pippin", "crumb"] as const)
+    for (const item of OUTFIT_IDS)
+      for (let level = 0; level < 6; level++) {
+        const html = renderToStaticMarkup(
+          createElement(Pet, {
+            kind,
+            level,
+            preview: true,
+            equipped: { [OUTFITS[item].slot]: item },
+          }),
+        );
+        assert.ok(
+          html.includes('data-outfit="' + item + '"'),
+          kind + " " + item + " " + level,
+        );
+      }
+});
+test("hundreds of repeated entries retain unique ball IDs and round-trip without duplicate rewards", () => {
+  const s = earn(setup(), 150);
+  assert.equal(s.coins, 750);
+  assert.equal(s.completions.length, 150);
+  assert.equal(new Set(s.completions.map(rewardKey)).size, 150);
+  assert.ok(validState(s));
+  assert.deepEqual(reload(s), s);
 });

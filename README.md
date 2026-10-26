@@ -43,7 +43,7 @@ Care stays between 0 and 100. Items cannot be used without inventory; purchases 
 
 ### Undo after spending
 
-Task outcomes remain reversible from their cards and dated history. Currency is derived from currently completed occurrences minus purchase costs, so repeated clicking, switching, refreshing or undoing cannot stack rewards.
+Task outcomes remain reversible from their cards and dated history. Currency is derived from currently completed occurrences minus purchase costs, so each intentional completion earns one reward while duplicate events cannot duplicate it.
 
 If awarded coins have already been spent, undo keeps bought supplies and previously applied item care intact. The wallet displays zero spendable coins and a small **reserved** amount. Future earnings settle that shortfall before becoming spendable. For example: earn 5, buy Food for 5, undo the task → 0 available and 5 reserved; re-complete the same task → the reservation clears, with no extra coins or duplicated Food. The shelf explains this whenever a reservation exists. Missed outcomes award no coins or balls and retain their negative care effects.
 
@@ -72,7 +72,7 @@ Damage is stylized cute-spooky cloth damage, not realistic gore. Zombie-like and
 
 ## Schedules, missed tasks and health
 
-Daily, weekly (on the starting weekday), selected-day and one-time tasks use local calendar dates. Tasks still pending when their assigned day ends become missed during the next reconciliation. Reconciliation runs on opening, focus, every 30 seconds, and before task edits/deletions. It processes multiple absent days once and preserves task snapshots and historical dates. New tasks cannot be missed before creation, even if backdated. Calendar arithmetic respects daylight-saving transitions.
+Daily, weekly (on the starting weekday), selected-day and one-time tasks use local calendar dates. Unmet finite daily targets become missed during the next reconciliation. Unlimited tasks have no automatic misses. Reconciliation runs on opening, focus, every 30 seconds, and before task edits/deletions. It processes multiple absent days once and preserves task snapshots and historical dates. New tasks cannot be missed before creation, even if backdated. Calendar arithmetic respects daylight-saving transitions.
 
 A task undone today is pending and may become automatically missed at that day's end. An already settled past occurrence undone through history stays pending; reopening does not apply its penalty again. Editing or deleting a task does not erase existing results.
 
@@ -89,11 +89,11 @@ No code runs while the browser is closed. On return, elapsed timestamps reconcil
 
 ## Persistence and upgrades
 
-Data remains under the existing localStorage key `pocketpal-v1`, now using **schema version 3**. One outcome per `(task ID, local date)` is authoritative. The model replays care from an immutable checkpoint with timestamped, sequence-ordered settings, revival, purchase and item-use events. Wallet and inventory caches are re-derived from those records. This keeps capped health, duplicate prevention and corrections consistent across refreshes.
+Data remains under the existing localStorage key `pocketpal-v1`, now using **schema version 4**. Each task attempt has its own persistent outcome and jar-ball ID. The model replays care from an immutable checkpoint with timestamped, sequence-ordered settings, revival, purchase and item-use events. Wallet and inventory caches are re-derived from those records. This keeps capped health, duplicate prevention and corrections consistent across refreshes.
 
-Version-1 and version-2 saves/backups migrate automatically. Existing pet name/type, care, schedules, history, settings and achievements are retained. Existing completed occurrences receive a single 5-coin grant for the new shop; refreshing cannot award it again. Historical version-2 completed occurrences retain their already-recorded care until corrected. Re-completing a corrected occurrence awards coins only, including old saves; it does not restore a former direct-care reward. New occurrences, and formerly pending or missed occurrences completed after upgrading, use the coin-only care loop. Version-1 saves did not record per-reward clamping, so correcting those very old completions still reverses their original nominal care contribution at the migration checkpoint. Automatic missed-task accounting does not invent penalties for unrecorded pre-version-2 days.
+Version-1, version-2 and version-3 saves/backups migrate automatically. Existing pet name/type, care, schedules, history, settings and achievements are retained. Existing completed occurrences receive a single 5-coin grant for the new shop; refreshing cannot award it again. Historical version-2 completed occurrences retain their already-recorded care until corrected. Re-completing a corrected occurrence awards coins only, including old saves; it does not restore a former direct-care reward. New occurrences, and formerly pending or missed occurrences completed after upgrading, use the coin-only care loop. Version-1 saves did not record per-reward clamping, so correcting those very old completions still reverses their original nominal care contribution at the migration checkpoint. Automatic missed-task accounting does not invent penalties for unrecorded pre-version-2 days.
 
-The original raw save is backed up under `pocketpal-before-supplies` when storage allows. Export JSON through Settings; imports validate schema, unique occurrence/transaction IDs, item names and inventory chronology before asking to replace data. Unreadable saves show a recovery screen rather than being overwritten. Failed saving displays a warning. Browser storage is device/browser-specific and can be erased by clearing site data; keep exports for important progress. No user data leaves the browser.
+The original raw save is backed up under `pocketpal-before-boutique` when storage allows. Export JSON through Settings; imports validate schema, unique occurrence/transaction IDs, item names and inventory chronology before asking to replace data. Unreadable saves show a recovery screen rather than being overwritten. Failed saving displays a warning. Browser storage is device/browser-specific and can be erased by clearing site data; keep exports for important progress. No user data leaves the browser.
 
 ## Source and verification
 
@@ -104,7 +104,31 @@ The original raw save is backed up under `pocketpal-before-supplies` when storag
 - `src/Pets.tsx`: three original pet drawings, species-specific spooky details, reactions and preview guide.
 - `src/TaskOutcomes.tsx`: shared outcome controls and history corrections.
 - `src/App.tsx`: existing room, layout, onboarding, settings and integration.
-- `src/model.test.ts`: 46 behavioral/rendering checks covering schedules, offline elapsed time, missed days, caps, corrections, coins, purchases, item use, exploit prevention, migration, all 18 pet-stage drawings and real-time sleep boundaries. Additional checks cover head-pat happiness, tired open-eye drawings and legacy coin-only corrections.
+- `src/model.test.ts`: 64 behavioral/rendering checks covering schedules, offline elapsed time, missed days, caps, corrections, coins, purchases, item use, exploit prevention, migration, all 18 pet-stage drawings and real-time sleep boundaries. Additional checks cover head-pat happiness, tired open-eye drawings and legacy coin-only corrections.
 
 Browser QA covers desktop/mobile layouts, source-to-jar flight and landing, coin gain, purchase versus use behavior, corrections after spending, refresh, theme/sleep separation, and disabled animations. Run tests with `TZ=America/Los_Angeles` to explicitly exercise that timezone's daylight-saving dates.
 
+
+## Repeatable tasks and daily targets
+
+Every deliberate + or − press records a separate entry. A 350 ms lock prevents rapid accidental duplicates. Choose Once (target 1), Multiple (minimum 1), Custom goal (1–100), or Unlimited (no automatic misses). All modes allow extra entries beyond the target. Each positive earns 5 coins and a distinct jar ball. Each negative applies the category penalty within existing daily caps. Counters reset on the local date; history retains every entry.
+
+Undo removes only the latest entry. History corrects or removes individual entries. Automatic reconciliation records only the finite target shortfall once, counting manual completed and missed entries toward the target. Goal progress is capped per task; every positive, including extras, remains in the jar.
+
+## Boutique and interactive inventory
+
+Shop offers Essentials, Treats & Food, and Outfits & Accessories, illustrated with original SVG artwork. Buying stocks inventory without applying care. Drag an owned item onto your pet with mouse or touch, or choose Feed / Use. Outside drops return without consuming anything. Your pet follows food, anticipates nearby treats, and chews after feeding. Favorites affect reactions: Mochi likes pizza/ice cream, Pippin cake/smoothies, and Crumb burgers/pancakes.
+
+| Treat | Coins | Effects |
+| --- | ---: | --- |
+| Cheeseburger | 15 | +25 Food, +5 Happiness |
+| Pizza | 18 | +25 Food, +7 Happiness |
+| Cake | 20 | +10 Food, +20 Happiness |
+| Ice cream | 12 | +5 Food, +15 Happiness |
+| Cookie | 10 | +5 Food, +10 Happiness |
+| Smoothie | 14 | +10 Water, +10 Happiness |
+| Pancakes | 22 | +30 Food, +8 Happiness |
+
+Permanent clothing: Tiny Beanie 25, Bow Tie 15, Cozy Scarf 30, Little Backpack 40, Mushroom Hat 50, Soft Pajamas 60, Golden Crown 100, Zombie Costume 75 coins. Wardrobe previews your pet and supports equip/unequip. Head, neck, back and body slots combine; another item in the same slot replaces it. Species-specific layers move with pet animations. Clothing has no care effect and cannot be purchased twice.
+
+Inventory, outfit ownership, equipped items and transactions persist through refresh/export/import. Undoing income after spending retains purchases and used care; future earnings cover the shortfall before becoming spendable. Migration retains old progress without granting rewards twice.

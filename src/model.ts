@@ -1,19 +1,27 @@
 export type Category = "food" | "water" | "clean" | "happy";
-export type Supply = "food" | "water" | "soap";
-export const SUPPLIES: Record<
-  Supply,
-  {
-    name: string;
-    price: number;
-    category: Category;
-    boost: number;
-    morale: number;
-  }
-> = {
-  food: { name: "Food", price: 5, category: "food", boost: 15, morale: 4 },
-  water: { name: "Water", price: 4, category: "water", boost: 15, morale: 4 },
-  soap: { name: "Soap", price: 6, category: "clean", boost: 15, morale: 4 },
-};
+import {
+  SUPPLIES,
+  OUTFITS,
+  SUPPLY_IDS,
+  OUTFIT_IDS,
+  isSupply,
+  isOutfit,
+  emptyInventory,
+  type Supply,
+  type Outfit,
+  type OutfitSlot,
+  type ShopItem,
+} from "./catalog";
+export {
+  SUPPLIES,
+  OUTFITS,
+  SUPPLY_IDS,
+  OUTFIT_IDS,
+  isSupply,
+  isOutfit,
+  emptyInventory,
+} from "./catalog";
+export type { Supply, Outfit, OutfitSlot, ShopItem } from "./catalog";
 export const petRhythm = (n = Date.now()) => {
   const h = new Date(n).getHours();
   return { sleeping: h >= 21 || h < 6, calm: h >= 19 && h < 21 };
@@ -31,8 +39,12 @@ export type Task = {
   date: string;
   category: Category;
   createdAt?: number;
+  repetitions?: "once" | "multiple" | "goal" | "unlimited";
+  dailyGoal?: number;
 };
 export type Completion = {
+  id?: string;
+  ballId?: string;
   taskId: string;
   name: string;
   category: Category;
@@ -40,6 +52,10 @@ export type Completion = {
   date: string;
 };
 export type Occurrence = Completion & {
+  id: string;
+  ballId: string;
+  penalty: number;
+  deleted?: boolean;
   status: OutcomeStatus;
   task: Task;
   automatic: boolean;
@@ -72,7 +88,7 @@ type CareEvent =
       id: string;
       at: number;
       sequence: number;
-      item: Supply;
+      item: ShopItem;
       cost: number;
     }
   | {
@@ -85,7 +101,9 @@ type CareEvent =
       morale: number;
     };
 export type State = {
-  version: 3;
+  version: 4;
+  ownedOutfits: Outfit[];
+  equipped: Partial<Record<OutfitSlot, Outfit>>;
   coins: number;
   debt: number;
   inventory: Record<Supply, number>;
@@ -140,10 +158,12 @@ export const occurrenceKey = (id: string, date: string) =>
 export function initial(n = Date.now()): State {
   const care = { food: 85, water: 85, clean: 90, happy: 90 };
   return {
-    version: 3,
+    version: 4,
+    ownedOutfits: [],
+    equipped: {},
     coins: 0,
     debt: 0,
-    inventory: { food: 0, water: 0, soap: 0 },
+    inventory: emptyInventory(),
     lastSequence: 0,
     name: "",
     color: "sage",
@@ -195,7 +215,124 @@ export const stage = (s: Pick<State, "care" | "settings">) => {
             : 5;
 };
 export function outcomeFor(s: State, id: string, date: string) {
-  return s.outcomes.find((o) => o.taskId === id && o.date === date);
+  return s.outcomes.find(
+    (o) => o.taskId === id && o.date === date && !o.deleted,
+  );
+}
+export const goalFor = (task: Task) =>
+  task.repetitions === "unlimited"
+    ? 0
+    : task.repetitions === "goal"
+      ? Math.max(1, Math.min(100, Math.round(task.dailyGoal || 1)))
+      : 1;
+export function taskCounts(s: State, id: string, date: string) {
+  const entries = s.outcomes.filter(
+    (o) => o.taskId === id && o.date === date && !o.deleted,
+  );
+  return {
+    completed: entries.filter((o) => o.status === "completed").length,
+    missed: entries.filter((o) => o.status === "missed").length,
+    latest: [...entries]
+      .filter((o) => o.status !== "pending")
+      .sort((a, b) => b.sequence - a.sequence)[0],
+  };
+}
+export const rewardKey = (c: Completion) =>
+  c.ballId || c.id || occurrenceKey(c.taskId, c.date);
+export function recordAttempt(
+  s: State,
+  taskId: string,
+  date: string,
+  status: "completed" | "missed",
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
+  s = decay(s, n);
+  if (s.outcomes.some((o) => o.id === id) || date > dateKey(n)) return s;
+  const task = s.tasks.find((t) => t.id === taskId);
+  if (!task || !due(task, +localDate(date))) return s;
+  const entry: Occurrence = {
+    id,
+    ballId: "ball:" + id,
+    taskId,
+    date,
+    status,
+    at: date === dateKey(n) ? n : endOfDay(date),
+    name: task.name,
+    category: task.category,
+    task: { ...task, days: [...task.days] },
+    automatic: false,
+    sequence: s.lastSequence + 1,
+    rewardCare: 0,
+    rewardCoins: BALANCE.completedCoins,
+    penalty: BALANCE.missed,
+  };
+  return project(
+    {
+      ...s,
+      lastSequence: s.lastSequence + 1,
+      outcomes: [...s.outcomes, entry],
+    },
+    n,
+  );
+}
+export function correctAttempt(
+  s: State,
+  id: string,
+  status: OutcomeStatus,
+  n = Date.now(),
+): State {
+  s = decay(s, n);
+  const old = s.outcomes.find((o) => o.id === id && !o.deleted);
+  if (!old || old.status === status) return s;
+  return project(
+    {
+      ...s,
+      outcomes: s.outcomes.map((o) =>
+        o.id === id
+          ? {
+              ...o,
+              status,
+              automatic: false,
+              rewardCare: status === "completed" ? 0 : o.rewardCare,
+              ...(o.legacy ? { legacyRetired: true } : {}),
+            }
+          : o,
+      ),
+    },
+    n,
+  );
+}
+export function deleteAttempt(s: State, id: string, n = Date.now()): State {
+  s = decay(s, n);
+  const old = s.outcomes.find((o) => o.id === id && !o.deleted);
+  if (!old) return s;
+  return project(
+    {
+      ...s,
+      outcomes: s.outcomes.map((o) =>
+        o.id === id
+          ? {
+              ...o,
+              deleted: true,
+              status: "pending",
+              ...(o.legacy ? { legacyRetired: true } : {}),
+            }
+          : o,
+      ),
+    },
+    n,
+  );
+}
+export function undoLatest(
+  s: State,
+  taskId: string,
+  date: string,
+  n = Date.now(),
+): State {
+  s = decay(s, n);
+  const latest = taskCounts(s, taskId, date).latest;
+  return latest ? deleteAttempt(s, latest.id, n) : s;
 }
 /** Recompute from an immutable checkpoint. Never reverse a clamped value by subtraction. */
 function project(s: State, n: number): State {
@@ -232,7 +369,8 @@ function project(s: State, n: number): State {
   };
   let recovered = false;
   let spent = 0;
-  const inventory: Record<Supply, number> = { food: 0, water: 0, soap: 0 };
+  const inventory = emptyInventory();
+  const ownedOutfits = new Set<Outfit>();
   for (const { at, event: e } of events) {
     if (at > n) continue;
     advance(at);
@@ -249,7 +387,8 @@ function project(s: State, n: number): State {
       }
       if (e.kind === "buy") {
         spent += e.cost;
-        inventory[e.item]++;
+        if (isSupply(e.item)) inventory[e.item]++;
+        else ownedOutfits.add(e.item);
         continue;
       }
       if (e.kind === "use") {
@@ -278,14 +417,14 @@ function project(s: State, n: number): State {
     }
     const before = stage({ care, settings: { ...s.settings, cozy } });
     let amount = 0;
-    if (e.status === "completed") amount = e.rewardCare;
-    if (e.status === "missed") {
+    if (e.status === "completed" && !e.deleted) amount = e.rewardCare;
+    if (e.status === "missed" && !e.deleted) {
       const ck = e.date + ":" + e.category,
         dk = e.date;
       const penalty = Math.max(
         0,
         Math.min(
-          BALANCE.missed,
+          e.penalty ?? BALANCE.missed,
           BALANCE.maxMissedPerCategoryPerDay - (penalties.get(ck) || 0),
           BALANCE.maxMissedPerDay - (penalties.get(dk) || 0),
         ),
@@ -310,8 +449,10 @@ function project(s: State, n: number): State {
   }
   advance(n);
   const completions = s.outcomes
-    .filter((o) => o.status === "completed")
-    .map(({ taskId, name, category, at, date }) => ({
+    .filter((o) => o.status === "completed" && !o.deleted)
+    .map(({ id, ballId, taskId, name, category, at, date }) => ({
+      id,
+      ballId,
       taskId,
       name,
       category,
@@ -328,9 +469,7 @@ function project(s: State, n: number): State {
     planned = s.tasks.filter((t) => due(t, n));
   if (
     planned.length &&
-    planned.every((t) =>
-      completions.some((c) => c.taskId === t.id && c.date === day),
-    )
+    planned.every((t) => taskCounts(s, t.id, day).completed >= goalFor(t))
   )
     achievements.add("Full Jar");
   if (recovered) achievements.add("Zombie Survivor");
@@ -352,62 +491,62 @@ function project(s: State, n: number): State {
           .reduce((sum, o) => sum + o.rewardCoins, 0),
     ),
     inventory,
+    ownedOutfits: [...ownedOutfits],
+    equipped: Object.fromEntries(
+      Object.entries(s.equipped || {}).filter(([, id]) =>
+        ownedOutfits.has(id as Outfit),
+      ),
+    ),
     completions,
     achievements: [...achievements],
   };
 }
 /** Settle each local calendar day once, including DST and multi-day absences. */
 export function decay(s: State, n = Date.now()): State {
-  if ((s.version as number) !== 3) {
+  if ((s.version as number) !== 4) {
     const upgraded = parseState(s, n);
     if (!upgraded) throw Error("This save could not be upgraded safely.");
     return upgraded;
   }
   const today = dateKey(n),
-    outcomes = [...s.outcomes],
-    known = new Map(
-      outcomes.map((o, index) => [occurrenceKey(o.taskId, o.date), index]),
-    );
-  let settledThrough = s.settledThrough;
-  let lastSequence = s.lastSequence;
+    outcomes = [...s.outcomes];
+  let settledThrough = s.settledThrough,
+    lastSequence = s.lastSequence;
   for (
     let day = shiftDate(settledThrough, 1);
     day < today;
     day = shiftDate(day, 1)
   ) {
     for (const task of s.tasks) {
-      const key = occurrenceKey(task.id, day);
-      const existing = known.get(key);
-      if (
-        due(task, +localDate(day)) &&
-        existing !== undefined &&
-        outcomes[existing].status === "pending"
-      ) {
-        outcomes[existing] = {
-          ...outcomes[existing],
-          status: "missed",
-          automatic: true,
-          at: endOfDay(day),
-          sequence: ++lastSequence,
-          rewardCare: 0,
-          rewardCoins: BALANCE.completedCoins,
-        };
-      }
-      if (existing === undefined && due(task, +localDate(day))) {
-        outcomes.push({
+      if (!due(task, +localDate(day))) continue;
+      const records = outcomes.filter(
+        (o) => o.taskId === task.id && o.date === day && !o.deleted,
+      );
+      const recorded = records.filter((o) => o.status !== "pending").length;
+      const shortfall = Math.max(0, goalFor(task) - recorded);
+      const pending = records.filter((o) => o.status === "pending");
+      for (let i = 0; i < shortfall; i++) {
+        const old = pending[i];
+        const id = old?.id ?? JSON.stringify(["auto", task.id, day, i]);
+        const occurrence: Occurrence = {
+          ...(old || {}),
+          id,
+          ballId: old?.ballId ?? "ball:" + id,
           taskId: task.id,
-          name: task.name,
-          category: task.category,
+          name: old?.name ?? task.name,
+          category: old?.category ?? task.category,
           at: endOfDay(day),
           date: day,
           status: "missed",
-          task: { ...task, days: [...task.days] },
+          task: old?.task ?? { ...task, days: [...task.days] },
           automatic: true,
           sequence: ++lastSequence,
           rewardCare: 0,
           rewardCoins: BALANCE.completedCoins,
-        });
-        known.set(key, outcomes.length - 1);
+          penalty: BALANCE.missed,
+        };
+        if (old) outcomes[outcomes.indexOf(old)] = occurrence;
+        else outcomes.push(occurrence);
       }
     }
     settledThrough = day;
@@ -444,6 +583,9 @@ export function setOutcome(
         ...(old.legacy ? { legacyRetired: true } : {}),
       }
     : {
+        id: crypto.randomUUID(),
+        ballId: crypto.randomUUID(),
+        penalty: BALANCE.missed,
         taskId: id,
         name: task.name,
         category: task.category,
@@ -543,10 +685,25 @@ export function headPat(s: State, n = Date.now()): State {
     n,
   );
 }
-export function buySupply(s: State, item: Supply, n = Date.now()): State {
+export function buyItem(
+  s: State,
+  item: ShopItem,
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
   s = decay(s, n);
-  const supply = SUPPLIES[item];
-  if (!supply || s.coins < supply.price) return s;
+  if (s.careEvents.some((e) => "id" in e && e.id === id)) return s;
+  const product = isSupply(item)
+    ? SUPPLIES[item]
+    : isOutfit(item)
+      ? OUTFITS[item]
+      : null;
+  if (
+    !product ||
+    s.coins < product.price ||
+    (isOutfit(item) && s.ownedOutfits.includes(item))
+  )
+    return s;
   return project(
     {
       ...s,
@@ -555,9 +712,9 @@ export function buySupply(s: State, item: Supply, n = Date.now()): State {
         ...s.careEvents,
         {
           kind: "buy",
-          id: crypto.randomUUID(),
+          id,
           item,
-          cost: supply.price,
+          cost: product.price,
           at: n,
           sequence: s.lastSequence + 1,
         },
@@ -566,9 +723,35 @@ export function buySupply(s: State, item: Supply, n = Date.now()): State {
     n,
   );
 }
-export function useSupply(s: State, item: Supply, n = Date.now()): State {
+export const buySupply = (
+  s: State,
+  item: Supply,
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+) => buyItem(s, item, n, id);
+export function equipOutfit(
+  s: State,
+  item: Outfit | null,
+  n = Date.now(),
+): State {
   s = decay(s, n);
-  const supply = SUPPLIES[item];
+  if (item === null) return { ...s, equipped: {} };
+  if (!isOutfit(item) || !s.ownedOutfits.includes(item)) return s;
+  const slot = OUTFITS[item].slot,
+    equipped = { ...s.equipped };
+  if (equipped[slot] === item) delete equipped[slot];
+  else equipped[slot] = item;
+  return { ...s, equipped };
+}
+export function useSupply(
+  s: State,
+  item: Supply,
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
+  s = decay(s, n);
+  if (s.careEvents.some((e) => "id" in e && e.id === id)) return s;
+  const supply = isSupply(item) ? SUPPLIES[item] : null;
   if (!supply || s.inventory[item] < 1 || stage(s) === 5) return s;
   return project(
     {
@@ -578,7 +761,7 @@ export function useSupply(s: State, item: Supply, n = Date.now()): State {
         ...s.careEvents,
         {
           kind: "use",
-          id: crypto.randomUUID(),
+          id,
           item,
           boost: supply.boost,
           morale: supply.morale,
@@ -625,7 +808,11 @@ const taskValid = (t: Task) =>
   t.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) &&
   isDate(t.date) &&
   categories.includes(t.category) &&
-  (t.createdAt === undefined || Number.isFinite(t.createdAt));
+  (t.createdAt === undefined || Number.isFinite(t.createdAt)) &&
+  (t.repetitions === undefined ||
+    ["once", "multiple", "goal", "unlimited"].includes(t.repetitions)) &&
+  (t.dailyGoal === undefined ||
+    (Number.isInteger(t.dailyGoal) && t.dailyGoal >= 1 && t.dailyGoal <= 100));
 function commonValid(x: unknown): boolean {
   if (!x || typeof x !== "object") return false;
   const s = x as State;
@@ -683,17 +870,17 @@ function validModel(x: unknown, version: number): x is State {
         Number.isFinite(e.at) &&
         e.at >= s.baseline.at &&
         (e.kind === "revive" ||
-          (version === 3 && e.kind === "pat") ||
-          (version === 3 &&
+          (version >= 3 && e.kind === "pat") ||
+          (version >= 3 &&
             ((e.kind === "buy" &&
               typeof e.id === "string" &&
-              (["food", "water", "soap"] as Supply[]).includes(e.item) &&
+              (isSupply(e.item) || isOutfit(e.item)) &&
               Number.isSafeInteger(e.cost) &&
               e.cost > 0 &&
               e.cost <= 1000) ||
               (e.kind === "use" &&
                 typeof e.id === "string" &&
-                !!SUPPLIES[e.item] &&
+                isSupply(e.item) &&
                 Number.isFinite(e.boost) &&
                 e.boost >= 0 &&
                 e.boost <= 100 &&
@@ -730,12 +917,25 @@ function validModel(x: unknown, version: number): x is State {
         (o.legacy === undefined || typeof o.legacy === "boolean") &&
         (o.legacyRetired === undefined || typeof o.legacyRetired === "boolean"),
     ) &&
-    new Set(s.outcomes.map((o) => occurrenceKey(o.taskId, o.date))).size ===
-      s.outcomes.length
+    (version < 4
+      ? new Set(s.outcomes.map((o) => occurrenceKey(o.taskId, o.date))).size ===
+        s.outcomes.length
+      : s.outcomes.every(
+          (o) =>
+            typeof o.id === "string" &&
+            typeof o.ballId === "string" &&
+            Number.isFinite(o.penalty) &&
+            o.penalty >= 0 &&
+            o.penalty <= 8 &&
+            (o.deleted === undefined || typeof o.deleted === "boolean") &&
+            (o.deleted !== true || o.status === "pending"),
+        ) &&
+        new Set(s.outcomes.map((o) => o.id)).size === s.outcomes.length &&
+        new Set(s.outcomes.map((o) => o.ballId)).size === s.outcomes.length)
   );
 }
 export function validState(x: unknown): x is State {
-  if (!validModel(x, 3)) return false;
+  if (!validModel(x, 4)) return false;
   const s = x as State;
   if (
     !Number.isSafeInteger(s.coins) ||
@@ -743,13 +943,25 @@ export function validState(x: unknown): x is State {
     !Number.isSafeInteger(s.debt) ||
     s.debt < 0 ||
     !s.inventory ||
-    !(["food", "water", "soap"] as Supply[]).every(
+    !SUPPLY_IDS.every(
       (i) => Number.isSafeInteger(s.inventory[i]) && s.inventory[i] >= 0,
+    ) ||
+    !Array.isArray(s.ownedOutfits) ||
+    !s.ownedOutfits.every(isOutfit) ||
+    new Set(s.ownedOutfits).size !== s.ownedOutfits.length ||
+    !s.equipped ||
+    typeof s.equipped !== "object" ||
+    !Object.entries(s.equipped).every(
+      ([slot, id]) =>
+        isOutfit(id) &&
+        OUTFITS[id].slot === slot &&
+        s.ownedOutfits.includes(id),
     )
   )
     return false;
-  const inventory: Record<Supply, number> = { food: 0, water: 0, soap: 0 };
-  const ids = new Set<string>();
+  const inventory = emptyInventory(),
+    ids = new Set<string>(),
+    owned = new Set<Outfit>();
   const sequences = [
     ...s.outcomes.map((o) => o.sequence),
     ...s.careEvents.map((e) => e.sequence),
@@ -761,21 +973,55 @@ export function validState(x: unknown): x is State {
     if (e.kind !== "buy" && e.kind !== "use") continue;
     if (ids.has(e.id)) return false;
     ids.add(e.id);
+    if (e.kind === "buy" && isOutfit(e.item)) {
+      if (owned.has(e.item)) return false;
+      owned.add(e.item);
+      continue;
+    }
+    if (!isSupply(e.item)) return false;
     inventory[e.item] += e.kind === "buy" ? 1 : -1;
     if (inventory[e.item] < 0) return false;
   }
   return true;
 }
+const upgradedEntry = (o: Occurrence, index: number): Occurrence => {
+  const id =
+    o.id ||
+    JSON.stringify(["migrated", o.taskId, o.date, o.sequence || index + 1]);
+  return {
+    ...o,
+    id,
+    ballId: o.ballId || "ball:" + id,
+    penalty: o.penalty ?? BALANCE.missed,
+  };
+};
 export function parseState(x: unknown, n = Date.now()): State | null {
+  if (validModel(x, 3)) {
+    const old = x as State;
+    return decay(
+      {
+        ...old,
+        version: 4,
+        ownedOutfits: [],
+        equipped: {},
+        inventory: { ...emptyInventory(), ...old.inventory },
+        outcomes: old.outcomes.map(upgradedEntry),
+      },
+      n,
+    );
+  }
   if (validModel(x, 2)) {
     const old = x as State;
     const upgraded: State = {
       ...old,
-      version: 3,
+      version: 4,
+      ownedOutfits: [],
+      equipped: {},
       coins: 0,
       debt: 0,
-      inventory: { food: 0, water: 0, soap: 0 },
-      outcomes: old.outcomes.map((o) => ({
+      inventory: emptyInventory(),
+      outcomes: old.outcomes.map((o, i) => ({
+        ...upgradedEntry(o, i),
         ...o,
         rewardCare: o.status === "completed" ? 10 : 0,
         rewardCoins: BALANCE.completedCoins,
@@ -790,6 +1036,9 @@ export function parseState(x: unknown, n = Date.now()): State | null {
   // Upgrade forward only: no new penalties for days before this feature existed.
   const tasks = old.tasks.map((t) => ({ ...t, createdAt: n }));
   const outcomes: Occurrence[] = old.completions.map((c, i) => ({
+    id: JSON.stringify(["v1", c.taskId, c.date, i]),
+    ballId: JSON.stringify(["v1-ball", c.taskId, c.date, i]),
+    penalty: BALANCE.missed,
     sequence: i + 1,
     rewardCare: 0,
     rewardCoins: BALANCE.completedCoins,
@@ -853,8 +1102,8 @@ export function load(): State {
       const s = parseState(parsed);
       if (s) {
         if (
-          parsed.version < 3 &&
-          !localStorage.getItem("pocketpal-before-supplies")
+          parsed.version < 4 &&
+          !localStorage.getItem("pocketpal-before-boutique")
         ) {
           try {
             localStorage.setItem("pocketpal-before-outcomes", raw);

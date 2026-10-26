@@ -5,10 +5,14 @@ export function Supplies({
   s,
   onBuy,
   onUse,
+  onShop,
+  onInventory,
 }: {
   s: State;
   onBuy: (item: Supply) => void;
   onUse: (item: Supply) => void;
+  onShop: () => void;
+  onInventory: () => void;
 }) {
   return (
     <section
@@ -24,7 +28,7 @@ export function Supplies({
         </span>
       </div>
       <p>Little wins become little comforts.</p>
-      {(Object.keys(SUPPLIES) as Supply[]).map((item) => {
+      {(["food", "water", "soap"] as const).map((item) => {
         const v = SUPPLIES[item],
           Icon = icons[item];
         return (
@@ -76,6 +80,10 @@ export function Supplies({
           </div>
         );
       })}
+      <div className="shelf-links">
+        <button onClick={onShop}>PocketPal Shop</button>
+        <button onClick={onInventory}>Open inventory</button>
+      </div>
       <p className="supply-hint">
         Buy now, use when your pal needs a little care. Each use adds +4
         happiness.

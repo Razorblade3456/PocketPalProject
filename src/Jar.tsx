@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type Ref } from "react";
 import { motion, useAnimationControls, useReducedMotion } from "motion/react";
-import { occurrenceKey, type Category, type Completion } from "./model";
+import { rewardKey, type Category, type Completion } from "./model";
 export type RewardSource = { x: number; y: number };
 export type JarFlight = {
   token: string;
@@ -35,6 +35,23 @@ export function Jar({
   }, [pulse, small, reduce, controls]);
   return (
     <motion.div
+      style={
+        {
+          "--jar-ball-size":
+            Math.max(
+              1,
+              Math.min(
+                small ? 12 : 24,
+                Math.floor(
+                  Math.sqrt(
+                    (small ? 64 * 70 : 128 * 145) / Math.max(1, balls.length),
+                  ),
+                ) - (balls.length > 100 ? 0 : 2),
+              ),
+            ) + "px",
+          "--jar-ball-gap": balls.length > 100 ? "0px" : "2px",
+        } as import("react").CSSProperties
+      }
       ref={jarRef}
       animate={controls}
       className={`jar ${small ? "mini" : ""}`}
@@ -52,8 +69,8 @@ export function Jar({
       <div className="jar-glass">
         <div className="glass-shine" />
         <div className="balls">
-          {balls.slice(-70).map((b) => {
-            const key = occurrenceKey(b.taskId, b.date),
+          {balls.map((b) => {
+            const key = rewardKey(b),
               hidden = incoming.includes(key);
             return (
               <motion.span

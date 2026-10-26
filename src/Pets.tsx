@@ -1,6 +1,8 @@
-import { useId, useState } from "react";
+import { useId, useState, useEffect, type Ref } from "react";
 import { motion } from "motion/react";
-import type { PetKind } from "./model";
+import type { PetKind, Supply } from "./model";
+import { OutfitLayer, type Equipped } from "./Outfits";
+import type { IncomingFood } from "./Inventory";
 export const stages = [
   "Healthy",
   "Tired",
@@ -15,6 +17,8 @@ export const pets: Record<PetKind, { name: string; description: string }> = {
   crumb: { name: "Crumb", description: "Curious, clumsy & always hungry" },
 };
 type ArtProps = {
+  equipped?: Equipped;
+  anticipating?: boolean;
   level: number;
   sleep: boolean;
   sad: boolean;
@@ -208,7 +212,7 @@ function SpookyWear({ kind, level }: { kind: PetKind; level: number }) {
     </g>
   );
 }
-function Mochi({ level, sleep, sad, look }: ArtProps) {
+function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
   const texture = useId(),
     belly = useId();
   return (
@@ -238,6 +242,7 @@ function Mochi({ level, sleep, sad, look }: ArtProps) {
           <stop offset="1" stopColor="#ddd8b3" />
         </radialGradient>
       </defs>
+      <OutfitLayer kind="mochi" equipped={equipped} back />
       <g className="pet-body" filter={`url(#${texture})`}>
         <path
           d="M83 258 Q55 280 70 304 Q91 320 112 292L121 265M207 264L211 296Q236 315 251 296Q258 280 233 257"
@@ -296,6 +301,7 @@ function Mochi({ level, sleep, sad, look }: ArtProps) {
         )}
         <SpookyWear kind="mochi" level={level} />
       </g>
+      <OutfitLayer kind="mochi" equipped={equipped} />
       <g
         transform={`translate(${look.x},${look.y + (level >= 3 ? 6 : 0)})`}
         className="face"
@@ -333,12 +339,14 @@ function Mochi({ level, sleep, sad, look }: ArtProps) {
             fill="none"
           />
         ) : (
-          <g>
+          <g className="mouth">
             <path
               d={
-                level > 1
-                  ? "M131 178Q160 158 188 178L186 193Q157 202 133 192Z"
-                  : "M130 163Q160 170 190 163L187 187Q161 213 134 187Z"
+                anticipating
+                  ? "M130 159Q160 147 190 159L190 190Q160 216 130 190Z"
+                  : level > 1
+                    ? "M131 178Q160 158 188 178L186 193Q157 202 133 192Z"
+                    : "M130 163Q160 170 190 163L187 187Q161 213 134 187Z"
               }
               fill="#514840"
             />
@@ -455,7 +463,7 @@ function Ghost() {
     </g>
   );
 }
-function Pippin({ level, sleep, sad, look }: ArtProps) {
+function Pippin({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
   const texture = useId();
   const folded = sad || sleep;
   return (
@@ -481,6 +489,7 @@ function Pippin({ level, sleep, sad, look }: ArtProps) {
           <feComposite in2="SourceAlpha" operator="in" />
         </filter>
       </defs>
+      <OutfitLayer kind="pippin" equipped={equipped} back />
       <g filter={`url(#${texture})`}>
         <g
           className={`moth-wings ${folded ? "wrapped" : ""}`}
@@ -592,8 +601,9 @@ function Pippin({ level, sleep, sad, look }: ArtProps) {
           </g>
         )}
       </g>
+      <OutfitLayer kind="pippin" equipped={equipped} />
       <SpookyWear kind="pippin" level={level} />
-      <g transform={`translate(${look.x},${look.y})`}>
+      <g className="face" transform={`translate(${look.x},${look.y})`}>
         <Eyes
           level={level}
           sleep={sleep}
@@ -604,10 +614,17 @@ function Pippin({ level, sleep, sad, look }: ArtProps) {
           large
         />
         <path
-          d={sad || level > 1 ? "M150 209q10-8 20 0" : "M151 201q9 12 18 0"}
+          className="mouth"
+          d={
+            anticipating
+              ? "M149 201q11-10 22 0q0 20-22 0Z"
+              : sad || level > 1
+                ? "M150 209q10-8 20 0"
+                : "M151 201q9 12 18 0"
+          }
           stroke="#7f697c"
           strokeWidth="4"
-          fill="none"
+          fill={anticipating ? "#766274" : "none"}
           strokeLinecap="round"
         />
       </g>
@@ -632,7 +649,7 @@ function Pippin({ level, sleep, sad, look }: ArtProps) {
     </svg>
   );
 }
-function Crumb({ level, sleep, sad, look }: ArtProps) {
+function Crumb({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
   const texture = useId(),
     curl = sleep || level === 1;
   return (
@@ -658,6 +675,7 @@ function Crumb({ level, sleep, sad, look }: ArtProps) {
           <feComposite in2="SourceAlpha" operator="in" />
         </filter>
       </defs>
+      <OutfitLayer kind="crumb" equipped={equipped} back />
       <g
         filter={`url(#${texture})`}
         transform={curl ? "translate(0 37) scale(1 .87)" : undefined}
@@ -772,16 +790,23 @@ function Crumb({ level, sleep, sad, look }: ArtProps) {
         )}
         <SpookyWear kind="crumb" level={level} />
       </g>
-      <g transform={`translate(${look.x},${look.y + (curl ? 17 : 0)})`}>
+      <OutfitLayer kind="crumb" equipped={equipped} />
+      <g
+        className="face"
+        transform={`translate(${look.x},${look.y + (curl ? 17 : 0)})`}
+      >
         <Eyes level={level} sleep={sleep} sad={sad} x={122} gap={77} y={167} />
         <path d="M151 185q10-5 20 0l-10 12z" fill="#6c5142" />
         <path
+          className="mouth"
           d={
-            sad || level > 1
-              ? "M149 211q12-9 24 0"
-              : "M161 197v9m-12-2q12 15 24 0"
+            anticipating
+              ? "M148 204q13-11 26 0q0 24-26 0Z"
+              : sad || level > 1
+                ? "M149 211q12-9 24 0"
+                : "M161 197v9m-12-2q12 15 24 0"
           }
-          fill="none"
+          fill={anticipating ? "#6c5142" : "none"}
           stroke="#7c5b4b"
           strokeWidth="3"
           strokeLinecap="round"
@@ -814,6 +839,10 @@ export function Pet({
   onPet = () => {},
   preview = false,
   calm = false,
+  equipped = {},
+  incoming,
+  feeding,
+  petRef,
 }: {
   level: number;
   kind?: PetKind;
@@ -822,25 +851,43 @@ export function Pet({
   onPet?: () => void;
   preview?: boolean;
   calm?: boolean;
+  equipped?: Equipped;
+  incoming?: IncomingFood | null;
+  feeding?: Supply | null;
+  petRef?: Ref<HTMLButtonElement>;
 }) {
   const [look, setLook] = useState({ x: 0, y: 0 });
+  const excited = !!incoming?.near && level !== 5;
+  useEffect(() => {
+    if (!incoming || level === 5 || preview) return;
+    const el = document.querySelector(".room .pet-button");
+    const r = el?.getBoundingClientRect();
+    if (r)
+      setLook({
+        x: (incoming.x - r.left - r.width / 2) / 35,
+        y: (incoming.y - r.top - r.height / 2) / 45,
+      });
+  }, [incoming, level, preview]);
   const sad = reaction.startsWith("−");
   const art = {
+    equipped,
+    anticipating: excited,
     level,
-    sleep: level !== 5 && sleep,
+    sleep: level !== 5 && sleep && !excited && !feeding,
     sad,
     look: level === 5 || preview ? { x: 0, y: 0 } : look,
   };
   const animated = level !== 5 && !preview && !!reaction;
   return (
     <motion.button
+      ref={petRef}
       type="button"
       tabIndex={preview ? -1 : 0}
       disabled={preview}
       aria-label={
         preview ? `${pets[kind].name}: ${stages[level]}` : "Pet your companion"
       }
-      className={`pet-button species-${kind} stage-${level} ${sleep ? "sleeping" : ""} ${calm ? "calm" : ""} ${sad ? "hurt" : ""} ${preview ? "pet-preview" : ""}`}
+      className={`pet-button species-${kind} stage-${level} ${sleep ? "sleeping" : ""} ${calm ? "calm" : ""} ${excited ? "food-approach" : ""} ${feeding ? "is-eating" : ""} ${reaction.includes("favorite") ? "favorite-reaction" : ""} ${sad ? "hurt" : ""} ${preview ? "pet-preview" : ""}`}
       onPointerMove={(e) => {
         if (preview || level === 5) return;
         const r = e.currentTarget.getBoundingClientRect();
