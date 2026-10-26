@@ -6,8 +6,6 @@ import {
   Moon,
   Settings,
   Heart,
-  Droplets,
-  Apple,
   Sparkles,
   Check,
   X,
@@ -30,7 +28,6 @@ import {
   PackageOpen,
 } from "lucide-react";
 import {
-  categories,
   SUPPLIES,
   buyItem,
   recordAttempt,
@@ -65,17 +62,16 @@ import {
   demoTasks,
   type State,
   type Task,
-  type Category,
 } from "./model";
 import { Pet, PetChoices, LifeGuide, stages, pets } from "./Pets";
 import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
 import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
+import { LocalClock } from "./LocalClock";
 import { PetNeeds } from "./PetNeeds";
 import { Supplies } from "./Supplies";
 import { Boutique, Wardrobe } from "./Boutique";
 import { Inventory, type IncomingFood } from "./Inventory";
 import { favorites, itemName } from "./catalog";
-const icons = { food: Apple, water: Droplets, clean: Sparkles, happy: Heart };
 function tone(enabled: boolean, kind = 0) {
   if (!enabled) return;
   try {
@@ -441,13 +437,6 @@ export default function App() {
               <span>coins</span>
               {s.debt > 0 && <small>{s.debt} reserved</small>}
             </a>
-            <span className="date">
-              {new Date(now).toLocaleDateString(undefined, {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
             <button
               className="icon-button"
               aria-label="Toggle day or night"
@@ -516,11 +505,14 @@ export default function App() {
                 {s.name || "your pal"}.
               </p>
             </div>
+            <div className="today-summary">
+              <LocalClock />
             <span className="streak">
               <Flame size={20} />
               <b>{streak(s)}</b> day streak
               <span>Every day is a fresh start</span>
             </span>
+            </div>
           </div>
           <div className="game-layout">
             <section className="task-panel">
@@ -546,8 +538,7 @@ export default function App() {
                   </div>
                 ) : (
                   todayTasks.map((t) => {
-                    const Icon = icons[t.category],
-                      counts = taskCounts(s, t.id, today),
+                    const counts = taskCounts(s, t.id, today),
                       status = counts.completed
                         ? "completed"
                         : counts.missed
@@ -570,14 +561,7 @@ export default function App() {
                                 minute: "2-digit",
                               })}
                             </time>
-                            <span className={`category-tag ${t.category}`}>
-                              <Icon size={12} />
-                              {t.category === "clean"
-                                ? "Clean"
-                                : t.category === "happy"
-                                  ? "Joy"
-                                  : t.category}
-                            </span>
+
                           </div>
                           {t.description && (
                             <span className="task-description">
@@ -662,6 +646,7 @@ export default function App() {
                 <Pet
                   level={level}
                   kind={s.pet}
+                  care={s.care}
                   petRef={petRef}
                   equipped={s.equipped}
                   incoming={incoming}
@@ -782,16 +767,7 @@ export default function App() {
                 <ChevronRight size={16} />
               </button>
               <div className="jar-legend">
-                {categories.map((c) => {
-                  const Icon = icons[c];
-                  return (
-                    <span key={c}>
-                      <i className={c} />
-                      <Icon size={12} />
-                      {c === "happy" ? "Joy" : c === "clean" ? "Clean" : c}
-                    </span>
-                  );
-                })}
+<span><Coins size={13} /> Every little win earns 5 coins</span>
               </div>
               <Supplies
                 s={s}
@@ -861,7 +837,7 @@ export default function App() {
         )}
         <dialog
           className={
-            panel === "shop" || panel === "wardrobe" ? "boutique-dialog" : ""
+            (panel === "shop" || panel === "wardrobe" || panel === "health") ? "boutique-dialog" : ""
           }
           ref={dialog}
           onCancel={(e) => {
@@ -1148,7 +1124,7 @@ export default function App() {
                 onShop={() => setPanel("shop")}
               />
             ) : panel === "health" ? (
-              <LifeGuide kind={s.pet} actual={level} />
+              <LifeGuide kind={s.pet} actual={level} realCare={s.care} equipped={s.equipped} />
             ) : panel === "history" ? (
               <>
                 <span className="eyebrow">A COLLECTION OF GOOD DAYS</span>
@@ -1224,12 +1200,9 @@ export default function App() {
                 <h2>Today's jar of joy</h2>
                 {earned.length ? (
                   earned.map((c) => {
-                    const Icon = icons[c.category];
                     return (
                       <div className="reward-entry" key={rewardKey(c)}>
-                        <span className={`category-tag ${c.category}`}>
-                          <Icon size={18} />
-                        </span>
+                        <span className="category-tag"><Coins size={18} /></span>
                         <span>
                           {c.name}
                           <small>
@@ -1280,7 +1253,6 @@ function TaskEditor({
       dailyGoal: 1,
     },
   );
-  const [manual, setManual] = useState(!!task);
   const update = (p: Partial<Task>) => setT((v) => ({ ...v, ...p }));
   return (
     <form
@@ -1302,20 +1274,7 @@ function TaskEditor({
           placeholder="e.g. Drink a glass of water"
           onChange={(e) => {
             const name = e.target.value;
-            update({
-              name,
-              ...(!manual
-                ? {
-                    category: /water|drink|hydrat/i.test(name)
-                      ? "water"
-                      : /clean|brush|wash|tidy/i.test(name)
-                        ? "clean"
-                        : /\b(eat|breakfast|stretch|walk|meal)\b/i.test(name)
-                          ? "food"
-                          : "happy",
-                  }
-                : {}),
-            });
+            update({ name });
           }}
         />
       </label>
@@ -1416,26 +1375,7 @@ function TaskEditor({
         moments after reaching them. Unlimited tasks never receive automatic
         misses.
       </p>
-      <label>
-        Care category
-        <select
-          value={t.category}
-          onChange={(e) => {
-            setManual(true);
-            update({ category: e.target.value as Category });
-          }}
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {labels[c]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <p className="fine">
-        Every success earns 5 coins. The category chooses its jar color and the
-        need affected by a missed attempt.
-      </p>
+      <p className="fine">Every completed goal earns 5 coins. Spend them on care supplies and little treats for your pal.</p>
       <div className="button-row">
         <button
           className="primary"

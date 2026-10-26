@@ -172,14 +172,6 @@ export function OutcomeHistory({
               minute: "2-digit",
               second: "2-digit",
             })}{" "}
-            ·{" "}
-            {o.category === "happy"
-              ? "Happiness"
-              : o.category === "clean"
-                ? "Cleanliness"
-                : o.category === "water"
-                  ? "Hydration"
-                  : "Nourishment"}
             {o.automatic ? " · automatic missed goal" : ""}
           </small>
           <div className="entry-actions">

@@ -187,6 +187,7 @@ export function Wardrobe({
         <Pet
           kind={s.pet}
           level={stage(s)}
+          care={s.care}
           preview
           sleep={petRhythm().sleeping && stage(s) < 3}
           equipped={s.equipped}

@@ -1,8 +1,11 @@
-import { useId, useState, useEffect, type Ref } from "react";
+import { useId, useState, useEffect, useRef, type Ref } from "react";
 import { motion } from "motion/react";
-import type { PetKind, Supply } from "./model";
+import type { Care, Category, PetKind, Supply } from "./model";
 import { OutfitLayer, type Equipped } from "./Outfits";
 import type { IncomingFood } from "./Inventory";
+import { careTier, excellentCare } from "./careVisuals";
+import { CareBody, CareSurface, CareFace, CareRecovery } from "./CareLayers";
+import { CareGuide } from "./CareGuide";
 export const stages = [
   "Healthy",
   "Tired",
@@ -17,6 +20,8 @@ export const pets: Record<PetKind, { name: string; description: string }> = {
   crumb: { name: "Crumb", description: "Curious, clumsy & always hungry" },
 };
 type ArtProps = {
+  care?: Care;
+  recovering?: Category[];
   equipped?: Equipped;
   anticipating?: boolean;
   level: number;
@@ -212,7 +217,7 @@ function SpookyWear({ kind, level }: { kind: PetKind; level: number }) {
     </g>
   );
 }
-function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
+function Mochi({ level, sleep, sad, look, equipped, anticipating, care, recovering = [] }: ArtProps) {
   const texture = useId(),
     belly = useId();
   return (
@@ -242,6 +247,7 @@ function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           <stop offset="1" stopColor="#ddd8b3" />
         </radialGradient>
       </defs>
+      <CareBody care={care} kind="mochi" level={level} sleeping={sleep}>
       <OutfitLayer kind="mochi" equipped={equipped} back />
       <g className="pet-body" filter={`url(#${texture})`}>
         <path
@@ -254,7 +260,7 @@ function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
         />
         <path
           d={
-            level < 1
+            level < 1 && (!care || careTier(care.happy) < 2)
               ? "M84 80Q56 50 73 28Q91 29 111 65Q146 51 190 65Q219 26 239 35Q253 53 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
               : level < 3
                 ? "M84 80Q47 56 57 94Q74 113 99 84Q146 51 190 65Q244 65 262 105Q249 118 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
@@ -272,7 +278,7 @@ function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           strokeDasharray="5 7"
           opacity=".75"
         />
-        <ellipse cx="160" cy="222" rx="64" ry="49" fill={`url(#${belly})`} />
+        <ellipse cx="160" cy="222" rx={64 * (1 - careTier(care?.food ?? 100) * .13)} ry={49 * (1 - careTier(care?.food ?? 100) * .06)} fill={`url(#${belly})`} />
         <path
           d="M126 257L191 257"
           stroke="#b7b18a"
@@ -301,10 +307,11 @@ function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
         )}
         <SpookyWear kind="mochi" level={level} />
       </g>
+      <CareSurface kind="mochi" care={care} level={level} sleeping={sleep} />
       <OutfitLayer kind="mochi" equipped={equipped} />
       <g
         transform={`translate(${look.x},${look.y + (level >= 3 ? 6 : 0)})`}
-        className="face"
+        className={`face ${care && !sleep && level !== 5 ? "base-face-hidden" : ""}`}
       >
         {level === 5 ? (
           <g stroke="#454c42" strokeWidth="6">
@@ -355,6 +362,8 @@ function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           </g>
         )}
       </g>
+      <CareFace kind="mochi" care={care} level={level} sleeping={sleep} look={look} anticipating={anticipating} offsetY={level >= 3 ? 6 : 0} />
+      {level !== 5 && <CareRecovery changes={recovering} />}
       {sleep && (
         <text x="240" y="65" fill="#7e91b2" fontSize="26">
           z z
@@ -371,6 +380,7 @@ function Mochi({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           <circle cx="168" cy="65" r="3" />
         </g>
       )}
+      </CareBody>
     </svg>
   );
 }
@@ -463,9 +473,9 @@ function Ghost() {
     </g>
   );
 }
-function Pippin({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
+function Pippin({ level, sleep, sad, look, equipped, anticipating, care, recovering = [] }: ArtProps) {
   const texture = useId();
-  const folded = sad || sleep;
+  const folded = sad || sleep || (!!care && careTier(care.happy) >= 2);
   return (
     <svg
       className="pet-art"
@@ -489,6 +499,7 @@ function Pippin({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           <feComposite in2="SourceAlpha" operator="in" />
         </filter>
       </defs>
+      <CareBody care={care} kind="pippin" level={level} sleeping={sleep}>
       <OutfitLayer kind="pippin" equipped={equipped} back />
       <g filter={`url(#${texture})`}>
         <g
@@ -549,25 +560,25 @@ function Pippin({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           fill="none"
         >
           <path
-            d={level >= 3 ? "M127 115Q105 60 72 94" : "M127 115Q119 49 92 41"}
+            d={(level >= 3 || (!!care && careTier(care.water) >= 2)) ? "M127 115Q105 60 72 94" : "M127 115Q119 49 92 41"}
           />
           <path
             d={
-              level >= 3 ? "M193 115Q218 66 251 106" : "M193 115Q201 49 228 41"
+              (level >= 3 || (!!care && careTier(care.water) >= 2)) ? "M193 115Q218 66 251 106" : "M193 115Q201 49 228 41"
             }
           />
         </g>
         <g fill="var(--wing)" stroke="var(--pet-dark)" strokeWidth="2">
           <path
             d={
-              level >= 3
+              (level >= 3 || (!!care && careTier(care.water) >= 2))
                 ? "M70 76q-20 3-17 21l7 1-3 9 15-2 5 6 10-15-3-15z"
                 : "M92 23q-18-7-23 9l5 5-8 8 9 5 4 12 13-6 12 3 2-12 7-8-9-6z"
             }
           />
           <path
             d={
-              level >= 3
+              (level >= 3 || (!!care && careTier(care.water) >= 2))
                 ? "M251 87q21 3 18 21l-7 1 3 9-15-2-5 6-10-15 3-15z"
                 : "M228 23q18-7 23 9l-5 5 8 8-9 5-4 12-13-6-12 3-2-12-7-8 9-6z"
             }
@@ -601,9 +612,22 @@ function Pippin({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           </g>
         )}
       </g>
+      {folded && (
+        <g
+          className="moth-wrap"
+          fill="var(--wing)"
+          stroke="var(--pet-dark)"
+          strokeWidth="2"
+        >
+          <path d="M91 191Q162 203 162 278Q83 271 91 191Z" />
+          <path d="M229 191Q158 203 158 278Q237 271 229 191Z" />
+          <path d="M107 215l31 40m75-40l-31 40" strokeDasharray="4 5" />
+        </g>
+      )}
+      <CareSurface kind="pippin" care={care} level={level} sleeping={sleep} />
       <OutfitLayer kind="pippin" equipped={equipped} />
       <SpookyWear kind="pippin" level={level} />
-      <g className="face" transform={`translate(${look.x},${look.y})`}>
+      <g className={`face ${care && !sleep && level !== 5 ? "base-face-hidden" : ""}`} transform={`translate(${look.x},${look.y})`}>
         <Eyes
           level={level}
           sleep={sleep}
@@ -628,30 +652,21 @@ function Pippin({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           strokeLinecap="round"
         />
       </g>
-      {folded && (
-        <g
-          className="moth-wrap"
-          fill="var(--wing)"
-          stroke="var(--pet-dark)"
-          strokeWidth="2"
-        >
-          <path d="M91 191Q162 203 162 278Q83 271 91 191Z" />
-          <path d="M229 191Q158 203 158 278Q237 271 229 191Z" />
-          <path d="M107 215l31 40m75-40l-31 40" strokeDasharray="4 5" />
-        </g>
-      )}
+      <CareFace kind="pippin" care={care} level={level} sleeping={sleep} look={look} anticipating={anticipating} offsetY={0} />
+      {level !== 5 && <CareRecovery changes={recovering} />}
       {sleep && (
         <text x="242" y="88" fontSize="24" fill="#9e91b3">
           z z
         </text>
       )}
       {level === 5 && <Ghost />}
+      </CareBody>
     </svg>
   );
 }
-function Crumb({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
+function Crumb({ level, sleep, sad, look, equipped, anticipating, care, recovering = [] }: ArtProps) {
   const texture = useId(),
-    curl = sleep || level === 1;
+    curl = sleep || level === 1 || (!!care && careTier(care.happy) >= 2);
   return (
     <svg
       className={`pet-art ${curl ? "curled" : ""}`}
@@ -675,10 +690,11 @@ function Crumb({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           <feComposite in2="SourceAlpha" operator="in" />
         </filter>
       </defs>
+      <CareBody care={care} kind="crumb" level={level} sleeping={sleep}>
       <OutfitLayer kind="crumb" equipped={equipped} back />
       <g
         filter={`url(#${texture})`}
-        transform={curl ? "translate(0 37) scale(1 .87)" : undefined}
+        transform={curl && !care ? "translate(0 37) scale(1 .87)" : undefined}
       >
         <g fill="var(--pet-dark)">
           <ellipse cx="117" cy="287" rx="23" ry="16" />
@@ -696,7 +712,7 @@ function Crumb({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           stroke="var(--pet-dark)"
           strokeWidth="3"
         />
-        <ellipse cx="161" cy="243" rx="44" ry="36" fill="#ddc59c" />
+        <ellipse cx="161" cy="243" rx={44 * (1 - careTier(care?.food ?? 100) * .14)} ry={36 * (1 - careTier(care?.food ?? 100) * .07)} fill="#ddc59c" />
         <path
           d="M128 260q35 17 64-3"
           stroke="#af9276"
@@ -711,14 +727,14 @@ function Crumb({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
         >
           <path
             d={
-              level > 1 || sad
+              level > 1 || sad || (!!care && careTier(care.water) >= 2)
                 ? "M99 116Q50 114 66 165Q85 178 103 144Z"
                 : "M99 112Q58 65 53 116Q53 143 96 144Z"
             }
           />
           <path
             d={
-              level > 1 || sad
+              level > 1 || sad || (!!care && careTier(care.water) >= 2)
                 ? "M221 116Q270 114 254 165Q235 178 217 144Z"
                 : "M221 112Q262 65 267 116Q267 143 224 144Z"
             }
@@ -790,9 +806,10 @@ function Crumb({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
         )}
         <SpookyWear kind="crumb" level={level} />
       </g>
+      <CareSurface kind="crumb" care={care} level={level} sleeping={sleep} />
       <OutfitLayer kind="crumb" equipped={equipped} />
       <g
-        className="face"
+        className={`face ${care && !sleep && level !== 5 ? "base-face-hidden" : ""}`}
         transform={`translate(${look.x},${look.y + (curl ? 17 : 0)})`}
       >
         <Eyes level={level} sleep={sleep} sad={sad} x={122} gap={77} y={167} />
@@ -812,12 +829,15 @@ function Crumb({ level, sleep, sad, look, equipped, anticipating }: ArtProps) {
           strokeLinecap="round"
         />
       </g>
+      <CareFace kind="crumb" care={care} level={level} sleeping={sleep} look={look} anticipating={anticipating} offsetY={curl && !care ? 17 : 0} />
+      {level !== 5 && <CareRecovery changes={recovering} />}
       {sleep && (
         <text x="245" y="81" fontSize="24" fill="#a89980">
           z z
         </text>
       )}
       {level === 5 && <Ghost />}
+      </CareBody>
     </svg>
   );
 }
@@ -843,6 +863,7 @@ export function Pet({
   incoming,
   feeding,
   petRef,
+  care,
 }: {
   level: number;
   kind?: PetKind;
@@ -855,9 +876,22 @@ export function Pet({
   incoming?: IncomingFood | null;
   feeding?: Supply | null;
   petRef?: Ref<HTMLButtonElement>;
+  care?: Care;
 }) {
   const [look, setLook] = useState({ x: 0, y: 0 });
   const excited = !!incoming?.near && level !== 5;
+  const previousCare = useRef(care);
+  const [recovering, setRecovering] = useState<Category[]>([]);
+  useEffect(() => {
+    const previous = previousCare.current;
+    previousCare.current = care;
+    if (!care || !previous || level === 5) return;
+    const improved = (["food", "water", "clean", "happy"] as Category[]).filter(key => care[key] > previous[key]);
+    if (!improved.length) return;
+    setRecovering(improved);
+    const timer = window.setTimeout(() => setRecovering([]), 1800);
+    return () => window.clearTimeout(timer);
+  }, [care?.food, care?.water, care?.clean, care?.happy, level]);
   useEffect(() => {
     if (!incoming || level === 5 || preview) return;
     const el = document.querySelector(".room .pet-button");
@@ -870,6 +904,8 @@ export function Pet({
   }, [incoming, level, preview]);
   const sad = reaction.startsWith("−");
   const art = {
+    care: level === 5 ? undefined : care,
+    recovering,
     equipped,
     anticipating: excited,
     level,
@@ -981,7 +1017,7 @@ export function PetChoices({
     </fieldset>
   );
 }
-export function LifeGuide({ kind, actual }: { kind: PetKind; actual: number }) {
+export function LifeGuide({ kind, actual, realCare = excellentCare, equipped = {} }: { kind: PetKind; actual: number; realCare?: Care; equipped?: Equipped }) {
   const [selected, setSelected] = useState(actual);
   const details = [
     "Bright eyes, soft stitches, and a heart full of small adventures.",
@@ -1030,6 +1066,7 @@ export function LifeGuide({ kind, actual }: { kind: PetKind; actual: number }) {
           </button>
         ))}
       </div>
+      <CareGuide kind={kind} realCare={realCare} equipped={equipped} />
       <p className="fine">
         Completed tasks earn 5 coins. Buy food, water or soap, then use it for
         +15 care and +4 happiness. Missed tasks take up to 8 care. Missed-task

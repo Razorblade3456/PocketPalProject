@@ -200,8 +200,8 @@ export const due = (t: Task, n = Date.now()) => {
       (t.repeat === "selected" && t.days.includes(d.getDay())))
   );
 };
-export const stage = (s: Pick<State, "care" | "settings">) => {
-  const avg = categories.reduce((a, c) => a + s.care[c], 0) / 4;
+export const stageForCare = (care: Care, cozy = false) => {
+  const avg = categories.reduce((a, c) => a + care[c], 0) / 4;
   return avg > 70
     ? 0
     : avg > 50
@@ -210,10 +210,11 @@ export const stage = (s: Pick<State, "care" | "settings">) => {
         ? 2
         : avg > 15
           ? 3
-          : avg > 0 || s.settings.cozy
+          : avg > 0 || cozy
             ? 4
             : 5;
 };
+export const stage = (s: Pick<State, "care" | "settings">) => stageForCare(s.care, s.settings.cozy);
 export function outcomeFor(s: State, id: string, date: string) {
   return s.outcomes.find(
     (o) => o.taskId === id && o.date === date && !o.deleted,

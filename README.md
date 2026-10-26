@@ -132,3 +132,7 @@ Shop offers Essentials, Treats & Food, and Outfits & Accessories, illustrated wi
 Permanent clothing: Tiny Beanie 25, Bow Tie 15, Cozy Scarf 30, Little Backpack 40, Mushroom Hat 50, Soft Pajamas 60, Golden Crown 100, Zombie Costume 75 coins. Wardrobe previews your pet and supports equip/unequip. Head, neck, back and body slots combine; another item in the same slot replaces it. Species-specific layers move with pet animations. Clothing has no care effect and cannot be purchased twice.
 
 Inventory, outfit ownership, equipped items and transactions persist through refresh/export/import. Undoing income after spending retains purchases and used care; future earnings cover the shortfall before becoming spendable. Migration retains old progress without granting rewards twice.
+
+## Visual polish and local clock
+
+The Here & Now card displays your device-local time and date using your locale's 12/24-hour format. It refreshes each second and on focus or visibility changes, independently of the room theme. A dedicated component keeps clock updates isolated from game state. Navigation, task cards, need panels, boutique, dialogs, and inventory share refined spacing, rounded corners, restrained shadows, and day/night styling. Phone layouts preserve visible controls without horizontal overflow; reduced-motion preferences are respected.
