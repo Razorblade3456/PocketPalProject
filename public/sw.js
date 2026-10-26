@@ -1,4 +1,4 @@
-const CACHE = "pocketpal-shell-v2";
+const CACHE = "pocketpal-shell-v4";
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE).then(async (cache) => {

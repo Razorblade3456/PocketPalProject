@@ -18,6 +18,11 @@ import {
   revive,
   streak,
   BALANCE,
+  headPat,
+  buySupply,
+  useSupply,
+  petRhythm,
+  SUPPLIES,
   type State,
   type Task,
   type Care,
@@ -79,10 +84,11 @@ test("all six health stages remain available", () => {
     assert.equal(stage(s), expected);
   }
 });
-test("positive and negative give exactly +10 or -8 in the selected category", () => {
+test("positive earns 5 coins without direct care, while a miss applies -8", () => {
   const s = setup();
   const positive = complete(s, "a", now);
-  assert.equal(positive.care.water, 95);
+  assert.equal(positive.care.water, 85);
+  assert.equal(positive.coins, 5);
   assert.equal(positive.care.happy, 90);
   assert.equal(positive.completions.length, 1);
   const negative = setOutcome(s, "a", dateKey(now), "missed", now);
@@ -104,7 +110,15 @@ test("repeat clicks cannot stack rewards or penalties", () => {
 test("undo at the 100 cap restores the original value, rather than subtracting 10", () => {
   const s = setup();
   s.care.water = s.baseline.care.water = 97;
-  const a = complete(s, "a", now);
+  const recorded = complete(s, "a", now);
+  const a = parseState(
+    {
+      ...recorded,
+      version: 2,
+      outcomes: recorded.outcomes.map(({ rewardCare, rewardCoins, ...o }) => o),
+    },
+    now,
+  )!;
   assert.equal(a.care.water, 100);
   const b = setOutcome(a, "a", dateKey(now), "pending", now);
   assert.equal(b.care.water, 97);
@@ -119,7 +133,8 @@ test("both outcome switches reverse the original effect and preserve one occurre
   assert.equal(a.care.water, 77);
   assert.equal(a.completions.length, 0);
   a = complete(a, "a", now);
-  assert.equal(a.care.water, 95);
+  assert.equal(a.care.water, 85);
+  assert.equal(a.coins, 5);
   assert.equal(a.completions.length, 1);
   assert.equal(a.outcomes.length, 1);
   a = setOutcome(a, "a", dateKey(now), "pending", now);
@@ -130,6 +145,14 @@ test("multiple capped transactions replay correctly when an earlier one is undon
   s.tasks.push(task("b"));
   let a = complete(s, "a", now);
   a = complete(a, "b", now + 100);
+  a = parseState(
+    {
+      ...a,
+      version: 2,
+      outcomes: a.outcomes.map(({ rewardCare, rewardCoins, ...o }) => o),
+    },
+    now + 100,
+  )!;
   assert.equal(a.care.water, 100);
   a = setOutcome(a, "a", dateKey(now), "pending", now + 100);
   assert.equal(a.care.water, 95);
@@ -360,9 +383,11 @@ test("streaks, jar history and achievements remain derived from positive outcome
 test("same-millisecond transactions preserve action order through revive and correction", () => {
   let s = revive(setup(), now);
   s = complete(s, "a", now);
+  s = useSupply(buySupply(s, "water", now), "water", now);
   assert.equal(s.care.water, 100);
   s = setOutcome(s, "a", dateKey(now), "pending", now);
-  assert.equal(s.care.water, 90);
+  assert.equal(s.care.water, 100);
+  assert.equal(s.debt, 4);
   assert.deepEqual(reload(s).care, s.care);
 });
 test("missed-task floor is reversible without manufacturing care", () => {
@@ -385,4 +410,298 @@ test("a task undone today becomes an automatic miss at day end, but a past-day u
   s = decay(reload(s, tomorrow), tomorrow + hour);
   assert.equal(s.outcomes[0].status, "pending");
   assert.equal(s.outcomes.length, 1);
+});
+test("coins reverse on undo and switches, with no duplicate earnings after refresh", () => {
+  let s = complete(setup(), "a", now);
+  assert.equal(s.coins, 5);
+  s = reload(s);
+  s = complete(s, "a", now);
+  assert.equal(s.coins, 5);
+  s = setOutcome(s, "a", dateKey(now), "missed", now);
+  assert.equal(s.coins, 0);
+  assert.equal(s.debt, 0);
+  s = complete(s, "a", now);
+  assert.equal(s.coins, 5);
+  s = setOutcome(s, "a", dateKey(now), "pending", now);
+  assert.equal(s.coins, 0);
+});
+test("purchasing stocks inventory without improving care", () => {
+  const earned = complete(setup(), "a", now);
+  const s = buySupply(earned, "water", now);
+  assert.equal(s.coins, 1);
+  assert.equal(s.inventory.water, 1);
+  assert.deepEqual(s.care, earned.care);
+  assert.equal(s.completions.length, 1);
+  assert.deepEqual(reload(s), s);
+});
+test("each supply improves the correct need by 15 and happiness by 4", () => {
+  for (const item of ["food", "water", "soap"] as const) {
+    let s = setup(now, { food: 50, water: 50, clean: 50, happy: 50 });
+    s.tasks.push(task("b"));
+    s = complete(complete(s, "a", now), "b", now);
+    s = buySupply(s, item, now);
+    assert.equal(s.inventory[item], 1);
+    s = useSupply(s, item, now);
+    assert.equal(s.care[SUPPLIES[item].category], 65);
+    assert.equal(s.care.happy, 54);
+    assert.equal(s.inventory[item], 0);
+    for (const category of ["food", "water", "clean"] as const)
+      if (category !== SUPPLIES[item].category)
+        assert.equal(s.care[category], 50);
+    assert.ok(validState(s));
+  }
+});
+test("insufficient funds and empty inventory cannot create items, debt or care", () => {
+  let s = setup();
+  const before = JSON.stringify(s);
+  s = buySupply(s, "food", now);
+  s = useSupply(s, "water", now);
+  assert.equal(JSON.stringify(s), before);
+});
+test("using supplies caps care at 100 and cannot consume more than owned", () => {
+  let s = setup(now, { food: 99, water: 99, clean: 99, happy: 99 });
+  s = useSupply(buySupply(complete(s, "a", now), "food", now), "food", now);
+  assert.equal(s.care.food, 100);
+  assert.equal(s.care.happy, 100);
+  const events = s.careEvents.length;
+  s = useSupply(s, "food", now);
+  assert.equal(s.careEvents.length, events);
+  assert.equal(s.inventory.food, 0);
+});
+test("undoing spent coins reserves a shortfall without erasing inventory or care", () => {
+  let s = buySupply(complete(setup(), "a", now), "food", now);
+  s = setOutcome(s, "a", dateKey(now), "pending", now);
+  assert.equal(s.coins, 0);
+  assert.equal(s.debt, 5);
+  assert.equal(s.inventory.food, 1);
+  s = useSupply(s, "food", now);
+  assert.equal(s.care.food, 100);
+  assert.equal(s.inventory.food, 0);
+  assert.equal(s.debt, 5);
+  s = complete(s, "a", now);
+  assert.equal(s.coins, 0);
+  assert.equal(s.debt, 0);
+  assert.equal(s.inventory.food, 0);
+  assert.equal(buySupply(s, "food", now).inventory.food, 0);
+});
+test("repeated outcome toggles cannot duplicate supplies or erase spent-coin reservations", () => {
+  let s = buySupply(complete(setup(), "a", now), "food", now);
+  for (let i = 0; i < 20; i++) {
+    s = setOutcome(s, "a", dateKey(now), "pending", now);
+    assert.equal(s.debt, 5);
+    s = complete(s, "a", now);
+    s = buySupply(s, "food", now);
+  }
+  assert.equal(s.inventory.food, 1);
+  assert.equal(s.coins, 0);
+  assert.equal(s.careEvents.filter((e) => e.kind === "buy").length, 1);
+});
+test("new earnings settle a reservation before new coins become spendable", () => {
+  let s = buySupply(complete(setup(), "a", now), "water", now);
+  s = setOutcome(s, "a", dateKey(now), "missed", now);
+  assert.equal(s.debt, 4);
+  s.tasks.push(task("b"));
+  s = complete(s, "b", now);
+  assert.equal(s.coins, 1);
+  assert.equal(s.debt, 0);
+  assert.equal(s.inventory.water, 1);
+  assert.deepEqual(reload(s), s);
+});
+test("past-date correction reverses currency without moving its jar ball into today", () => {
+  const tomorrow = +localDate(shiftDate(dateKey(now), 1));
+  let s = complete(setup(), "a", now);
+  s = buySupply(s, "water", now);
+  s = setOutcome(s, "a", dateKey(now), "pending", tomorrow);
+  assert.equal(s.coins, 0);
+  assert.equal(s.debt, 4);
+  assert.equal(s.completions.length, 0);
+  s = setOutcome(s, "a", dateKey(now), "completed", tomorrow);
+  assert.equal(s.coins, 1);
+  assert.equal(s.completions[0].date, dateKey(now));
+  assert.deepEqual(reload(s, tomorrow).inventory, s.inventory);
+});
+test("dead pets keep their supplies until revival", () => {
+  let s = buySupply(complete(setup(), "a", now), "water", now);
+  s = changeSettings(s, { cozy: false }, now);
+  s = decay(s, now + 20 * 86400000);
+  assert.equal(stage(s), 5);
+  const next = useSupply(s, "water", now + 20 * 86400000);
+  assert.equal(next.inventory.water, 1);
+  assert.equal(next.careEvents.length, s.careEvents.length);
+  assert.equal(revive(next, now + 20 * 86400000).inventory.water, 1);
+});
+test("sleep boundaries follow actual local time, independently of any theme setting", () => {
+  for (const [hours, minutes, expected] of [
+    [5, 59, true],
+    [6, 0, false],
+    [20, 59, false],
+    [21, 0, true],
+    [0, 0, true],
+  ] as const) {
+    const n = +new Date(2026, 9, 25, hours, minutes);
+    assert.equal(petRhythm(n).sleeping, expected);
+    for (const theme of ["day", "night", "auto"] as const) {
+      const s = changeSettings(initial(n), { theme }, n);
+      assert.equal(petRhythm(s.updated).sleeping, expected);
+    }
+  }
+  assert.equal(petRhythm(+new Date(2026, 9, 25, 19, 30)).calm, true);
+});
+test("migration from version 2 preserves existing capped care and grants one coin reward per old completion", () => {
+  const base = setup();
+  base.baseline.care.water = base.care.water = 97;
+  const entry = complete(base, "a", now);
+  const { coins, debt, inventory, ...old } = entry;
+  const v2 = {
+    ...old,
+    version: 2,
+    outcomes: entry.outcomes.map(({ rewardCare, rewardCoins, ...o }) => o),
+  };
+  let s = parseState(v2, now)!;
+  assert.equal(s.care.water, 100);
+  assert.equal(s.coins, 5);
+  assert.equal(s.pet, base.pet);
+  assert.deepEqual(reload(s).care, s.care);
+  s = setOutcome(s, "a", dateKey(now), "pending", now);
+  assert.equal(s.care.water, 97);
+  assert.equal(s.coins, 0);
+  assert.ok(validState(s));
+});
+test("backup validation rejects forged item names, duplicate transactions and impossible inventory use", () => {
+  const s = buySupply(complete(setup(), "a", now), "water", now);
+  const e = s.careEvents[0];
+  assert.equal(
+    validState({ ...s, careEvents: [{ ...e, item: "toString" }] }),
+    false,
+  );
+  assert.equal(validState({ ...s, careEvents: [e, e] }), false);
+  assert.equal(
+    validState({
+      ...s,
+      careEvents: [
+        {
+          kind: "use",
+          item: "water",
+          at: now,
+          sequence: e.sequence,
+          id: "bad",
+          boost: 15,
+          morale: 4,
+        },
+      ],
+    }),
+    false,
+  );
+  assert.equal(validState({ ...s, coins: -1 }), false);
+});
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { Pet } from "./Pets";
+test("all three pet drawings render every stage with unique late-stage damage and dead ghosts", () => {
+  for (const kind of ["mochi", "pippin", "crumb"] as const) {
+    for (let level = 0; level < 6; level++) {
+      const html = renderToStaticMarkup(
+        createElement(Pet, { kind, level, preview: true }),
+      );
+      assert.ok(html.includes("stage-" + level));
+      assert.equal(
+        html.includes('data-damage-species="' + kind + '"'),
+        level >= 3,
+      );
+      assert.equal(html.includes('class="ghost"'), level === 5);
+      assert.ok(html.includes("<svg"));
+    }
+  }
+});
+test("derived wallet caches cannot buy supplies without earned currency", () => {
+  const forged = { ...setup(), coins: 1000 };
+  const s = buySupply(forged, "food", now);
+  assert.equal(s.coins, 0);
+  assert.equal(s.inventory.food, 0);
+});
+test("head pats give only happiness and persist without changing wallet or inventory", () => {
+  let s = setup(now, { food: 50, water: 50, clean: 50, happy: 50 });
+  s = headPat(s, now);
+  assert.deepEqual(s.care, { food: 50, water: 50, clean: 50, happy: 53 });
+  assert.equal(s.coins, 0);
+  assert.equal(s.completions.length, 0);
+  assert.deepEqual(s.inventory, { food: 0, water: 0, soap: 0 });
+  assert.ok(validState(s));
+  assert.deepEqual(reload(s).care, s.care);
+});
+test("head pats cap at 100, avoid empty ledger entries and cannot revive dead pets", () => {
+  let s = setup(now, { food: 70, water: 70, clean: 70, happy: 99 });
+  s = headPat(s, now);
+  assert.equal(s.care.happy, 100);
+  const count = s.careEvents.length;
+  assert.equal(headPat(s, now).careEvents.length, count);
+  s = setup(now, { food: 0, water: 0, clean: 0, happy: 0 });
+  s.baseline.cozy = s.settings.cozy = false;
+  assert.equal(headPat(s, now).care.happy, 0);
+  assert.equal(headPat(s, now).careEvents.length, 0);
+});
+test("head-pat happiness survives task undo without granting food or water", () => {
+  let s = headPat(complete(setup(), "a", now), now);
+  s = setOutcome(s, "a", dateKey(now), "pending", now);
+  assert.equal(s.care.happy, 93);
+  assert.equal(s.care.water, 85);
+  assert.equal(s.care.food, 85);
+  assert.equal(s.coins, 0);
+});
+test("tired drawings keep open eyes for every species while awake", () => {
+  for (const kind of ["mochi", "pippin", "crumb"] as const) {
+    const html = renderToStaticMarkup(
+      createElement(Pet, { kind, level: 1, preview: true, sleep: false }),
+    );
+    assert.ok(
+      html.includes(
+        kind === "mochi" ? 'class="eyes"' : 'data-eye-state="open"',
+      ),
+    );
+    assert.equal(html.includes("z z"), false);
+  }
+});
+test("re-completing version-2 history grants coins without restoring old direct care", () => {
+  const old = complete(setup(), "a", now);
+  let s = parseState(
+    {
+      ...old,
+      version: 2,
+      outcomes: old.outcomes.map(({ rewardCare, rewardCoins, ...o }) => o),
+    },
+    now,
+  )!;
+  assert.equal(s.care.water, 95);
+  s = setOutcome(s, "a", dateKey(now), "pending", now);
+  assert.equal(s.care.water, 85);
+  s = complete(s, "a", now);
+  assert.equal(s.care.water, 85);
+  assert.equal(s.care.happy, 90);
+  assert.equal(s.coins, 5);
+});
+test("re-completing version-1 history never restores its old food, water or happiness reward", () => {
+  const source = setup();
+  let s = parseState(
+    {
+      ...source,
+      version: 1,
+      completions: [
+        {
+          taskId: "a",
+          name: "Old water",
+          category: "water",
+          at: now,
+          date: dateKey(now),
+        },
+      ],
+    },
+    now,
+  )!;
+  s = setOutcome(s, "a", dateKey(now), "pending", now);
+  const before = { ...s.care };
+  s = complete(s, "a", now);
+  assert.deepEqual(s.care, before);
+  assert.equal(s.coins, 5);
+  assert.ok(validState(s));
+  assert.deepEqual(reload(s).care, s.care);
 });

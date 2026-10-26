@@ -1,3 +1,4 @@
+import type { RewardSource } from "./Jar";
 import { Plus, Minus, Undo2 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -15,7 +16,7 @@ export function OutcomeControls({
 }: {
   status: OutcomeStatus;
   name: string;
-  onChange: (status: OutcomeStatus) => void;
+  onChange: (status: OutcomeStatus, source?: RewardSource) => void;
 }) {
   return (
     <div className="outcome-controls">
@@ -31,10 +32,16 @@ export function OutcomeControls({
           type="button"
           className="outcome-positive"
           aria-label={`Complete ${name}`}
-          title="I completed this task · +10 care"
+          title="I completed this task · +5 coins"
           aria-pressed={status === "completed"}
           disabled={status === "completed"}
-          onClick={() => onChange("completed")}
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            onChange("completed", {
+              x: r.left + r.width / 2,
+              y: r.top + r.height / 2,
+            });
+          }}
         >
           <Plus size={16} />
         </button>
@@ -68,7 +75,12 @@ export function OutcomeHistory({
   onChange,
 }: {
   s: State;
-  onChange: (t: Task, status: OutcomeStatus, date: string) => void;
+  onChange: (
+    t: Task,
+    status: OutcomeStatus,
+    date: string,
+    source?: RewardSource,
+  ) => void;
 }) {
   const days = [...new Set([...s.outcomes.map((o) => o.date), dateKey()])]
     .sort()
@@ -81,7 +93,8 @@ export function OutcomeHistory({
       <h3>Every day's little things</h3>
       <p className="fine">
         Correct a result anytime. Its original date stays the same, and care and
-        jar rewards are recalculated together.
+        jar rewards and coins are recalculated together. Bought supplies stay
+        yours; any spent-coin shortfall is reserved from future wins.
       </p>
       <label>
         Choose a day
@@ -116,7 +129,9 @@ export function OutcomeHistory({
           <OutcomeControls
             status={o.status}
             name={`${o.name} on ${selected}`}
-            onChange={(status) => onChange(o.task, status, selected)}
+            onChange={(status, source) =>
+              onChange(o.task, status, selected, source)
+            }
           />
         </article>
       ))}

@@ -23,9 +23,17 @@ import {
   Leaf,
   ChevronRight,
   Trophy,
+  Coins,
 } from "lucide-react";
 import {
   categories,
+  SUPPLIES,
+  buySupply,
+  useSupply,
+  headPat,
+  petRhythm,
+  occurrenceKey,
+  type Supply,
   labels,
   dateKey,
   load,
@@ -48,6 +56,9 @@ import {
 } from "./model";
 import { Pet, PetChoices, LifeGuide, stages, pets } from "./Pets";
 import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
+import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
+import { PetNeeds } from "./PetNeeds";
+import { Supplies } from "./Supplies";
 const icons = { food: Apple, water: Droplets, clean: Sparkles, happy: Heart };
 function tone(enabled: boolean, kind = 0) {
   if (!enabled) return;
@@ -72,43 +83,6 @@ function tone(enabled: boolean, kind = 0) {
     setTimeout(() => void ctx.close(), 700);
   } catch {}
 }
-function Jar({
-  balls,
-  small = false,
-}: {
-  balls: { category: Category; at: number; taskId?: string; date?: string }[];
-  small?: boolean;
-}) {
-  return (
-    <div className={`jar ${small ? "mini" : ""}`}>
-      <div className="jar-lid" />
-      <div className="jar-neck" />
-      <div className="jar-glass">
-        <div className="glass-shine" />
-        <div className="balls">
-          {balls.slice(-70).map((b, i) => (
-            <motion.span
-              key={
-                b.taskId ? JSON.stringify([b.taskId, b.date]) : b.at + "-" + i
-              }
-              className={`ball ${b.category}`}
-              initial={{ y: -190, scale: 0.7 }}
-              animate={{ y: 0, scale: 1 }}
-              transition={{
-                type: "spring",
-                bounce: 0.48,
-                duration: 1,
-                delay: small ? 0 : 0.06,
-              }}
-              style={{ transform: `rotate(${i * 29}deg)` }}
-            />
-          ))}
-        </div>
-        <span className="jar-label">little wins</span>
-      </div>
-    </div>
-  );
-}
 export default function App() {
   const [s, setS] = useState<State>(load);
   const [panel, setPanel] = useState<
@@ -117,6 +91,10 @@ export default function App() {
   const [edit, setEdit] = useState<Task | null | undefined>();
   const [message, setMessage] = useState("");
   const [reaction, setReaction] = useState("");
+  const [flights, setFlights] = useState<JarFlight[]>([]);
+  const [landed, setLanded] = useState<string>();
+  const [jarPulse, setJarPulse] = useState(0);
+  const jarRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(Date.now());
   const [storageError, setStorageError] = useState(false);
   const reminded = useRef(new Set<string>());
@@ -130,6 +108,7 @@ export default function App() {
       s.settings.theme === "night" ||
       (s.settings.theme === "auto" &&
         (new Date(now).getHours() < 7 || new Date(now).getHours() >= 19));
+  const rhythm = petRhythm(now);
   const todayTasks = s.tasks.filter((t) => due(t, now));
   const earned = s.completions.filter((c) => c.date === today);
   const done = todayTasks.filter((t) =>
@@ -202,10 +181,32 @@ export default function App() {
     setPanel(null);
     setEdit(undefined);
   };
-  const reward = (t: Task, status: OutcomeStatus, date = today) => {
+  const reward = (
+    t: Task,
+    status: OutcomeStatus,
+    date = today,
+    source?: RewardSource,
+  ) => {
     if ((outcomeFor(s, t.id, date)?.status || "pending") === status) return;
     const next = setOutcome(s, t.id, date, status);
     setS((p) => setOutcome(p, t.id, date, status));
+    const key = occurrenceKey(t.id, date);
+    setFlights((prev) => prev.filter((f) => f.key !== key));
+    if (status === "completed" && date === today && !panel) {
+      const origin = source || {
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      };
+      setFlights((prev) => [
+        ...prev,
+        {
+          key,
+          token: crypto.randomUUID(),
+          category: t.category,
+          source: origin,
+        },
+      ]);
+    }
     const difference =
       Math.round((next.care[t.category] - s.care[t.category]) * 10) / 10;
     const indicator =
@@ -218,7 +219,7 @@ export default function App() {
         ? "↶ care restored"
         : status === "missed"
           ? "−" + Math.abs(difference) + " " + labels[t.category]
-          : indicator,
+          : "+5 coins · a little win!",
     );
     tone(
       s.settings.sound,
@@ -226,14 +227,92 @@ export default function App() {
     );
     setMessage(
       status === "pending"
-        ? "Back to pending. Care and jar rewards restored."
+        ? next.debt > 0
+          ? `Back to pending. ${next.debt} coins reserved from future wins; supplies stay yours.`
+          : "Back to pending. Coins, care and jar rewards recalculated."
         : date !== today
-          ? "Past-day result corrected. Care and jar rewards recalculated."
+          ? next.debt > 0
+            ? `Past result corrected. ${next.debt} coins reserved from future wins.`
+            : "Past result corrected. Coins, care and jar rewards recalculated."
           : status === "completed"
-            ? indicator + " · A little win for you and your pal."
+            ? next.debt > 0
+              ? `+5 coins earned · ${next.debt} still reserved from future wins.`
+              : "+5 coins · A little win! Pick up a supply to care for your pal."
             : difference === 0
               ? "Miss recorded. Your daily care cushion softened the damage."
               : indicator + " · Tomorrow is another little beginning.",
+    );
+  };
+  const land = (flight: JarFlight) => {
+    setFlights((prev) => prev.filter((f) => f.token !== flight.token));
+    setLanded(flight.key);
+    setJarPulse((p) => p + 1);
+    tone(s.settings.sound, 0);
+  };
+  useEffect(() => {
+    setFlights((prev) => {
+      const next = prev.filter((f) =>
+        s.outcomes.some(
+          (o) =>
+            occurrenceKey(o.taskId, o.date) === f.key &&
+            o.status === "completed",
+        ),
+      );
+      return next.length === prev.length ? prev : next;
+    });
+  }, [s.outcomes]);
+  const purchase = (item: Supply) => {
+    const next = buySupply(s, item);
+    if (next.careEvents.length === s.careEvents.length) {
+      setMessage("A few more little wins will stock this shelf.");
+      return;
+    }
+    setS((p) => buySupply(p, item));
+    tone(s.settings.sound, 0);
+    setMessage(
+      SUPPLIES[item].name +
+        " tucked onto your shelf. Use it whenever your pal needs care.",
+    );
+  };
+  const pat = () => {
+    if (level === 5) return;
+    const next = headPat(s);
+    const gain = Math.max(
+      0,
+      Math.round((next.care.happy - s.care.happy) * 10) / 10,
+    );
+    setS((p) => headPat(p));
+    setReaction(gain ? "♥ +" + gain + " happiness" : "♥ happy as can be!");
+    tone(s.settings.sound, 2);
+  };
+  const careFor = (item: Supply) => {
+    const next = useSupply(s, item);
+    if (next.careEvents.length === s.careEvents.length) {
+      setMessage(
+        level === 5
+          ? "Revive your pal before using a supply."
+          : "Your shelf needs a refill first.",
+      );
+      return;
+    }
+    setS((p) => useSupply(p, item));
+    const v = SUPPLIES[item],
+      gain = Math.round((next.care[v.category] - s.care[v.category]) * 10) / 10;
+    setReaction(
+      { food: "🍎", water: "💧", soap: "✨" }[item] +
+        " +" +
+        Math.max(0, gain) +
+        " " +
+        labels[v.category],
+    );
+    tone(s.settings.sound, 1);
+    setMessage(
+      v.name +
+        " used · +" +
+        Math.max(0, gain) +
+        " " +
+        labels[v.category] +
+        " and a little happiness.",
     );
   };
   return (
@@ -249,6 +328,22 @@ export default function App() {
             PocketPal<span className="brand-dot">✦</span>
           </a>
           <nav>
+            <a
+              className="wallet"
+              href="#supplies"
+              aria-label={
+                "Wallet: " +
+                s.coins +
+                " coins" +
+                (s.debt ? ", " + s.debt + " reserved from future rewards" : "")
+              }
+              title="Complete little things to earn coins for care supplies"
+            >
+              <Coins size={16} />
+              <b>{s.coins}</b>
+              <span>coins</span>
+              {s.debt > 0 && <small>{s.debt} reserved</small>}
+            </a>
             <span className="date">
               {new Date(now).toLocaleDateString(undefined, {
                 weekday: "long",
@@ -302,7 +397,9 @@ export default function App() {
                   {done}/{todayTasks.length}
                 </span>
               </div>
-              <p className="section-note">Good for you. Good for your pal.</p>
+              <p className="section-note">
+                Finish tasks → +5 coins. Use supplies for care.
+              </p>
               <div className="task-list">
                 {todayTasks.length === 0 ? (
                   <div className="empty">
@@ -351,7 +448,9 @@ export default function App() {
                         <OutcomeControls
                           status={status}
                           name={t.name}
-                          onChange={(status) => reward(t, status)}
+                          onChange={(status, source) =>
+                            reward(t, status, today, source)
+                          }
                         />
                         <button
                           className="edit-button"
@@ -418,13 +517,10 @@ export default function App() {
                 <Pet
                   level={level}
                   kind={s.pet}
-                  sleep={night && level < 2}
+                  sleep={rhythm.sleeping && level < 3}
+                  calm={rhythm.calm}
                   reaction={reaction}
-                  onPet={() => {
-                    if (level === 5) return;
-                    setReaction("♥ little head pats");
-                    tone(s.settings.sound, 2);
-                  }}
+                  onPet={pat}
                 />
                 <div className="bowl food-bowl">•••</div>
                 <div className="bowl water-bowl">≈</div>
@@ -449,11 +545,30 @@ export default function App() {
                 </h2>
                 <span>
                   <i className={`status-dot stage-dot-${level}`} />
-                  {night && level < 2
+                  {rhythm.sleeping && level < 3
                     ? "Dreaming of little adventures"
-                    : stages[level]}
+                    : rhythm.calm && level < 2
+                      ? "Winding down for the evening"
+                      : stages[level]}
                 </span>
               </div>
+              <PetNeeds
+                s={s}
+                onPat={pat}
+                onSupplies={() =>
+                  document
+                    .getElementById("supplies")
+                    ?.scrollIntoView({
+                      behavior:
+                        s.settings.motion &&
+                        !window.matchMedia("(prefers-reduced-motion: reduce)")
+                          .matches
+                          ? "smooth"
+                          : "instant",
+                      block: "center",
+                    })
+                }
+              />
               {level === 5 && (
                 <div className="revive">
                   <p>Your little friend has run out of energy.</p>
@@ -493,7 +608,13 @@ export default function App() {
                 onClick={() => setPanel("rewards")}
                 aria-label="Inspect today's earned rewards"
               >
-                <Jar balls={earned} />
+                <Jar
+                  balls={earned}
+                  jarRef={jarRef}
+                  incoming={flights.map((f) => f.key)}
+                  landed={landed}
+                  pulse={jarPulse}
+                />
               </button>
               <div className="jar-progress">
                 <strong>
@@ -525,42 +646,9 @@ export default function App() {
                   );
                 })}
               </div>
+              <Supplies s={s} onBuy={purchase} onUse={careFor} />
             </section>
           </div>
-          <section className="care-section">
-            <div className="care-title">
-              <Heart size={18} />
-              <div>
-                <h2>A happy pal starts with a little care</h2>
-                <p>
-                  Your everyday moments keep {s.name || "your pal"} feeling
-                  lovely.
-                </p>
-              </div>
-            </div>
-            <div className="care-meters">
-              {categories.map((c) => {
-                const Icon = icons[c];
-                return (
-                  <div className="care-item" key={c}>
-                    <div>
-                      <span className={c}>
-                        <Icon size={16} />
-                        {labels[c]}
-                      </span>
-                      <b>
-                        {Math.round(s.care[c])}
-                        <small>/100</small>
-                      </b>
-                    </div>
-                    <div className={`meter ${c}`}>
-                      <span style={{ width: s.care[c] + "%" }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
           <footer>
             <span>Made of small moments & a little magic.</span>
             <button
@@ -580,6 +668,12 @@ export default function App() {
             closing.
           </div>
         )}
+        <RewardFlights
+          flights={flights}
+          jar={jarRef.current}
+          onLand={land}
+          enabled={s.settings.motion}
+        />
         <AnimatePresence>
           {message && (
             <motion.div
@@ -772,9 +866,11 @@ export default function App() {
                   </select>
                 </label>
                 <p className="fine">
-                  Time estimates start from full care after the first-day grace
-                  period. Every completed task restores care. Petting gives
-                  affection, without replacing your habits.
+                  Sleep follows your local clock: 9pm–6am. Theme changes only
+                  the room lighting. Time estimates start from full care after
+                  the first-day grace period. Tasks earn coins; using supplies
+                  restores care. Petting gives affection, without replacing your
+                  habits.
                 </p>
                 <div className="button-row">
                   <button

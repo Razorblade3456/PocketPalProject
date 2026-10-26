@@ -1,4 +1,23 @@
 export type Category = "food" | "water" | "clean" | "happy";
+export type Supply = "food" | "water" | "soap";
+export const SUPPLIES: Record<
+  Supply,
+  {
+    name: string;
+    price: number;
+    category: Category;
+    boost: number;
+    morale: number;
+  }
+> = {
+  food: { name: "Food", price: 5, category: "food", boost: 15, morale: 4 },
+  water: { name: "Water", price: 4, category: "water", boost: 15, morale: 4 },
+  soap: { name: "Soap", price: 6, category: "clean", boost: 15, morale: 4 },
+};
+export const petRhythm = (n = Date.now()) => {
+  const h = new Date(n).getHours();
+  return { sleeping: h >= 21 || h < 6, calm: h >= 19 && h < 21 };
+};
 export type PetKind = "mochi" | "pippin" | "crumb";
 export type OutcomeStatus = "pending" | "completed" | "missed";
 export type Care = Record<Category, number>;
@@ -26,6 +45,9 @@ export type Occurrence = Completion & {
   automatic: boolean;
   sequence: number;
   legacy?: boolean;
+  legacyRetired?: boolean;
+  rewardCare: number;
+  rewardCoins: number;
 };
 type Settings = {
   sound: boolean;
@@ -43,9 +65,30 @@ type CareEvent =
       cozy: boolean;
       sequence: number;
     }
-  | { kind: "revive"; at: number; sequence: number };
+  | { kind: "pat"; at: number; sequence: number }
+  | { kind: "revive"; at: number; sequence: number }
+  | {
+      kind: "buy";
+      id: string;
+      at: number;
+      sequence: number;
+      item: Supply;
+      cost: number;
+    }
+  | {
+      kind: "use";
+      id: string;
+      at: number;
+      sequence: number;
+      item: Supply;
+      boost: number;
+      morale: number;
+    };
 export type State = {
-  version: 2;
+  version: 3;
+  coins: number;
+  debt: number;
+  inventory: Record<Supply, number>;
   name: string;
   color: string;
   pet: PetKind;
@@ -63,7 +106,9 @@ export type State = {
   lastSequence: number;
 };
 export const BALANCE = {
-  completed: 10,
+  completed: 0,
+  completedCoins: 5,
+  headPat: 3,
   missed: 8,
   maxMissedPerCategoryPerDay: 16,
   maxMissedPerDay: 24,
@@ -95,7 +140,10 @@ export const occurrenceKey = (id: string, date: string) =>
 export function initial(n = Date.now()): State {
   const care = { food: 85, water: 85, clean: 90, happy: 90 };
   return {
-    version: 2,
+    version: 3,
+    coins: 0,
+    debt: 0,
+    inventory: { food: 0, water: 0, soap: 0 },
     lastSequence: 0,
     name: "",
     color: "sage",
@@ -183,10 +231,42 @@ function project(s: State, n: number): State {
     last = Math.max(last, at);
   };
   let recovered = false;
+  let spent = 0;
+  const inventory: Record<Supply, number> = { food: 0, water: 0, soap: 0 };
   for (const { at, event: e } of events) {
     if (at > n) continue;
     advance(at);
     if ("kind" in e) {
+      if (e.kind === "pat") {
+        const before = stage({ care, settings: { ...s.settings, cozy } });
+        care.happy = clamp(care.happy + BALANCE.headPat, cozy ? 5 : 0);
+        if (
+          before >= 3 &&
+          stage({ care, settings: { ...s.settings, cozy } }) < 3
+        )
+          recovered = true;
+        continue;
+      }
+      if (e.kind === "buy") {
+        spent += e.cost;
+        inventory[e.item]++;
+        continue;
+      }
+      if (e.kind === "use") {
+        if (inventory[e.item] > 0) {
+          const before = stage({ care, settings: { ...s.settings, cozy } });
+          inventory[e.item]--;
+          const category = SUPPLIES[e.item].category;
+          care[category] = clamp(care[category] + e.boost, cozy ? 5 : 0);
+          care.happy = clamp(care.happy + e.morale, cozy ? 5 : 0);
+          if (
+            before >= 3 &&
+            stage({ care, settings: { ...s.settings, cozy } }) < 3
+          )
+            recovered = true;
+        }
+        continue;
+      }
       if (e.kind === "revive")
         care = { food: 90, water: 90, clean: 90, happy: 90 };
       else {
@@ -198,7 +278,7 @@ function project(s: State, n: number): State {
     }
     const before = stage({ care, settings: { ...s.settings, cozy } });
     let amount = 0;
-    if (e.status === "completed") amount = BALANCE.completed;
+    if (e.status === "completed") amount = e.rewardCare;
     if (e.status === "missed") {
       const ck = e.date + ":" + e.category,
         dk = e.date;
@@ -216,7 +296,7 @@ function project(s: State, n: number): State {
     }
     // Legacy care is already in the checkpoint; retain it until the old result is corrected.
     if (e.legacy) {
-      if (e.status === "completed") continue;
+      if (e.status === "completed" && !e.legacyRetired) continue;
       amount -= 28;
       if (e.category !== "happy")
         care.happy = clamp(care.happy - 5, cozy ? 5 : 1);
@@ -258,12 +338,31 @@ function project(s: State, n: number): State {
     ...s,
     updated: Math.max(n, s.updated),
     care,
+    coins: Math.max(
+      0,
+      s.outcomes
+        .filter((o) => o.status === "completed")
+        .reduce((sum, o) => sum + o.rewardCoins, 0) - spent,
+    ),
+    debt: Math.max(
+      0,
+      spent -
+        s.outcomes
+          .filter((o) => o.status === "completed")
+          .reduce((sum, o) => sum + o.rewardCoins, 0),
+    ),
+    inventory,
     completions,
     achievements: [...achievements],
   };
 }
 /** Settle each local calendar day once, including DST and multi-day absences. */
 export function decay(s: State, n = Date.now()): State {
+  if ((s.version as number) !== 3) {
+    const upgraded = parseState(s, n);
+    if (!upgraded) throw Error("This save could not be upgraded safely.");
+    return upgraded;
+  }
   const today = dateKey(n),
     outcomes = [...s.outcomes],
     known = new Map(
@@ -290,6 +389,8 @@ export function decay(s: State, n = Date.now()): State {
           automatic: true,
           at: endOfDay(day),
           sequence: ++lastSequence,
+          rewardCare: 0,
+          rewardCoins: BALANCE.completedCoins,
         };
       }
       if (existing === undefined && due(task, +localDate(day))) {
@@ -303,6 +404,8 @@ export function decay(s: State, n = Date.now()): State {
           task: { ...task, days: [...task.days] },
           automatic: true,
           sequence: ++lastSequence,
+          rewardCare: 0,
+          rewardCoins: BALANCE.completedCoins,
         });
         known.set(key, outcomes.length - 1);
       }
@@ -333,7 +436,13 @@ export function setOutcome(
   )
     return s;
   const outcome: Occurrence = old
-    ? { ...old, status, automatic: false }
+    ? {
+        ...old,
+        status,
+        automatic: false,
+        rewardCare: status === "completed" ? 0 : old.rewardCare,
+        ...(old.legacy ? { legacyRetired: true } : {}),
+      }
     : {
         taskId: id,
         name: task.name,
@@ -344,6 +453,8 @@ export function setOutcome(
         task: { ...task, days: [...task.days] },
         automatic: false,
         sequence: s.lastSequence + 1,
+        rewardCare: 0,
+        rewardCoins: BALANCE.completedCoins,
       };
   return project(
     {
@@ -412,6 +523,68 @@ export function revive(s: State, n = Date.now()): State {
       careEvents: [
         ...s.careEvents,
         { kind: "revive", at: n, sequence: s.lastSequence + 1 },
+      ],
+    },
+    n,
+  );
+}
+export function headPat(s: State, n = Date.now()): State {
+  s = decay(s, n);
+  if (stage(s) === 5 || s.care.happy >= 100) return s;
+  return project(
+    {
+      ...s,
+      lastSequence: s.lastSequence + 1,
+      careEvents: [
+        ...s.careEvents,
+        { kind: "pat", at: n, sequence: s.lastSequence + 1 },
+      ],
+    },
+    n,
+  );
+}
+export function buySupply(s: State, item: Supply, n = Date.now()): State {
+  s = decay(s, n);
+  const supply = SUPPLIES[item];
+  if (!supply || s.coins < supply.price) return s;
+  return project(
+    {
+      ...s,
+      lastSequence: s.lastSequence + 1,
+      careEvents: [
+        ...s.careEvents,
+        {
+          kind: "buy",
+          id: crypto.randomUUID(),
+          item,
+          cost: supply.price,
+          at: n,
+          sequence: s.lastSequence + 1,
+        },
+      ],
+    },
+    n,
+  );
+}
+export function useSupply(s: State, item: Supply, n = Date.now()): State {
+  s = decay(s, n);
+  const supply = SUPPLIES[item];
+  if (!supply || s.inventory[item] < 1 || stage(s) === 5) return s;
+  return project(
+    {
+      ...s,
+      lastSequence: s.lastSequence + 1,
+      careEvents: [
+        ...s.careEvents,
+        {
+          kind: "use",
+          id: crypto.randomUUID(),
+          item,
+          boost: supply.boost,
+          morale: supply.morale,
+          at: n,
+          sequence: s.lastSequence + 1,
+        },
       ],
     },
     n,
@@ -486,11 +659,11 @@ function commonValid(x: unknown): boolean {
     )
   );
 }
-export function validState(x: unknown): x is State {
+function validModel(x: unknown, version: number): x is State {
   if (!commonValid(x)) return false;
   const s = x as State;
   return (
-    s.version === 2 &&
+    (s.version as number) === version &&
     Number.isSafeInteger(s.lastSequence) &&
     s.lastSequence >= 0 &&
     ["mochi", "pippin", "crumb"].includes(s.pet) &&
@@ -510,6 +683,23 @@ export function validState(x: unknown): x is State {
         Number.isFinite(e.at) &&
         e.at >= s.baseline.at &&
         (e.kind === "revive" ||
+          (version === 3 && e.kind === "pat") ||
+          (version === 3 &&
+            ((e.kind === "buy" &&
+              typeof e.id === "string" &&
+              (["food", "water", "soap"] as Supply[]).includes(e.item) &&
+              Number.isSafeInteger(e.cost) &&
+              e.cost > 0 &&
+              e.cost <= 1000) ||
+              (e.kind === "use" &&
+                typeof e.id === "string" &&
+                !!SUPPLIES[e.item] &&
+                Number.isFinite(e.boost) &&
+                e.boost >= 0 &&
+                e.boost <= 100 &&
+                Number.isFinite(e.morale) &&
+                e.morale >= 0 &&
+                e.morale <= 100))) ||
           (e.kind === "settings" &&
             [0.5, 1, 2].includes(e.speed) &&
             typeof e.cozy === "boolean")),
@@ -530,13 +720,69 @@ export function validState(x: unknown): x is State {
         o.taskId === o.task.id &&
         ["pending", "completed", "missed"].includes(o.status) &&
         typeof o.automatic === "boolean" &&
-        (o.legacy === undefined || typeof o.legacy === "boolean"),
+        (version === 2 ||
+          (Number.isFinite(o.rewardCare) &&
+            o.rewardCare >= 0 &&
+            o.rewardCare <= 28 &&
+            Number.isSafeInteger(o.rewardCoins) &&
+            o.rewardCoins >= 0 &&
+            o.rewardCoins <= 5)) &&
+        (o.legacy === undefined || typeof o.legacy === "boolean") &&
+        (o.legacyRetired === undefined || typeof o.legacyRetired === "boolean"),
     ) &&
     new Set(s.outcomes.map((o) => occurrenceKey(o.taskId, o.date))).size ===
       s.outcomes.length
   );
 }
+export function validState(x: unknown): x is State {
+  if (!validModel(x, 3)) return false;
+  const s = x as State;
+  if (
+    !Number.isSafeInteger(s.coins) ||
+    s.coins < 0 ||
+    !Number.isSafeInteger(s.debt) ||
+    s.debt < 0 ||
+    !s.inventory ||
+    !(["food", "water", "soap"] as Supply[]).every(
+      (i) => Number.isSafeInteger(s.inventory[i]) && s.inventory[i] >= 0,
+    )
+  )
+    return false;
+  const inventory: Record<Supply, number> = { food: 0, water: 0, soap: 0 };
+  const ids = new Set<string>();
+  const sequences = [
+    ...s.outcomes.map((o) => o.sequence),
+    ...s.careEvents.map((e) => e.sequence),
+  ];
+  if (new Set(sequences).size !== sequences.length) return false;
+  for (const e of [...s.careEvents].sort(
+    (a, b) => a.at - b.at || a.sequence - b.sequence,
+  )) {
+    if (e.kind !== "buy" && e.kind !== "use") continue;
+    if (ids.has(e.id)) return false;
+    ids.add(e.id);
+    inventory[e.item] += e.kind === "buy" ? 1 : -1;
+    if (inventory[e.item] < 0) return false;
+  }
+  return true;
+}
 export function parseState(x: unknown, n = Date.now()): State | null {
+  if (validModel(x, 2)) {
+    const old = x as State;
+    const upgraded: State = {
+      ...old,
+      version: 3,
+      coins: 0,
+      debt: 0,
+      inventory: { food: 0, water: 0, soap: 0 },
+      outcomes: old.outcomes.map((o) => ({
+        ...o,
+        rewardCare: o.status === "completed" ? 10 : 0,
+        rewardCoins: BALANCE.completedCoins,
+      })),
+    };
+    return decay(upgraded, n);
+  }
   if (validState(x)) return decay(x, n);
   if (!commonValid(x) || (x as { version: number }).version !== 1) return null;
   const old = x as Omit<State, "version"> & { version: number };
@@ -545,6 +791,8 @@ export function parseState(x: unknown, n = Date.now()): State | null {
   const tasks = old.tasks.map((t) => ({ ...t, createdAt: n }));
   const outcomes: Occurrence[] = old.completions.map((c, i) => ({
     sequence: i + 1,
+    rewardCare: 0,
+    rewardCoins: BALANCE.completedCoins,
     ...c,
     status: "completed",
     automatic: false,
@@ -605,8 +853,8 @@ export function load(): State {
       const s = parseState(parsed);
       if (s) {
         if (
-          parsed.version === 1 &&
-          !localStorage.getItem("pocketpal-before-outcomes")
+          parsed.version < 3 &&
+          !localStorage.getItem("pocketpal-before-supplies")
         ) {
           try {
             localStorage.setItem("pocketpal-before-outcomes", raw);

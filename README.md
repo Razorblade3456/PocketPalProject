@@ -1,17 +1,17 @@
 # PocketPal
 
-A handmade habit companion built with React, TypeScript, Vite, Tailwind CSS, Motion and Lucide. The existing room, typography, pastel layout and glass jar are preserved. All three creatures use original code-driven SVG artwork; no assets or backend services are required.
+A cozy local-first habit companion built with React, TypeScript, Vite, Tailwind CSS, Motion and Lucide. The original handcrafted room, pastel layout, typography and glass jar are preserved. All artwork and soft sounds are generated in code; there are no external assets, accounts, paid services or backend requirements.
 
-## Run
+## Run and check
 
-Requires Node.js 22 or newer. Dependencies are already installed in the project.
+Requires Node.js 22 or newer. Dependencies are already installed in this project.
 
 ```sh
 npm install
 npm run dev
 ```
 
-Open the local address printed by Vite. Checks and production build:
+Open the local address printed by Vite. Production and verification:
 
 ```sh
 npm test
@@ -19,62 +19,92 @@ npm run build
 npm run preview
 ```
 
-Deploy `dist/` to any static host. Automatic night runs from 7pm to 7am in the device's local timezone. Sound starts muted; reduced-motion preferences are respected.
+Deploy the generated `dist/` directory to any static host. Production builds cache the app shell and assets with a service worker for offline return visits after the first successful load. Development does not register that worker. HTTPS or localhost is required for service workers and browser notifications.
 
-## Three companions
+## Pet health at a glance
 
-Choose a companion during onboarding or in Settings, without resetting your name, care or history:
+Overall health and all four needs now sit directly beneath the pet. Food, Water and Cleanliness point to the corresponding supply; Happiness points to head pats. Tap the pet or use **Head pat +3 joy** to restore happiness. The overall health bar is the average of all four needs, matching the lifecycle stage calculation. Tired pets keep their eyes open while awake; actual nighttime sleep still closes them.
 
-- **Mochi:** the original green felt monster, with pointed ears, a round belly and cheerful bounces. Neglect droops its ears, loosens stitches, and tears its cloth.
-- **Pippin:** a cream and lavender felt moth with fuzzy antennae, sleepy eyes and little wings. It floats happily, wraps its wings when hurt, and develops sagging antennae and ragged wings as care falls.
-- **Crumb:** a caramel woodland mushroom-bear with floppy ears, a stitched belly and triangular nose. It wiggles when excited, curls when sleepy, and develops a faded, torn cap and drooping ears.
+## The care loop
 
-The **Pet health & life stages** button opens an illustrated guide. Select any of the six stages to inspect your chosen creature. Previewing never changes care, tasks or progress. Dead pets have still bodies and X eyes; only their little ghost moves.
+**Complete a real-life task → earn 5 coins → watch a ball fly into the jar → buy a supply → use it on your pal.**
 
-## Task outcomes and corrections
+Each task card retains its small sage **+**, dusty coral **−**, undo arrow and edit icon. Completing a newly recorded occurrence gives exactly 5 coins and one colored jar ball; it does not directly feed, hydrate or clean the pet. The ball travels from the clicked control to the jar's mouth, then drops into its slot, bounces and settles while the jar wobbles. The lid briefly lifts. Existing balls do not replay entry animations after refresh. Undo removes the occurrence's ball, including one still in flight. Overlapping completions have independent flights. Scrolling or resizing ends an interrupted flight at its real jar slot. Animation-off and system reduced-motion settings settle rewards immediately.
 
-Each card has sage **+** (completed), dusty coral **−** (missed), an undo arrow, and an edit icon. Statuses are Pending, Completed and Missed. A completion gives **+10** to the task's care category and one jar ball. A miss takes **up to 8** from that category and adds no ball. Floating indicators show the actual stat change, including caps. Petting is affection rather than a care reward.
+The small wallet in the top bar links to the supply shelf below the jar. Buying an item stocks it without applying care. Click **Use** to consume one:
 
-Undo returns a task occurrence to pending. Switching outcomes replaces its result rather than applying a second transaction. The jar, count and care recompute together. Health replays from an immutable checkpoint so a reward that hit 100 can be undone accurately. Care-setting changes and revivals are timestamped and ordered, including actions in the same millisecond. Historical outcomes retain their original task name, category and local date, even after the task is edited or deleted.
+| Supply | Price   | Effect when used              |
+| ------ | ------- | ----------------------------- |
+| Food   | 5 coins | +15 Nourishment, +4 Happiness |
+| Water  | 4 coins | +15 Hydration, +4 Happiness   |
+| Soap   | 6 coins | +15 Cleanliness, +4 Happiness |
 
-Open **Your little history → Every day's little things** to choose a date and correct completed, manually missed, automatically missed, or undone occurrences. An undone past occurrence stays pending; reopening does not automatically penalize it again. Achievements already earned remain unlocked, while streaks and jar counts follow the current positive results.
+Care stays between 0 and 100. Items cannot be used without inventory; purchases cannot exceed available coins. Dead pets keep their supplies until revived. Head pats give +3 Happiness, capped at 100. They never restore Food, Water or Cleanliness.
 
-## Scheduling and automatic misses
+### Undo after spending
 
-Daily, weekly (on the starting weekday), selected-weekday and one-time schedules all use local calendar dates. Tasks still pending when their assigned day ends become missed during the next reconciliation, which runs on opening, focus and every 30 seconds while open. It also runs before schedule edits or deletions so past occurrences retain their old schedules. Multiple absent days are reconciled once. Dates advance by calendar day, including daylight-saving transitions. New tasks cannot be penalized for dates before their creation, even if their starting date is backdated.
+Task outcomes remain reversible from their cards and dated history. Currency is derived from currently completed occurrences minus purchase costs, so repeated clicking, switching, refreshing or undoing cannot stack rewards.
 
-No process runs while the browser is closed. On return, timestamps settle missed occurrences and passive care consistently. Reminders operate only while the app is open. Browser notifications require permission and HTTPS or localhost and cannot reliably arrive while closed.
+If awarded coins have already been spent, undo keeps bought supplies and previously applied item care intact. The wallet displays zero spendable coins and a small **reserved** amount. Future earnings settle that shortfall before becoming spendable. For example: earn 5, buy Food for 5, undo the task → 0 available and 5 reserved; re-complete the same task → the reservation clears, with no extra coins or duplicated Food. The shelf explains this whenever a reservation exists. Missed outcomes award no coins or balls and retain their negative care effects.
 
-## Health balance
+## Pet time and atmosphere
 
-All tuning values are exported as `BALANCE` in `src/model.ts`:
+The day/night button changes only the room's visual theme: colors, lighting, sun/moon and stars. Settings offer automatic appearance (day from 7am to 7pm) or a fixed day/night look.
 
-- Completion: +10 to the associated care meter; miss: up to −8.
-- Missed-task damage: maximum **16 per care category per local day**, **24 total per local day**, distributed deterministically in occurrence order. Correcting an outcome also recomputes this cushion.
-- A missed-task penalty cannot reduce a living, non-cozy meter below 1. Passive decay may eventually reach zero. One missed task alone cannot kill a pet.
-- New users receive a 24-hour passive-decay grace period. At normal speed, food/happiness decay .85/hour, water 1.1/hour and cleanliness .65/hour. Speed settings are .5×, 1× and 2×. Missed-task effects remain fixed; they are capped separately from passive decay.
-- The four-meter average determines Healthy >70, Tired >50, Unwell >30, Zombie-like >15, Critical >0, Dead at 0. Cozy mode defaults on and floors care at 5, preventing death.
-- Revival sets every meter to 90 without deleting task history or rewards. Later correction of an occurrence before that revival keeps the historical correction, while the revival still resets subsequent care.
+The pet follows the **actual local clock**, independently of that setting:
 
-## Saving and migration
+- **6:00am–8:59pm:** awake; the evening from 7pm is calmer.
+- **9:00pm–5:59am:** sleepy/sleeping. Severely unwell pets retain their health-warning expressions.
 
-Data stays in localStorage under the existing `pocketpal-v1` key. The value now uses schema version 2, with one authoritative record per `(task ID, local date)`, task snapshots, a care checkpoint, and timestamped care-setting/revival events. Completion records are derived from positive outcomes. Refreshes do not stack effects.
+Health can also make a tired pal look sleepy during the day. Toggling the visual theme never changes the sleep schedule. The app refreshes clock and care on focus and every 30 seconds while open.
 
-Original version-1 saves and backups migrate automatically. Name, tasks, care, completed jars, settings and achievements are retained, and the original raw save is kept under `pocketpal-before-outcomes` when storage allows. Existing pals initially retain Mochi's shape. Automatic missed-task accounting begins on the upgrade day: old unrecorded days do not receive surprise penalties.
+## Three handmade companions
 
-Old saves recorded only final care values, not the actual clamped effect of each old reward. They therefore seed the care checkpoint rather than replaying old rewards. Correcting one of those legacy completions reverses its former nominal reward (+28 category and +5 happiness, or +28 happiness) at the migration checkpoint; returning it to completed restores that checkpoint contribution. Exact replay, including cap-aware undo, applies to all outcomes recorded by this update.
+Choose a companion during onboarding or in Settings without resetting your custom name, care or history:
 
-Export a JSON backup through Settings. Import validates structure, dates and unique occurrence keys, then asks before replacing data. Storage is browser- and device-specific, and clearing site data erases it. The app shows a warning if saving fails. No user data leaves the browser.
+- **Mochi:** the original green monster with pointed ears and a round belly. Later stages show drooping ears, scratched cloth, loose threads, exposed pink lining and small dusty-red blood accents.
+- **Pippin:** a cream/lavender felt moth with fuzzy antennae and tiny wings. It floats happily, wraps its wings when hurt or asleep, and develops ragged wing edges, damaged lining and dangling antenna stitches.
+- **Crumb:** a caramel mushroom-bear with floppy ears and a triangular nose. It wiggles when excited, curls when sleepy, and develops a torn mushroom cap, exposed inner fabric and little blood accents.
 
-Production builds cache the app shell and its assets with a service worker for offline return visits after the first successful load. Development builds do not register it. A first visit still requires a connection; service workers require HTTPS or localhost.
+Damage is stylized cute-spooky cloth damage, not realistic gore. Zombie-like and Critical stages change anatomy and expression as well as color. Critical movement is weak and slouched. Dead pets are fully desaturated, with X eyes and still bodies; only their little ghost floats.
+
+**Pet health & life stages** opens an illustrated six-stage care guide. Selecting a stage is preview-only and never changes real health, tasks, coins or inventory.
+
+## Schedules, missed tasks and health
+
+Daily, weekly (on the starting weekday), selected-day and one-time tasks use local calendar dates. Tasks still pending when their assigned day ends become missed during the next reconciliation. Reconciliation runs on opening, focus, every 30 seconds, and before task edits/deletions. It processes multiple absent days once and preserves task snapshots and historical dates. New tasks cannot be missed before creation, even if backdated. Calendar arithmetic respects daylight-saving transitions.
+
+A task undone today is pending and may become automatically missed at that day's end. An already settled past occurrence undone through history stays pending; reopening does not apply its penalty again. Editing or deleting a task does not erase existing results.
+
+Balance values are exported as `BALANCE` and `SUPPLIES` in `src/model.ts`:
+
+- New completions: 5 coins, zero direct care. Item use: +15 to its need and +4 Happiness.
+- Miss: up to −8 to the task's care category. Total missed-task damage is capped at 16 per category and 24 overall per local day, in deterministic occurrence order. Corrections recompute the cushion too.
+- A miss cannot reduce a living non-cozy meter below 1; passive decay can eventually reach zero. A single miss alone cannot kill a pal.
+- New-user passive-decay grace: 24 hours. Normal decay per hour: Food/Happiness .85, Water 1.1, Cleanliness .65. Speed settings are .5×, 1× and 2×. Missed-task damage is capped separately from passive decay.
+- Average care selects Healthy >70, Tired >50, Unwell >30, Zombie-like >15, Critical >0, Dead at 0. Cozy mode defaults on and floors care at 5, preventing death.
+- Revival restores care to 90 without deleting jars, achievements, coins or inventory. Already earned achievements remain unlocked; streaks and jar totals follow corrected positive outcomes.
+
+No code runs while the browser is closed. On return, elapsed timestamps reconcile care and missed tasks. In-app reminders and browser notifications require the app to remain open; there is no backend push service. Notifications also require permission. Sound starts muted and can be enabled with a user interaction.
+
+## Persistence and upgrades
+
+Data remains under the existing localStorage key `pocketpal-v1`, now using **schema version 3**. One outcome per `(task ID, local date)` is authoritative. The model replays care from an immutable checkpoint with timestamped, sequence-ordered settings, revival, purchase and item-use events. Wallet and inventory caches are re-derived from those records. This keeps capped health, duplicate prevention and corrections consistent across refreshes.
+
+Version-1 and version-2 saves/backups migrate automatically. Existing pet name/type, care, schedules, history, settings and achievements are retained. Existing completed occurrences receive a single 5-coin grant for the new shop; refreshing cannot award it again. Historical version-2 completed occurrences retain their already-recorded care until corrected. Re-completing a corrected occurrence awards coins only, including old saves; it does not restore a former direct-care reward. New occurrences, and formerly pending or missed occurrences completed after upgrading, use the coin-only care loop. Version-1 saves did not record per-reward clamping, so correcting those very old completions still reverses their original nominal care contribution at the migration checkpoint. Automatic missed-task accounting does not invent penalties for unrecorded pre-version-2 days.
+
+The original raw save is backed up under `pocketpal-before-supplies` when storage allows. Export JSON through Settings; imports validate schema, unique occurrence/transaction IDs, item names and inventory chronology before asking to replace data. Unreadable saves show a recovery screen rather than being overwritten. Failed saving displays a warning. Browser storage is device/browser-specific and can be erased by clearing site data; keep exports for important progress. No user data leaves the browser.
 
 ## Source and verification
 
-- `src/model.ts`: schedules, automatic settlement, outcome transactions, health replay, validation and migration.
-- `src/Pets.tsx`: original pet drawings, species reactions, selector and preview-only care guide.
-- `src/TaskOutcomes.tsx`: shared +/−/undo controls and dated history corrections.
-- `src/App.tsx`: existing room, jar, onboarding, task editor, settings and integration.
-- `src/style.css`: existing handcrafted design plus compact outcome controls and species styling.
-- `src/model.test.ts`: behavioral checks for reward caps, undo/switching, duplicate clicks, missed days, creation dates, historical snapshots, settings, revival, DST and migration.
+- `src/model.ts`: schedules, health and economy replay, automatic misses, supply transactions, sleep-time helper, save validation and migration.
+- `src/Jar.tsx`: existing jar artwork plus source-to-jar reward flights, landing bounce and wobble.
+- `src/Supplies.tsx`: compact shop/inventory shelf and coin-reservation explanation.
+- `src/PetNeeds.tsx`: overall health and clearly labeled needs beside the pet, supply guidance and head-pat action.
+- `src/Pets.tsx`: three original pet drawings, species-specific spooky details, reactions and preview guide.
+- `src/TaskOutcomes.tsx`: shared outcome controls and history corrections.
+- `src/App.tsx`: existing room, layout, onboarding, settings and integration.
+- `src/model.test.ts`: 46 behavioral/rendering checks covering schedules, offline elapsed time, missed days, caps, corrections, coins, purchases, item use, exploit prevention, migration, all 18 pet-stage drawings and real-time sleep boundaries. Additional checks cover head-pat happiness, tired open-eye drawings and legacy coin-only corrections.
 
-Run tests in your local timezone, or set `TZ=America/Los_Angeles` before launching the test command to explicitly exercise the DST transition cases.
+Browser QA covers desktop/mobile layouts, source-to-jar flight and landing, coin gain, purchase versus use behavior, corrections after spending, refresh, theme/sleep separation, and disabled animations. Run tests with `TZ=America/Los_Angeles` to explicitly exercise that timezone's daylight-saving dates.
+
