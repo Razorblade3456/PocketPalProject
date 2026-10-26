@@ -1,0 +1,805 @@
+import { useId, useState } from "react";
+import { motion } from "motion/react";
+import type { PetKind } from "./model";
+export const stages = [
+  "Healthy",
+  "Tired",
+  "Unwell",
+  "Zombie-like",
+  "Critical",
+  "Dead",
+];
+export const pets: Record<PetKind, { name: string; description: string }> = {
+  mochi: { name: "Mochi", description: "Cheerful little felt monster" },
+  pippin: { name: "Pippin", description: "Shy, sleepy & affectionate" },
+  crumb: { name: "Crumb", description: "Curious, clumsy & always hungry" },
+};
+type ArtProps = {
+  level: number;
+  sleep: boolean;
+  sad: boolean;
+  look: { x: number; y: number };
+};
+function Mochi({ level, sleep, sad, look }: ArtProps) {
+  const texture = useId(),
+    belly = useId();
+  return (
+    <svg
+      className="pet-art"
+      viewBox="0 0 320 340"
+      role="img"
+      aria-label={`Original stitched monster, ${stages[level]}`}
+    >
+      <defs>
+        <filter id={texture}>
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency=".6"
+            numOctaves="3"
+            seed="8"
+          />
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope=".16" />
+          </feComponentTransfer>
+          <feBlend in="SourceGraphic" mode="multiply" />
+          <feComposite in2="SourceAlpha" operator="in" />
+        </filter>
+        <radialGradient id={belly}>
+          <stop stopColor="#f1ecd2" />
+          <stop offset="1" stopColor="#ddd8b3" />
+        </radialGradient>
+      </defs>
+      <g className="pet-body" filter={`url(#${texture})`}>
+        <path
+          d="M83 258 Q55 280 70 304 Q91 320 112 292L121 265M207 264L211 296Q236 315 251 296Q258 280 233 257"
+          fill="var(--pet-dark)"
+        />
+        <path
+          d="M76 160Q35 158 40 208Q46 224 67 207L89 188M241 160Q282 155 281 199Q278 225 257 209L232 186"
+          fill="var(--pet)"
+        />
+        <path
+          d={
+            level < 1
+              ? "M84 80Q56 50 73 28Q91 29 111 65Q146 51 190 65Q219 26 239 35Q253 53 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+              : level < 3
+                ? "M84 80Q47 56 57 94Q74 113 99 84Q146 51 190 65Q244 65 262 105Q249 118 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+                : "M84 80Q35 100 56 127Q80 131 99 84Q146 51 190 65Q266 89 263 135Q240 147 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+          }
+          fill="var(--pet)"
+          stroke="var(--pet-dark)"
+          strokeWidth="3"
+        />
+        <path
+          d="M91 93Q120 67 155 75M209 83Q235 108 232 140M81 229Q84 267 115 271"
+          fill="none"
+          stroke="#e8edcf"
+          strokeWidth="3"
+          strokeDasharray="5 7"
+          opacity=".75"
+        />
+        <ellipse cx="160" cy="222" rx="64" ry="49" fill={`url(#${belly})`} />
+        <path
+          d="M126 257L191 257"
+          stroke="#b7b18a"
+          strokeDasharray="4 5"
+          fill="none"
+        />
+        <path
+          d="M203 111l28 13-13 31-28-13z"
+          fill={level > 1 ? "#959b83" : "#c8cda3"}
+          stroke="#77866c"
+          strokeDasharray="4 3"
+        />
+        {level > 1 && (
+          <path
+            d="M90 178l23 12-17 19m116 41l18-13m-4 4l8 6m-12-2l7 7"
+            stroke="#626e60"
+            strokeWidth="3"
+            fill="none"
+          />
+        )}
+        {level >= 4 && (
+          <g stroke="#636f59" strokeWidth="3" fill="none">
+            <path d="M92 238l17-11 9 17-12 8z" fill="#6f7965" />
+            <path d="M92 237l-8-8m21-2l3-9m9 20l10 1M210 82l-9 13 10 8-8 13" />
+          </g>
+        )}
+      </g>
+      <g transform={`translate(${look.x},${look.y})`} className="face">
+        {level === 5 ? (
+          <g stroke="#454c42" strokeWidth="6">
+            <path d="M102 128l20 22m0-22l-20 22m96-22l20 22m0-22l-20 22" />
+          </g>
+        ) : sleep || level === 1 || sad ? (
+          <g stroke="#414b3d" strokeWidth="6" strokeLinecap="round" fill="none">
+            <path d="M104 143q11 9 22-1M194 142q11 9 22-1" />
+          </g>
+        ) : (
+          <g className="eyes" fill="#354334">
+            <ellipse cx="115" cy="138" rx="10" ry={level > 2 ? 7 : 13} />
+            <ellipse cx="205" cy={level > 2 ? 145 : 138} rx="10" ry="13" />
+            <circle cx="118" cy="134" r="3" fill="#fff7df" />
+            <circle cx="208" cy="134" r="3" fill="#fff7df" />
+          </g>
+        )}
+        <ellipse cx="94" cy="166" rx="15" ry="8" fill="#e5a69b" opacity=".75" />
+        <ellipse
+          cx="224"
+          cy="166"
+          rx="15"
+          ry="8"
+          fill="#e5a69b"
+          opacity=".75"
+        />
+        {sleep || sad ? (
+          <path
+            d="M152 170q8 8 16 0"
+            stroke="#485440"
+            strokeWidth="4"
+            fill="none"
+          />
+        ) : (
+          <g>
+            <path
+              d={
+                level > 1
+                  ? "M131 178Q160 158 188 178L186 193Q157 202 133 192Z"
+                  : "M130 163Q160 170 190 163L187 187Q161 213 134 187Z"
+              }
+              fill="#514840"
+            />
+            <path d="M138 166l7 12 8-10m14 0l8 10 7-12" fill="#fff9df" />
+            <ellipse cx="160" cy="192" rx="15" ry="6" fill="#d79089" />
+          </g>
+        )}
+      </g>
+      {sleep && (
+        <text x="240" y="65" fill="#7e91b2" fontSize="26">
+          z z
+        </text>
+      )}
+      {level === 5 && (
+        <g className="ghost">
+          <path
+            d="M139 70q0-25 21-25t21 25v25l-10-7-10 7-10-7-12 7z"
+            fill="#fff"
+            opacity=".8"
+          />
+          <circle cx="154" cy="65" r="3" />
+          <circle cx="168" cy="65" r="3" />
+        </g>
+      )}
+    </svg>
+  );
+}
+function Eyes({
+  level,
+  sleep,
+  sad,
+  x = 117,
+  y = 150,
+  gap = 86,
+  large = false,
+}: {
+  level: number;
+  sleep: boolean;
+  sad: boolean;
+  x?: number;
+  y?: number;
+  gap?: number;
+  large?: boolean;
+}) {
+  if (level === 5)
+    return (
+      <g stroke="#55564c" strokeWidth="5" strokeLinecap="round">
+        <path
+          d={`M${x - 8} ${y - 8}l16 16m0-16l-16 16m${gap - 0} -16l16 16m0-16l-16 16`}
+        />
+      </g>
+    );
+  return (
+    <g>
+      {[x, x + gap].map((cx, i) => (
+        <g key={cx}>
+          {sleep ? (
+            <path
+              d={`M${cx - 12} ${y}q12 12 24 0`}
+              stroke="#544b4b"
+              fill="none"
+              strokeWidth="5"
+              strokeLinecap="round"
+            />
+          ) : (
+            <>
+              <ellipse
+                cx={cx}
+                cy={y + (level > 2 && i ? 6 : 0)}
+                rx={large ? 18 : 12}
+                ry={sad || level > 2 ? 10 : large ? 23 : 17}
+                fill="#4d4247"
+              />
+              <ellipse
+                cx={cx + 5}
+                cy={y - 6}
+                rx={large ? 6 : 4}
+                ry={large ? 8 : 5}
+                fill="#fff8e8"
+              />
+              {(level === 1 || sad) && (
+                <path
+                  d={`M${cx - 20} ${y - 13}q20 -9 40 0`}
+                  stroke="var(--pet)"
+                  strokeWidth="13"
+                  fill="none"
+                />
+              )}
+            </>
+          )}
+          <ellipse
+            cx={cx + (i ? 13 : -13)}
+            cy={y + 25}
+            rx="14"
+            ry="7"
+            fill="#e4aaa4"
+            opacity=".7"
+          />
+        </g>
+      ))}
+    </g>
+  );
+}
+function Ghost() {
+  return (
+    <g className="ghost">
+      <path
+        d="M142 70q0-25 20-25t20 25v25l-10-7-10 7-10-7-10 7z"
+        fill="#fffdf3"
+        opacity=".8"
+      />
+      <circle cx="155" cy="66" r="3" fill="#7c8382" />
+      <circle cx="169" cy="66" r="3" fill="#7c8382" />
+    </g>
+  );
+}
+function Pippin({ level, sleep, sad, look }: ArtProps) {
+  const texture = useId();
+  const folded = sad || sleep;
+  return (
+    <svg
+      className="pet-art"
+      viewBox="0 0 320 340"
+      role="img"
+      aria-label={`Pippin the felt moth, ${stages[level]}`}
+    >
+      <defs>
+        <filter id={texture}>
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency=".58"
+            numOctaves="3"
+            seed="12"
+          />
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope=".13" />
+          </feComponentTransfer>
+          <feBlend in="SourceGraphic" mode="multiply" />
+          <feComposite in2="SourceAlpha" operator="in" />
+        </filter>
+      </defs>
+      <g filter={`url(#${texture})`}>
+        <g
+          className={`moth-wings ${folded ? "wrapped" : ""}`}
+          style={{
+            transformOrigin: "160px 202px",
+            transform:
+              level > 1
+                ? `translateY(${level * 5}px) scaleY(${1 - level * 0.04})`
+                : undefined,
+          }}
+        >
+          <path
+            className="wing-left"
+            d={
+              level >= 3
+                ? "M131 167Q56 94 27 150L40 169 28 181 45 193 32 216Q35 256 108 249L142 221Z"
+                : "M131 167Q55 87 28 150Q6 199 36 232Q69 266 140 221Z"
+            }
+            fill="var(--wing)"
+            stroke="var(--pet-dark)"
+            strokeWidth="3"
+          />
+          <path
+            className="wing-right"
+            d={
+              level >= 3
+                ? "M189 167Q264 94 293 150L280 169 292 181 275 193 288 216Q285 256 212 249L178 221Z"
+                : "M189 167Q265 87 292 150Q314 199 284 232Q251 266 180 221Z"
+            }
+            fill="var(--wing)"
+            stroke="var(--pet-dark)"
+            strokeWidth="3"
+          />
+          <path
+            d="M52 160q-10 45 47 62M268 160q10 45-47 62"
+            stroke="#e8deef"
+            strokeWidth="3"
+            strokeDasharray="5 6"
+            fill="none"
+          />
+          {level > 1 && (
+            <path
+              d="M52 204l18-10 8 15-17 9zm190-18l17 12-10 14-17-12z"
+              fill="#9b9e8b"
+              stroke="#747c70"
+              strokeDasharray="3 4"
+            />
+          )}
+        </g>
+        <ellipse cx="131" cy="282" rx="17" ry="12" fill="var(--pet-dark)" />
+        <ellipse cx="189" cy="282" rx="17" ry="12" fill="var(--pet-dark)" />
+        <g
+          className="antennae"
+          stroke="var(--pet-dark)"
+          strokeWidth="7"
+          strokeLinecap="round"
+          fill="none"
+        >
+          <path
+            d={level >= 3 ? "M127 115Q105 60 72 94" : "M127 115Q119 49 92 41"}
+          />
+          <path
+            d={
+              level >= 3 ? "M193 115Q218 66 251 106" : "M193 115Q201 49 228 41"
+            }
+          />
+        </g>
+        <g fill="var(--wing)" stroke="var(--pet-dark)" strokeWidth="2">
+          <path
+            d={
+              level >= 3
+                ? "M70 76q-20 3-17 21l7 1-3 9 15-2 5 6 10-15-3-15z"
+                : "M92 23q-18-7-23 9l5 5-8 8 9 5 4 12 13-6 12 3 2-12 7-8-9-6z"
+            }
+          />
+          <path
+            d={
+              level >= 3
+                ? "M251 87q21 3 18 21l-7 1 3 9-15-2-5 6-10-15 3-15z"
+                : "M228 23q18-7 23 9l-5 5 8 8-9 5-4 12-13-6-12 3-2-12-7-8 9-6z"
+            }
+          />
+        </g>
+        <path
+          d="M94 123Q105 91 128 99L139 90 151 99 163 91 175 101 189 96Q224 97 231 135L240 141 234 155 243 167 236 180 242 198 233 210 235 226 222 235Q216 279 160 282Q104 279 98 242L86 231 91 216 80 203 87 186 80 173 87 159 82 143Z"
+          fill="var(--pet)"
+          stroke="var(--pet-dark)"
+          strokeWidth="2"
+        />
+        <path
+          d="M115 237q45 25 90 0M101 124q23-18 43-14"
+          stroke="#faf3dd"
+          fill="none"
+          strokeWidth="3"
+          strokeDasharray="4 6"
+        />
+        {level > 1 && (
+          <path
+            d="M188 227l21-9 12 18-25 12z"
+            fill={level >= 4 ? "#7e8d77" : "#b7bba3"}
+            stroke="#7e8b76"
+            strokeDasharray="3 4"
+          />
+        )}
+        {level >= 4 && (
+          <g stroke="#616e60" strokeWidth="3">
+            <path d="M100 216l17 8-13 15 9 8m88-124l-9 12 8 10" fill="none" />
+            <path d="M206 231l15 6m-22-2l-2 10" />
+          </g>
+        )}
+      </g>
+      <g transform={`translate(${look.x},${look.y})`}>
+        <Eyes
+          level={level}
+          sleep={sleep}
+          sad={sad}
+          x={124}
+          gap={72}
+          y={159}
+          large
+        />
+        <path
+          d={sad || level > 1 ? "M150 209q10-8 20 0" : "M151 201q9 12 18 0"}
+          stroke="#7f697c"
+          strokeWidth="4"
+          fill="none"
+          strokeLinecap="round"
+        />
+      </g>
+      {folded && (
+        <g
+          className="moth-wrap"
+          fill="var(--wing)"
+          stroke="var(--pet-dark)"
+          strokeWidth="2"
+        >
+          <path d="M91 191Q162 203 162 278Q83 271 91 191Z" />
+          <path d="M229 191Q158 203 158 278Q237 271 229 191Z" />
+          <path d="M107 215l31 40m75-40l-31 40" strokeDasharray="4 5" />
+        </g>
+      )}
+      {sleep && (
+        <text x="242" y="88" fontSize="24" fill="#9e91b3">
+          z z
+        </text>
+      )}
+      {level === 5 && <Ghost />}
+    </svg>
+  );
+}
+function Crumb({ level, sleep, sad, look }: ArtProps) {
+  const texture = useId(),
+    curl = sleep || level === 1;
+  return (
+    <svg
+      className={`pet-art ${curl ? "curled" : ""}`}
+      viewBox="0 0 320 340"
+      role="img"
+      aria-label={`Crumb the woodland mushroom bear, ${stages[level]}`}
+    >
+      <defs>
+        <filter id={texture}>
+          <feTurbulence
+            type="fractalNoise"
+            baseFrequency=".5"
+            numOctaves="3"
+            seed="22"
+          />
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope=".16" />
+          </feComponentTransfer>
+          <feBlend in="SourceGraphic" mode="multiply" />
+          <feComposite in2="SourceAlpha" operator="in" />
+        </filter>
+      </defs>
+      <g
+        filter={`url(#${texture})`}
+        transform={curl ? "translate(0 37) scale(1 .87)" : undefined}
+      >
+        <g fill="var(--pet-dark)">
+          <ellipse cx="117" cy="287" rx="23" ry="16" />
+          <ellipse cx="202" cy="287" rx="23" ry="16" />
+        </g>
+        <path
+          d="M106 181Q65 182 65 228Q79 242 98 218M215 181Q254 182 255 228Q242 242 223 218"
+          fill="var(--cap)"
+          stroke="var(--pet-dark)"
+          strokeWidth="3"
+        />
+        <path
+          d="M95 162Q89 134 115 117Q160 92 206 122Q233 142 225 184L228 239Q226 286 163 293Q93 290 92 244Z"
+          fill="var(--pet)"
+          stroke="var(--pet-dark)"
+          strokeWidth="3"
+        />
+        <ellipse cx="161" cy="243" rx="44" ry="36" fill="#ddc59c" />
+        <path
+          d="M128 260q35 17 64-3"
+          stroke="#af9276"
+          strokeDasharray="4 5"
+          fill="none"
+        />
+        <g
+          className="crumb-ears"
+          fill="var(--pet-dark)"
+          stroke="#9b775f"
+          strokeWidth="2"
+        >
+          <path
+            d={
+              level > 1 || sad
+                ? "M99 116Q50 114 66 165Q85 178 103 144Z"
+                : "M99 112Q58 65 53 116Q53 143 96 144Z"
+            }
+          />
+          <path
+            d={
+              level > 1 || sad
+                ? "M221 116Q270 114 254 165Q235 178 217 144Z"
+                : "M221 112Q262 65 267 116Q267 143 224 144Z"
+            }
+          />
+        </g>
+        <path
+          d={
+            level >= 4
+              ? "M60 121Q67 45 143 38L154 55 163 38Q250 40 263 116L248 124 237 115 226 131Q160 147 92 131Z"
+              : "M58 121Q68 37 159 37Q249 37 264 121Q252 141 160 140Q68 142 58 121Z"
+          }
+          fill="var(--cap)"
+          stroke="var(--pet-dark)"
+          strokeWidth="3"
+        />
+        <path
+          d="M72 122Q160 141 250 121"
+          stroke="#e0c298"
+          strokeWidth="4"
+          fill="none"
+        />
+        <g fill={level > 1 ? "#b1b09a" : "#eddbb3"}>
+          <ellipse
+            cx="112"
+            cy="79"
+            rx="16"
+            ry="12"
+            transform="rotate(-20 112 79)"
+          />
+          <ellipse
+            cx="196"
+            cy="69"
+            rx="20"
+            ry="12"
+            transform="rotate(17 196 69)"
+          />
+          <ellipse cx="222" cy="106" rx="10" ry="7" />
+        </g>
+        <path
+          d="M91 109q17-47 65-53"
+          stroke="#e3c29c"
+          strokeWidth="2"
+          strokeDasharray="4 6"
+          fill="none"
+        />
+        {level > 1 && (
+          <path
+            d="M189 249l27-10 8 24-27 8z"
+            fill="#9d9d82"
+            stroke="#777a65"
+            strokeDasharray="3 4"
+          />
+        )}
+        {level >= 3 && (
+          <path
+            d="M109 105l14 9 10-12m59-53l-7 15 11 8m12 176l-8 17m-2-13l14 3"
+            stroke="#6b725a"
+            strokeWidth="3"
+            fill="none"
+          />
+        )}
+        {level >= 4 && (
+          <path
+            d="M92 222l18-6 7 14-19 8z"
+            fill="#6f7d66"
+            stroke="#66715c"
+            strokeDasharray="3 4"
+          />
+        )}
+      </g>
+      <g transform={`translate(${look.x},${look.y + (curl ? 17 : 0)})`}>
+        <Eyes
+          level={level}
+          sleep={sleep || curl}
+          sad={sad}
+          x={122}
+          gap={77}
+          y={167}
+        />
+        <path d="M151 185q10-5 20 0l-10 12z" fill="#6c5142" />
+        <path
+          d={
+            sad || level > 1
+              ? "M149 211q12-9 24 0"
+              : "M161 197v9m-12-2q12 15 24 0"
+          }
+          fill="none"
+          stroke="#7c5b4b"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      </g>
+      {sleep && (
+        <text x="245" y="81" fontSize="24" fill="#a89980">
+          z z
+        </text>
+      )}
+      {level === 5 && <Ghost />}
+    </svg>
+  );
+}
+function PetDrawing({ kind, level }: { kind: PetKind; level: number }) {
+  const props = { level, sleep: false, sad: false, look: { x: 0, y: 0 } };
+  return kind === "mochi" ? (
+    <Mochi {...props} />
+  ) : kind === "pippin" ? (
+    <Pippin {...props} />
+  ) : (
+    <Crumb {...props} />
+  );
+}
+export function Pet({
+  level,
+  kind = "mochi",
+  sleep = false,
+  reaction = "",
+  onPet = () => {},
+  preview = false,
+}: {
+  level: number;
+  kind?: PetKind;
+  sleep?: boolean;
+  reaction?: string;
+  onPet?: () => void;
+  preview?: boolean;
+}) {
+  const [look, setLook] = useState({ x: 0, y: 0 });
+  const sad = reaction.startsWith("−");
+  const art = {
+    level,
+    sleep: level !== 5 && sleep,
+    sad,
+    look: level === 5 || preview ? { x: 0, y: 0 } : look,
+  };
+  const animated = level !== 5 && !preview && !!reaction;
+  return (
+    <motion.button
+      type="button"
+      tabIndex={preview ? -1 : 0}
+      disabled={preview}
+      aria-label={
+        preview ? `${pets[kind].name}: ${stages[level]}` : "Pet your companion"
+      }
+      className={`pet-button species-${kind} stage-${level} ${sleep ? "sleeping" : ""} ${sad ? "hurt" : ""} ${preview ? "pet-preview" : ""}`}
+      onPointerMove={(e) => {
+        if (preview || level === 5) return;
+        const r = e.currentTarget.getBoundingClientRect();
+        setLook({
+          x: (e.clientX - r.left - r.width / 2) / 35,
+          y: (e.clientY - r.top - r.height / 2) / 45,
+        });
+      }}
+      onPointerLeave={() => setLook({ x: 0, y: 0 })}
+      onClick={onPet}
+      animate={
+        animated
+          ? sad
+            ? { x: [0, -6, 5, -3, 0], y: [0, 5, 0], rotate: [0, -4, 3, 0] }
+            : kind === "pippin"
+              ? { y: [0, -30, -24, 0], rotate: [0, -3, 3, 0] }
+              : kind === "crumb"
+                ? { y: [0, -8, 0, -8, 0], rotate: [0, -12, 12, -8, 0] }
+                : { y: [0, -24, 0, -12, 0], rotate: [0, -6, 6, 0] }
+          : { x: 0, y: 0, rotate: 0 }
+      }
+      transition={{ duration: sad ? 0.55 : 0.85 }}
+    >
+      {kind === "mochi" ? (
+        <Mochi {...art} />
+      ) : kind === "pippin" ? (
+        <Pippin {...art} />
+      ) : (
+        <Crumb {...art} />
+      )}{" "}
+      {reaction && !preview && (
+        <span
+          className={`pet-reaction ${sad ? "damage-reaction" : ""}`}
+          role="status"
+        >
+          {reaction}
+        </span>
+      )}
+    </motion.button>
+  );
+}
+export function PetChoices({
+  value,
+  onChange,
+}: {
+  value: PetKind;
+  onChange: (kind: PetKind) => void;
+}) {
+  return (
+    <fieldset className="pet-choices">
+      <legend>Choose your little companion</legend>
+      <div>
+        {(Object.keys(pets) as PetKind[]).map((kind) => (
+          <label className={value === kind ? "chosen" : ""} key={kind}>
+            <input
+              type="radio"
+              name="pet-kind"
+              value={kind}
+              checked={value === kind}
+              onChange={() => onChange(kind)}
+            />
+            <div className={`choice-art species-${kind} stage-0`}>
+              {kind === "mochi" ? (
+                <Mochi
+                  level={0}
+                  sleep={false}
+                  sad={false}
+                  look={{ x: 0, y: 0 }}
+                />
+              ) : kind === "pippin" ? (
+                <Pippin
+                  level={0}
+                  sleep={false}
+                  sad={false}
+                  look={{ x: 0, y: 0 }}
+                />
+              ) : (
+                <Crumb
+                  level={0}
+                  sleep={false}
+                  sad={false}
+                  look={{ x: 0, y: 0 }}
+                />
+              )}
+            </div>
+            <b>{pets[kind].name}</b>
+            <small>{pets[kind].description}</small>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+export function LifeGuide({ kind, actual }: { kind: PetKind; actual: number }) {
+  const [selected, setSelected] = useState(actual);
+  const details = [
+    "Bright eyes, soft stitches, and a heart full of small adventures.",
+    "A slower little pal. Some rest and gentle care help.",
+    "Faded fabric and drooping features ask for a little attention.",
+    "Loose stitches, ragged edges, and a lovable shamble. There is time to recover.",
+    "Torn fabric and very slow movements. Every little bit of care helps.",
+    "Still paws and a floating ghost. Revive your friend to welcome them home.",
+  ];
+  return (
+    <>
+      <span className="eyebrow">THE TINY CREATURE-CARE GUIDE</span>
+      <h2>Pet health & life stages</h2>
+      <p>
+        Meet every side of {pets[kind].name}. This is a preview only — your real
+        pal and progress stay just as they are.
+      </p>
+      <div className="guide-preview">
+        <Pet kind={kind} level={selected} preview />
+        <h3>{stages[selected]}</h3>
+        <p>{details[selected]}</p>
+        <span className="preview-badge">
+          Preview only · actual stage: {stages[actual]}
+        </span>
+      </div>
+      <div
+        className="stage-gallery"
+        role="group"
+        aria-label="Preview a life stage"
+      >
+        {stages.map((name, i) => (
+          <button
+            className={selected === i ? "selected" : ""}
+            key={name}
+            aria-pressed={selected === i}
+            onClick={() => setSelected(i)}
+          >
+            <div
+              aria-hidden="true"
+              className={`stage-tile-art species-${kind} stage-${i}`}
+            >
+              <PetDrawing kind={kind} level={i} />
+            </div>
+            <span>{i + 1}</span>
+            {name}
+          </button>
+        ))}
+      </div>
+      <p className="fine">
+        Completed tasks give +10 care. Missed tasks take up to 8 care.
+        Missed-task damage is capped at 16 per care category and 24 total each
+        day; passive decay is separate. A miss alone cannot kill your pal. Cozy
+        mode always keeps a little energy in reserve.
+      </p>
+    </>
+  );
+}

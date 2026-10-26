@@ -28,28 +28,27 @@ import {
   categories,
   labels,
   dateKey,
-  initial,
   load,
   decay,
   stage,
   due,
-  complete,
+  setOutcome,
+  outcomeFor,
+  saveTask,
+  deleteTask,
+  changeSettings,
+  revive,
+  parseState,
+  type OutcomeStatus,
   streak,
-  validState,
   demoTasks,
   type State,
   type Task,
   type Category,
 } from "./model";
+import { Pet, PetChoices, LifeGuide, stages, pets } from "./Pets";
+import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
 const icons = { food: Apple, water: Droplets, clean: Sparkles, happy: Heart };
-const stages = [
-  "Happy & healthy",
-  "A little sleepy",
-  "Needs some care",
-  "A soft little zombie",
-  "Running low on energy",
-  "Resting in the stars",
-];
 function tone(enabled: boolean, kind = 0) {
   if (!enabled) return;
   try {
@@ -73,194 +72,11 @@ function tone(enabled: boolean, kind = 0) {
     setTimeout(() => void ctx.close(), 700);
   } catch {}
 }
-function Pet({
-  level,
-  color,
-  sleep,
-  reaction,
-  onPet,
-}: {
-  level: number;
-  color: string;
-  sleep: boolean;
-  reaction: string;
-  onPet: () => void;
-}) {
-  const [look, setLook] = useState({ x: 0, y: 0 });
-  return (
-    <motion.button
-      aria-label="Pet your companion"
-      className={`pet-button ${color} stage-${level} ${sleep ? "sleeping" : ""}`}
-      onPointerMove={(e) => {
-        const r = e.currentTarget.getBoundingClientRect();
-        setLook({
-          x: (e.clientX - r.left - r.width / 2) / 35,
-          y: (e.clientY - r.top - r.height / 2) / 45,
-        });
-      }}
-      onPointerLeave={() => setLook({ x: 0, y: 0 })}
-      onClick={onPet}
-      animate={
-        reaction ? { y: [0, -24, 0, -12, 0], rotate: [0, -6, 6, 0] } : { y: 0 }
-      }
-      transition={{ duration: 0.65 }}
-    >
-      <svg
-        className="pet-art"
-        viewBox="0 0 320 340"
-        role="img"
-        aria-label={`Original stitched monster, ${stages[level]}`}
-      >
-        <defs>
-          <filter id="felt">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency=".6"
-              numOctaves="3"
-              seed="8"
-            />
-            <feColorMatrix type="saturate" values="0" />
-            <feComponentTransfer>
-              <feFuncA type="linear" slope=".16" />
-            </feComponentTransfer>
-            <feBlend in="SourceGraphic" mode="multiply" />
-          </filter>
-          <radialGradient id="belly">
-            <stop stopColor="#f1ecd2" />
-            <stop offset="1" stopColor="#ddd8b3" />
-          </radialGradient>
-        </defs>
-        <g className="pet-body" filter="url(#felt)">
-          <path
-            d="M83 258 Q55 280 70 304 Q91 320 112 292L121 265M207 264L211 296Q236 315 251 296Q258 280 233 257"
-            fill="var(--pet-dark)"
-          />
-          <path
-            d="M76 160Q35 158 40 208Q46 224 67 207L89 188M241 160Q282 155 281 199Q278 225 257 209L232 186"
-            fill="var(--pet)"
-          />
-          <path
-            d="M84 80Q56 50 73 28Q91 29 111 65Q146 51 190 65Q219 26 239 35Q253 53 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
-            fill="var(--pet)"
-            stroke="var(--pet-dark)"
-            strokeWidth="3"
-          />
-          <path
-            d="M91 93Q120 67 155 75M209 83Q235 108 232 140M81 229Q84 267 115 271"
-            fill="none"
-            stroke="#e8edcf"
-            strokeWidth="3"
-            strokeDasharray="5 7"
-            opacity=".75"
-          />
-          <ellipse cx="160" cy="222" rx="64" ry="49" fill="url(#belly)" />
-          <path
-            d="M126 257L191 257"
-            stroke="#b7b18a"
-            strokeDasharray="4 5"
-            fill="none"
-          />
-          <path
-            d="M203 111l28 13-13 31-28-13z"
-            fill={level > 1 ? "#959b83" : "#c8cda3"}
-            stroke="#77866c"
-            strokeDasharray="4 3"
-          />
-          {level > 2 && (
-            <path
-              d="M90 178l23 12-17 19m116 41l18-13m-4 4l8 6m-12-2l7 7"
-              stroke="#626e60"
-              strokeWidth="3"
-              fill="none"
-            />
-          )}
-        </g>
-        <g transform={`translate(${look.x},${look.y})`} className="face">
-          {level === 5 ? (
-            <g stroke="#454c42" strokeWidth="6">
-              <path d="M102 128l20 22m0-22l-20 22m96-22l20 22m0-22l-20 22" />
-            </g>
-          ) : sleep || level === 1 ? (
-            <g
-              stroke="#414b3d"
-              strokeWidth="6"
-              strokeLinecap="round"
-              fill="none"
-            >
-              <path d="M104 143q11 9 22-1M194 142q11 9 22-1" />
-            </g>
-          ) : (
-            <g className="eyes" fill="#354334">
-              <ellipse cx="115" cy="138" rx="10" ry={level > 2 ? 7 : 13} />
-              <ellipse cx="205" cy={level > 2 ? 145 : 138} rx="10" ry="13" />
-              <circle cx="118" cy="134" r="3" fill="#fff7df" />
-              <circle cx="208" cy="134" r="3" fill="#fff7df" />
-            </g>
-          )}
-          <ellipse
-            cx="94"
-            cy="166"
-            rx="15"
-            ry="8"
-            fill="#e5a69b"
-            opacity=".75"
-          />
-          <ellipse
-            cx="224"
-            cy="166"
-            rx="15"
-            ry="8"
-            fill="#e5a69b"
-            opacity=".75"
-          />
-          {sleep ? (
-            <path
-              d="M152 170q8 8 16 0"
-              stroke="#485440"
-              strokeWidth="4"
-              fill="none"
-            />
-          ) : (
-            <g>
-              <path
-                d={
-                  level > 1
-                    ? "M131 178Q160 158 188 178L186 193Q157 202 133 192Z"
-                    : "M130 163Q160 170 190 163L187 187Q161 213 134 187Z"
-                }
-                fill="#514840"
-              />
-              <path d="M138 166l7 12 8-10m14 0l8 10 7-12" fill="#fff9df" />
-              <ellipse cx="160" cy="192" rx="15" ry="6" fill="#d79089" />
-            </g>
-          )}
-        </g>
-        {sleep && (
-          <text x="240" y="65" fill="#7e91b2" fontSize="26">
-            z z
-          </text>
-        )}
-        {level === 5 && (
-          <g className="ghost">
-            <path
-              d="M139 70q0-25 21-25t21 25v25l-10-7-10 7-10-7-12 7z"
-              fill="#fff"
-              opacity=".8"
-            />
-            <circle cx="154" cy="65" r="3" />
-            <circle cx="168" cy="65" r="3" />
-          </g>
-        )}
-      </svg>
-      {reaction && <span className="pet-reaction">{reaction}</span>}
-    </motion.button>
-  );
-}
 function Jar({
   balls,
   small = false,
 }: {
-  balls: { category: Category; at: number }[];
+  balls: { category: Category; at: number; taskId?: string; date?: string }[];
   small?: boolean;
 }) {
   return (
@@ -272,7 +88,9 @@ function Jar({
         <div className="balls">
           {balls.slice(-70).map((b, i) => (
             <motion.span
-              key={b.at + "-" + i}
+              key={
+                b.taskId ? JSON.stringify([b.taskId, b.date]) : b.at + "-" + i
+              }
               className={`ball ${b.category}`}
               initial={{ y: -190, scale: 0.7 }}
               animate={{ y: 0, scale: 1 }}
@@ -294,7 +112,7 @@ function Jar({
 export default function App() {
   const [s, setS] = useState<State>(load);
   const [panel, setPanel] = useState<
-    "settings" | "history" | "rewards" | "tasks" | "onboard" | null
+    "settings" | "history" | "rewards" | "tasks" | "onboard" | "health" | null
   >(() => (s.name ? null : "onboard"));
   const [edit, setEdit] = useState<Task | null | undefined>();
   const [message, setMessage] = useState("");
@@ -345,7 +163,12 @@ export default function App() {
     const d = new Date(now),
       time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     todayTasks
-      .filter((t) => t.time <= time && !earned.some((c) => c.taskId === t.id))
+      .filter(
+        (t) =>
+          t.time <= time &&
+          (!outcomeFor(s, t.id, today) ||
+            outcomeFor(s, t.id, today)?.status === "pending"),
+      )
       .forEach((t) => {
         const key = t.id + today;
         if (reminded.current.has(key)) return;
@@ -354,10 +177,11 @@ export default function App() {
         if ("Notification" in window && Notification.permission === "granted")
           new Notification("A little moment for you", { body: t.name });
       });
-  }, [now, s.settings.reminders, s.name, today, s.tasks, s.completions]);
+  }, [now, s.settings.reminders, s.name, today, s.tasks, s.outcomes]);
   useEffect(() => {
     if (panel || edit !== undefined) {
       dialog.current?.showModal();
+      if (dialog.current) dialog.current.scrollTop = 0;
     } else dialog.current?.close();
   }, [panel, edit]);
   useEffect(() => {
@@ -373,33 +197,43 @@ export default function App() {
   const setting = <K extends keyof State["settings"]>(
     k: K,
     v: State["settings"][K],
-  ) => setS((p) => ({ ...p, settings: { ...p.settings, [k]: v } }));
+  ) => setS((p) => changeSettings(p, { [k]: v }));
   const close = () => {
     setPanel(null);
     setEdit(undefined);
   };
-  const reward = (t: Task) => {
-    if (earned.some((c) => c.taskId === t.id)) return;
-    if (level === 5) {
-      setMessage("Revive your little friend to keep caring together.");
-      return;
-    }
-    setS((p) => complete(p, t.id));
-    tone(s.settings.sound, 1);
+  const reward = (t: Task, status: OutcomeStatus, date = today) => {
+    if ((outcomeFor(s, t.id, date)?.status || "pending") === status) return;
+    const next = setOutcome(s, t.id, date, status);
+    setS((p) => setOutcome(p, t.id, date, status));
+    const difference =
+      Math.round((next.care[t.category] - s.care[t.category]) * 10) / 10;
+    const indicator =
+      (difference > 0 ? "+" : difference < 0 ? "−" : "") +
+      Math.abs(difference) +
+      " " +
+      labels[t.category];
     setReaction(
-      (
-        {
-          food: "🍎 nom nom!",
-          water: "💧 aah, lovely!",
-          clean: "✨ squeaky clean!",
-          happy: "♥ happy little heart",
-        } as Record<Category, string>
-      )[t.category],
+      status === "pending"
+        ? "↶ care restored"
+        : status === "missed"
+          ? "−" + Math.abs(difference) + " " + labels[t.category]
+          : indicator,
+    );
+    tone(
+      s.settings.sound,
+      status === "completed" ? 1 : status === "missed" ? -3 : 0,
     );
     setMessage(
-      done + 1 === todayTasks.length
-        ? "A whole jar of little wins. You did it!"
-        : "A little care for you. A little joy for " + s.name + ".",
+      status === "pending"
+        ? "Back to pending. Care and jar rewards restored."
+        : date !== today
+          ? "Past-day result corrected. Care and jar rewards recalculated."
+          : status === "completed"
+            ? indicator + " · A little win for you and your pal."
+            : difference === 0
+              ? "Miss recorded. Your daily care cushion softened the damage."
+              : indicator + " · Tomorrow is another little beginning.",
     );
   };
   return (
@@ -481,21 +315,13 @@ export default function App() {
                 ) : (
                   todayTasks.map((t) => {
                     const Icon = icons[t.category],
-                      checked = earned.some((c) => c.taskId === t.id);
+                      status = outcomeFor(s, t.id, today)?.status || "pending";
                     return (
                       <motion.article
                         layout
-                        className={`task-card ${checked ? "completed" : ""}`}
+                        className={`task-card outcome-card ${status}`}
                         key={t.id}
                       >
-                        <button
-                          className={`check-button ${checked ? "checked" : ""}`}
-                          aria-label={`Complete ${t.name}`}
-                          disabled={checked}
-                          onClick={() => reward(t)}
-                        >
-                          {checked && <Check size={16} />}
-                        </button>
                         <div className="task-content">
                           <h3>{t.name}</h3>
                           <div>
@@ -522,6 +348,11 @@ export default function App() {
                             </span>
                           )}
                         </div>
+                        <OutcomeControls
+                          status={status}
+                          name={t.name}
+                          onChange={(status) => reward(t, status)}
+                        />
                         <button
                           className="edit-button"
                           aria-label={`Edit ${t.name}`}
@@ -586,8 +417,8 @@ export default function App() {
                 </div>
                 <Pet
                   level={level}
-                  color={s.color}
-                  sleep={night && level < 5}
+                  kind={s.pet}
+                  sleep={night && level < 2}
                   reaction={reaction}
                   onPet={() => {
                     if (level === 5) return;
@@ -618,7 +449,7 @@ export default function App() {
                 </h2>
                 <span>
                   <i className={`status-dot stage-dot-${level}`} />
-                  {night && level < 5
+                  {night && level < 2
                     ? "Dreaming of little adventures"
                     : stages[level]}
                 </span>
@@ -629,11 +460,7 @@ export default function App() {
                   <button
                     className="primary"
                     onClick={() => {
-                      setS((p) => ({
-                        ...p,
-                        updated: Date.now(),
-                        care: { food: 90, water: 90, clean: 90, happy: 90 },
-                      }));
+                      setS((p) => revive(p));
                       setReaction("♥ hello again!");
                     }}
                   >
@@ -641,6 +468,13 @@ export default function App() {
                   </button>
                 </div>
               )}
+              <button
+                className="life-guide-button"
+                onClick={() => setPanel("health")}
+              >
+                <Heart size={13} /> Pet health & life stages{" "}
+                <ChevronRight size={13} />
+              </button>
               <div className="room-footer">
                 <Sparkles size={14} />{" "}
                 {s.settings.cozy
@@ -751,6 +585,7 @@ export default function App() {
             <motion.div
               role="status"
               className="toast"
+              style={{ x: "-50%" }}
               initial={{ y: 30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -786,22 +621,14 @@ export default function App() {
               <TaskEditor
                 task={edit}
                 onSave={(t) => {
-                  setS((p) => ({
-                    ...p,
-                    tasks: edit
-                      ? p.tasks.map((x) => (x.id === t.id ? t : x))
-                      : [...p.tasks, t],
-                  }));
+                  setS((p) => saveTask(p, t));
                   close();
                   tone(s.settings.sound);
                 }}
                 onDelete={
                   edit
                     ? () => {
-                        setS((p) => ({
-                          ...p,
-                          tasks: p.tasks.filter((t) => t.id !== edit.id),
-                        }));
+                        setS((p) => deleteTask(p, edit.id));
                         close();
                       }
                     : undefined
@@ -833,19 +660,14 @@ export default function App() {
                       onChange={(e) => setDraftName(e.target.value)}
                     />
                   </label>
-                  <label>
-                    A little personality
-                    <select
-                      value={s.color}
-                      onChange={(e) =>
-                        setS((p) => ({ ...p, color: e.target.value }))
-                      }
-                    >
-                      <option value="sage">Pistachio felt</option>
-                      <option value="peach">Peach corduroy</option>
-                      <option value="lilac">Lilac wool</option>
-                    </select>
-                  </label>
+                  <PetChoices
+                    value={s.pet}
+                    onChange={(pet) => {
+                      setS((p) => ({ ...p, pet }));
+                      if (Object.values(pets).some((p) => p.name === draftName))
+                        setDraftName(pets[pet].name);
+                    }}
+                  />
                   <label className="toggle">
                     <input
                       type="checkbox"
@@ -877,19 +699,10 @@ export default function App() {
                     }
                   />
                 </label>
-                <label>
-                  Appearance
-                  <select
-                    value={s.color}
-                    onChange={(e) =>
-                      setS((p) => ({ ...p, color: e.target.value }))
-                    }
-                  >
-                    <option value="sage">Pistachio</option>
-                    <option value="peach">Peach</option>
-                    <option value="lilac">Lilac</option>
-                  </select>
-                </label>
+                <PetChoices
+                  value={s.pet}
+                  onChange={(pet) => setS((p) => ({ ...p, pet }))}
+                />
                 {(["sound", "motion", "cozy", "reminders"] as const).map(
                   (k) => (
                     <label className="toggle" key={k}>
@@ -950,16 +763,7 @@ export default function App() {
                   <select
                     value={s.settings.speed}
                     onChange={(e) => {
-                      setS((p) => {
-                        const next = decay(p);
-                        return {
-                          ...next,
-                          settings: {
-                            ...next.settings,
-                            speed: Number(e.target.value),
-                          },
-                        };
-                      });
+                      setting("speed", Number(e.target.value));
                     }}
                   >
                     <option value={0.5}>Extra gentle · about a week</option>
@@ -1008,13 +812,14 @@ export default function App() {
                     try {
                       if (f.size > 10000000) throw Error();
                       const data = JSON.parse(await f.text());
-                      if (!validState(data)) throw Error();
+                      const restored = parseState(data);
+                      if (!restored) throw Error();
                       if (
                         window.confirm(
                           "Replace this browser’s PocketPal data with this backup?",
                         )
                       ) {
-                        setS(decay(data));
+                        setS(restored);
                         setMessage("Your little world has been restored.");
                       }
                     } catch {
@@ -1063,6 +868,8 @@ export default function App() {
                   <Plus size={16} /> Add a little thing
                 </button>
               </>
+            ) : panel === "health" ? (
+              <LifeGuide kind={s.pet} actual={level} />
             ) : panel === "history" ? (
               <>
                 <span className="eyebrow">A COLLECTION OF GOOD DAYS</span>
@@ -1099,9 +906,10 @@ export default function App() {
                     </div>
                   ))}
                 </div>
+                <OutcomeHistory s={s} onChange={reward} />
                 <h3>Your past jars</h3>
                 <div className="history-grid">
-                  {[...new Set(s.completions.map((c) => c.date))]
+                  {[...new Set(s.outcomes.map((c) => c.date))]
                     .sort()
                     .reverse()
                     .map((d) => (
@@ -1123,7 +931,7 @@ export default function App() {
                       </div>
                     ))}
                 </div>
-                {!s.completions.length && (
+                {!s.outcomes.length && (
                   <p>Your first little win will find a home here.</p>
                 )}
               </>

@@ -1,0 +1,3 @@
+const fs=require('fs');let p='src/Pets.tsx',s=fs.readFileSync(p,'utf8');const index=s.indexOf('export function Pet({');s=s.slice(0,index)+`function PetDrawing({kind,level}:{kind:PetKind;level:number}) {const props={level,sleep:false,sad:false,look:{x:0,y:0}};return kind==='mochi'?<Mochi {...props}/>:kind==='pippin'?<Pippin {...props}/>:<Crumb {...props}/>;}
+`+s.slice(index);
+s=s.replace('            <span>{i + 1}</span>','            <div aria-hidden="true" className={`stage-tile-art species-${kind} stage-${i}`}><PetDrawing kind={kind} level={i}/></div>\n            <span>{i + 1}</span>');fs.writeFileSync(p,s);
