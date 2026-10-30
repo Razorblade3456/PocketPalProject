@@ -26,12 +26,15 @@ import {
   ShoppingBag,
   Shirt,
   PackageOpen,
+  ListChecks,
 } from "lucide-react";
 import {
   SUPPLIES,
   buyItem,
   buyAndUseBasic,
   taskFinishedToday,
+  taskProgressGoal,
+  addHabitEvent,
   recordAttempt,
   correctAttempt,
   deleteAttempt,
@@ -161,17 +164,21 @@ export default function App() {
   );
   const activeTasks = todayTasks.filter((t) => !taskFinishedToday(s, t, today));
   const earned = s.completions.filter((c) => c.date === today);
-  const dailyTarget = todayTasks.reduce((sum, t) => sum + goalFor(t), 0);
+  const dailyTarget = todayTasks.reduce(
+    (sum, t) => sum + taskProgressGoal(t),
+    0,
+  );
   const done = todayTasks.reduce(
     (sum, t) =>
-      sum + Math.min(goalFor(t), taskCounts(s, t.id, today).completed),
+      sum + Math.min(taskProgressGoal(t), taskCounts(s, t.id, today).completed),
     0,
   );
   const percent = dailyTarget
     ? Math.round(
         (todayTasks.reduce(
           (sum, t) =>
-            sum + Math.min(goalFor(t), taskCounts(s, t.id, today).completed),
+            sum +
+            Math.min(taskProgressGoal(t), taskCounts(s, t.id, today).completed),
           0,
         ) /
           dailyTarget) *
@@ -242,7 +249,7 @@ export default function App() {
         reminded.current.add(key);
         setMessage(`A gentle nudge: ${t.name}`);
         if ("Notification" in window && Notification.permission === "granted")
-          new Notification("A little moment for you", { body: t.name });
+          new Notification("PocketPal Reminder", { body: t.name });
       });
   }, [now, s.settings, s.name, today, s.tasks, s.outcomes]);
   useEffect(() => {
@@ -332,8 +339,8 @@ export default function App() {
     setReaction(
       status === "completed"
         ? entry.rewardCoins
-          ? `+${entry.rewardCoins} coins · another little win!`
-          : "Another little win · tracked!"
+          ? `+${entry.rewardCoins} coins · completion recorded`
+          : "Completion tracked"
         : "−" + difference + " " + labels[entry.category],
     );
     tone(s.settings.sound, status === "completed" ? 1 : -3);
@@ -344,7 +351,7 @@ export default function App() {
             next.debt +
             " still reserved from future wins."
           : entry.rewardCoins
-            ? `+${entry.rewardCoins} coins · Every little moment counts.`
+            ? `+${entry.rewardCoins} coins · Completion recorded.`
             : "Completion tracked · today’s reward cap is reached. Every moment still counts."
         : difference
           ? "−" +
@@ -392,9 +399,7 @@ export default function App() {
     const id = crypto.randomUUID(),
       next = buyItem(s, item, at, id);
     if (next.careEvents.length === s.careEvents.length) {
-      setMessage(
-        "Save up a few more little wins, or find this outfit in your wardrobe.",
-      );
+      setMessage("Earn more coins, or check your wardrobe.");
       return;
     }
     setS((p) => buyItem(p, item, at, id));
@@ -461,25 +466,27 @@ export default function App() {
     setFeeding(item);
     setFeedToken((t) => t + 1);
     setReaction(
-      (v.category === "clean"
-        ? s.pet === "pippin"
-          ? "Ooh, bubbles! "
-          : s.pet === "crumb"
-            ? "All clean! "
-            : "Squeaky clean! "
-        : v.category === "water"
-          ? favorite
-            ? "My favorite sip! "
+      (v.category === "happy"
+        ? "♥ Catch! "
+        : v.category === "clean"
+          ? s.pet === "pippin"
+            ? "Ooh, bubbles! "
             : s.pet === "crumb"
-              ? "Glug glug! "
-              : "Ahhh, refreshing! "
-          : favorite
-            ? "My favorite! "
-            : s.pet === "pippin"
-              ? "So tasty! "
+              ? "All clean! "
+              : "Squeaky clean! "
+          : v.category === "water"
+            ? favorite
+              ? "My favorite sip! "
               : s.pet === "crumb"
-                ? "More please! "
-                : "YUM! ") +
+                ? "Glug glug! "
+                : "Ahhh, refreshing! "
+            : favorite
+              ? "My favorite! "
+              : s.pet === "pippin"
+                ? "So tasty! "
+                : s.pet === "crumb"
+                  ? "More please! "
+                  : "YUM! ") +
         "+" +
         gain +
         " " +
@@ -487,28 +494,35 @@ export default function App() {
     );
     tone(s.settings.sound, 1);
     setMessage(
-      (v.category === "clean"
-        ? "Bath finished"
-        : v.category === "water"
-          ? "Drink finished"
-          : v.name + " enjoyed") +
+      (v.category === "happy"
+        ? "Play session finished"
+        : v.category === "clean"
+          ? "Bath finished"
+          : v.category === "water"
+            ? "Drink finished"
+            : v.name + " enjoyed") +
         " · +" +
         gain +
         " " +
         labels[v.category] +
-        " and +" +
-        Math.max(0, Math.round(next.care.happy - s.care.happy)) +
-        " happiness.",
+        (v.category === "happy" ||
+        Math.round(next.care.happy - s.care.happy) <= 0
+          ? "."
+          : " and +" +
+            Math.max(0, Math.round(next.care.happy - s.care.happy)) +
+            " happiness."),
     );
     return true;
   };
   const renderTask = (t: Task) => {
     const counts = taskCounts(s, t.id, today),
-      status = counts.completed
+      status = taskFinishedToday(s, t, today)
         ? "completed"
-        : counts.missed
-          ? "missed"
-          : "pending";
+        : counts.completed
+          ? "in-progress"
+          : counts.missed
+            ? "missed"
+            : "pending";
     return (
       <motion.article
         layout
@@ -526,14 +540,15 @@ export default function App() {
               })}
             </time>
           </div>
-          {t.description && (
-            <span className="task-description">{t.description}</span>
-          )}
+          {t.description &&
+            t.description !== "A small moment just for you." && (
+              <span className="task-description">{t.description}</span>
+            )}
         </div>
         <OutcomeControls
           counts={counts}
           missPenalty={t.careLinked === false ? 0 : 8}
-          goal={goalFor(t)}
+          goal={taskProgressGoal(t)}
           rewardCoins={
             counts.completed < rewardLimitFor(s, t) ? policyFor(s).coins : 0
           }
@@ -545,7 +560,26 @@ export default function App() {
           onChange={(status, source) => reward(t, status, dateKey(), source)}
         />
         <div className="habit-card-tools">
-          <TaskRewardNote s={s} task={t} today={today} />
+          {t.repetitions === "unlimited" && (
+            <button
+              className="finish-day"
+              onClick={() =>
+                setS((p) =>
+                  addHabitEvent(p, {
+                    taskId: t.id,
+                    date: today,
+                    kind: taskFinishedToday(p, t, today)
+                      ? "reopenDay"
+                      : "finishDay",
+                  }),
+                )
+              }
+            >
+              {taskFinishedToday(s, t, today)
+                ? "Reopen task"
+                : "Done for today"}
+            </button>
+          )}
           <TinySteps s={s} task={t} today={today} setS={setS} />
           <TaskQuickActions s={s} task={t} today={today} setS={setS} />
         </div>
@@ -581,7 +615,7 @@ export default function App() {
                 " coins" +
                 (s.debt ? ", " + s.debt + " reserved from future rewards" : "")
               }
-              title="Complete little things to earn coins for care supplies"
+              title="Complete tasks to earn coins for care supplies"
             >
               <Coins size={16} />
               <b>{s.coins}</b>
@@ -611,10 +645,27 @@ export default function App() {
               close();
               setInventoryOpen(false);
               setIncoming(null);
+              if (window.innerWidth <= 800)
+                window.scrollTo({ top: 0, behavior: "auto" });
             }}
           >
             <Home size={14} />
             Home
+          </button>
+          <button
+            className="mobile-tasks-nav"
+            onClick={() => {
+              close();
+              setInventoryOpen(false);
+              requestAnimationFrame(() =>
+                document
+                  .getElementById("tasks")
+                  ?.scrollIntoView({ behavior: "auto", block: "start" }),
+              );
+            }}
+          >
+            <ListChecks size={14} />
+            Tasks
           </button>
           <button aria-pressed={panel === "shop"} onClick={openShop}>
             <ShoppingBag size={14} />
@@ -645,16 +696,11 @@ export default function App() {
         <main>
           <div className="intro">
             <div>
-              <span className="eyebrow">
-                SMALL WINS. STRANGE LITTLE FRIENDS.
-              </span>
+              <span className="eyebrow">HABITS. CARE. REPEAT.</span>
               <h1>
-                A little care, <em>every day.</em>
+                Make progress, <em>your way.</em>
               </h1>
-              <p>
-                Small steps for you. A happy little life for{" "}
-                {s.name || "your pal"}.
-              </p>
+              <p>Track your habits. Care for {s.name || "your pal"}.</p>
             </div>
             <div className="today-summary">
               <LocalClock />
@@ -672,27 +718,32 @@ export default function App() {
             onComplete={(t) => reward(t, "completed")}
           />
           <div className="game-layout">
-            <section className="task-panel">
+            <section className="task-panel" aria-label="Tasks" id="tasks">
               <div className="section-heading">
                 <h2>
-                  Today's little things <span>✦</span>
+                  Today's Tasks <span>✦</span>
                 </h2>
                 <span className="count">
                   {done}/{dailyTarget || "∞"}
                 </span>
               </div>
               <p className="section-note">
-                Little wins earn coins. Use supplies for care.
+                Complete tasks to earn coins for care supplies.
               </p>
 
-              <div className="task-list">
+              <h3 className="active-task-heading">
+                In Progress <span>{activeTasks.length}</span>
+              </h3>
+              <div
+                className="task-list"
+                id="active-tasks"
+                aria-label="In Progress"
+              >
                 {todayTasks.length === 0 ? (
                   <div className="empty">
                     <Leaf />
-                    <h3>A little room to grow</h3>
-                    <p>
-                      Add one small thing you'd like to do for yourself today.
-                    </p>
+                    <h3>No tasks scheduled</h3>
+                    <p>Add a task to get started.</p>
                   </div>
                 ) : (
                   activeTasks.map(renderTask)
@@ -710,7 +761,7 @@ export default function App() {
                 </details>
               )}
               <button className="add-task" onClick={() => setEdit(null)}>
-                <Plus size={18} /> Add a little thing
+                <Plus size={18} /> Add Task
               </button>
               <button
                 className="manage-tasks"
@@ -721,9 +772,9 @@ export default function App() {
               <div className="paper-note">
                 <span>✧</span>
                 <p>
-                  You don't have to do it all.
+                  Stay consistent.
                   <br />
-                  <b>Just a little is lovely.</b>
+                  <b>Progress counts.</b>
                 </p>
               </div>
             </section>
@@ -796,9 +847,9 @@ export default function App() {
                 <span>
                   <i className={`status-dot stage-dot-${level}`} />
                   {rhythm.sleeping && level < 3
-                    ? "Dreaming of little adventures"
+                    ? "Sleeping"
                     : rhythm.calm && level < 2
-                      ? "Winding down for the evening"
+                      ? "Winding down"
                       : stages[level]}
                 </span>
               </div>
@@ -827,7 +878,7 @@ export default function App() {
               />
               {level === 5 && (
                 <div className="revive">
-                  <p>Your little friend has run out of energy.</p>
+                  <p>Your pet needs revival.</p>
                   <button
                     className="primary"
                     onClick={() => {
@@ -849,16 +900,16 @@ export default function App() {
               <div className="room-footer">
                 <Sparkles size={14} />{" "}
                 {s.settings.cozy
-                  ? "Cozy mode · a gentle place to grow"
-                  : "A little care goes a long way"}
+                  ? "Cozy mode · recovery protected"
+                  : "Care Stats"}
               </div>
             </section>
             <section className="progress-panel">
               <div className="section-heading">
-                <h2>Your jar of joy</h2>
+                <h2>Progress Jar</h2>
                 <span>✧</span>
               </div>
-              <p className="section-note">Little wins, all adding up.</p>
+              <p className="section-note">Today's rewarded completions.</p>
               <button
                 className="jar-button"
                 onClick={() => setPanel("rewards")}
@@ -874,22 +925,21 @@ export default function App() {
               </button>
               <div className="jar-progress">
                 <strong>{earned.length}</strong>
-                <p>rewarded little wins</p>
+                <p>rewarded completions</p>
                 <div className="progress-track">
                   <span style={{ width: percent + "%" }} />
                 </div>
-                <span>{percent}% of today's little things</span>
+                <span>{percent}% of today's targets</span>
               </div>
               <button
                 className="history-button"
                 onClick={() => setPanel("history")}
               >
-                <History size={16} /> Your little history{" "}
-                <ChevronRight size={16} />
+                <History size={16} /> History <ChevronRight size={16} />
               </button>
               <div className="jar-legend">
                 <span>
-                  <Coins size={13} /> Rewarded little wins earn{" "}
+                  <Coins size={13} /> Rewarded completions earn{" "}
                   {policyFor(s).coins} coins
                 </span>
               </div>
@@ -903,7 +953,7 @@ export default function App() {
             </section>
           </div>
           <footer>
-            <span>Made of small moments & a little magic.</span>
+            <span>PocketPal · saved on this device</span>
             <button
               onClick={() => {
                 setting("sound", !s.settings.sound);
@@ -1002,8 +1052,8 @@ export default function App() {
               />
             ) : panel === "onboard" ? (
               <>
-                <span className="eyebrow">A SMALL FRIEND. A FRESH START.</span>
-                <h2>Someone little is waiting.</h2>
+                <span className="eyebrow">WELCOME TO POCKETPAL</span>
+                <h2>Choose your companion</h2>
                 <p>Take care of yourself, and your pal grows with you.</p>
                 <form
                   onSubmit={(e) => {
@@ -1047,14 +1097,14 @@ export default function App() {
                     friend can always recover. Everything stays in this browser.
                   </p>
                   <button className="primary">
-                    Meet my little pal <Heart size={16} />
+                    Get Started <Heart size={16} />
                   </button>
                 </form>
               </>
             ) : panel === "settings" ? (
               <>
-                <span className="eyebrow">MAKE YOURSELF AT HOME</span>
-                <h2>The little details</h2>
+                <span className="eyebrow">PREFERENCES</span>
+                <h2>Settings</h2>
                 <label>
                   Pet name
                   <input
@@ -1190,7 +1240,7 @@ export default function App() {
                         )
                       ) {
                         setS(restored);
-                        setMessage("Your little world has been restored.");
+                        setMessage("Backup restored.");
                       }
                     } catch {
                       setMessage(
@@ -1204,7 +1254,7 @@ export default function App() {
             ) : panel === "tasks" ? (
               <>
                 <span className="eyebrow">YOUR LITTLE ROUTINES</span>
-                <h2>All your little things</h2>
+                <h2>All Tasks</h2>
                 {s.tasks.map((t) => (
                   <div className="managed-habit" key={t.id}>
                     <div className="reward-entry">
@@ -1234,9 +1284,7 @@ export default function App() {
                     />
                   </div>
                 ))}
-                {!s.tasks.length && (
-                  <p>Add your first little thing to begin.</p>
-                )}
+                {!s.tasks.length && <p>Add a task to begin.</p>}
                 <button
                   className="primary"
                   onClick={() => {
@@ -1244,7 +1292,7 @@ export default function App() {
                     setEdit(null);
                   }}
                 >
-                  <Plus size={16} /> Add a little thing
+                  <Plus size={16} /> Add Task
                 </button>
               </>
             ) : panel === "shop" ? (
@@ -1270,7 +1318,7 @@ export default function App() {
             ) : panel === "history" ? (
               <>
                 <span className="eyebrow">A COLLECTION OF GOOD DAYS</span>
-                <h2>Your little history</h2>
+                <h2>History</h2>
                 <div className="achievement-list">
                   {[
                     "First Meal",
@@ -1327,14 +1375,12 @@ export default function App() {
                         </b>
                         <span>
                           {s.completions.filter((c) => c.date === d).length}{" "}
-                          little wins
+                          completions
                         </span>
                       </div>
                     ))}
                 </div>
-                {!s.outcomes.length && (
-                  <p>Your first little win will find a home here.</p>
-                )}
+                {!s.outcomes.length && <p>No history yet.</p>}
               </>
             ) : (
               <>
@@ -1361,10 +1407,7 @@ export default function App() {
                     );
                   })
                 ) : (
-                  <p>
-                    Your jar is ready for its first little win. Complete a task
-                    to add a colorful felt ball.
-                  </p>
+                  <p>Complete a task to add a colorful felt ball.</p>
                 )}
               </>
             )}
@@ -1415,8 +1458,8 @@ function TaskEditor({
         });
       }}
     >
-      <span className="eyebrow">SMALL STEPS, HAPPY HEARTS</span>
-      <h2>{task ? "Edit a little thing" : "A new little thing"}</h2>
+      <span className="eyebrow">TASK DETAILS</span>
+      <h2>{task ? "Edit Task" : "Add Task"}</h2>
       <label>
         What will you do?
         <input
@@ -1432,7 +1475,7 @@ function TaskEditor({
         />
       </label>
       <label>
-        A little note (optional)
+        Notes (optional)
         <textarea
           maxLength={300}
           value={t.description}
@@ -1543,7 +1586,10 @@ function TaskEditor({
         <select
           value={t.repetitions || "once"}
           onChange={(e) =>
-            update({ repetitions: e.target.value as Task["repetitions"] })
+            update({
+              repetitions: e.target.value as Task["repetitions"],
+              ...(e.target.value === "multiple" ? { dailyGoal: 3 } : {}),
+            })
           }
         >
           <option value="once">Once per day</option>
@@ -1552,15 +1598,15 @@ function TaskEditor({
           <option value="unlimited">Unlimited repetitions</option>
         </select>
       </label>
-      {t.repetitions === "goal" && (
+      {(t.repetitions === "goal" || t.repetitions === "multiple") && (
         <label>
           Daily goal
           <input
             type="number"
-            min={1}
+            min={t.repetitions === "multiple" ? 2 : 1}
             max={100}
             required
-            value={t.dailyGoal || 1}
+            value={taskProgressGoal(t)}
             onChange={(e) => update({ dailyGoal: Number(e.target.value) })}
           />
         </label>
@@ -1583,7 +1629,7 @@ function TaskEditor({
           }
         >
           <Check size={17} />
-          {task ? "Save changes" : "Add little thing"}
+          {task ? "Save changes" : "Add Task"}
         </button>
         {onDelete && (
           <button

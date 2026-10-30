@@ -81,8 +81,8 @@ export function Inventory({
       <aside className="inventory-drawer" aria-label="Pet inventory">
         <div className="inventory-heading">
           <div>
-            <span className="eyebrow">A LITTLE SOMETHING FOR YOUR PAL</span>
-            <h2>Your inventory</h2>
+            <span className="eyebrow">YOUR SUPPLIES</span>
+            <h2>Inventory</h2>
           </div>
           <button
             className="icon-button"
@@ -102,7 +102,10 @@ export function Inventory({
           </button>
           <button
             aria-pressed={tab === "wardrobe"}
-            onClick={() => { end(true); setTab("wardrobe"); }}
+            onClick={() => {
+              end(true);
+              setTab("wardrobe");
+            }}
           >
             <Shirt size={13} />
             Wardrobe
@@ -111,7 +114,7 @@ export function Inventory({
         {tab === "food" ? (
           <>
             <p className="inventory-help">
-              Drag a little item onto your pal, or choose Feed / Use.
+              Tap Feed / Use, or drag an item onto your pet.
             </p>
             <div className="pantry-grid">
               {owned.map((item) => (
@@ -170,8 +173,12 @@ export function Inventory({
                           }),
                       });
                     }}
-                    onPointerUp={(e) => { if (pointer.current === e.pointerId) end(); }}
-                    onPointerCancel={(e) => { if (pointer.current === e.pointerId) end(true); }}
+                    onPointerUp={(e) => {
+                      if (pointer.current === e.pointerId) end();
+                    }}
+                    onPointerCancel={(e) => {
+                      if (pointer.current === e.pointerId) end(true);
+                    }}
                     onLostPointerCapture={() => {
                       if (
                         active.current?.phase === "drag" ||
@@ -186,13 +193,11 @@ export function Inventory({
                   <b>{SUPPLIES[item].shopName}</b>
                   <button
                     className="feed-button"
-                    aria-label={`${item === "water" || item === "soap" || item === "smoothie" ? "Use" : "Feed"} ${SUPPLIES[item].shopName}`}
+                    aria-label={`${SUPPLIES[item].category === "food" ? "Feed" : "Use"} ${SUPPLIES[item].shopName}`}
                     disabled={stage(s) === 5}
                     onClick={() => onFeed(item)}
                   >
-                    {item === "water" || item === "soap" || item === "smoothie"
-                      ? "Use"
-                      : "Feed"}
+                    {SUPPLIES[item].category === "food" ? "Feed" : "Use"}
                   </button>
                 </article>
               ))}
@@ -200,10 +205,7 @@ export function Inventory({
             {!owned.length && (
               <div className="pantry-empty">
                 <PackageOpen size={26} />
-                <p>
-                  A little empty, a little full of possibility. Pick up a supply
-                  in the shop.
-                </p>
+                <p>No supplies yet. Pick up an item in the shop.</p>
               </div>
             )}
           </>
@@ -226,17 +228,17 @@ export function Inventory({
               </article>
             ))}
             {!s.ownedOutfits.length && (
-              <p>Your future little outfits will live here.</p>
+              <p>No outfits owned yet.</p>
             )}
           </div>
         )}
         <button className="inventory-shop" onClick={onShop}>
           <ShoppingBag size={14} />
-          Visit PocketPal Shop
+          Open Shop
         </button>
         {stage(s) === 5 && (
           <p className="inventory-help">
-            Revive your little friend before using supplies.
+            Revive your pet before using supplies.
           </p>
         )}
       </aside>

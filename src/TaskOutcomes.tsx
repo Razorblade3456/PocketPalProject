@@ -37,10 +37,12 @@ export function OutcomeControls({
     <div className="repeat-controls">
       <div className="outcome-controls">
         <span className="task-counters">
-          <span className="success-count">
-            <Check size={11} />
-            {counts.completed} completed
-          </span>
+          {goal <= 1 && (
+            <span className="success-count">
+              <Check size={11} />
+              {counts.completed} completed
+            </span>
+          )}
           <span className="miss-count">
             <X size={11} />
             {counts.missed} missed
@@ -96,8 +98,8 @@ export function OutcomeControls({
       {goal > 1 && (
         <div className="task-goal">
           <span>
-            {counts.completed}/{goal} daily goal
-            {counts.completed >= goal ? " · lovely work!" : ""}
+            {counts.completed}/{goal} Done
+            {counts.completed >= goal ? " · Goal Reached" : ""}
           </span>
           <div
             role="progressbar"
@@ -114,11 +116,7 @@ export function OutcomeControls({
           </div>
         </div>
       )}
-      {goal === 0 && (
-        <span className="unlimited-note">
-          As many little moments as you like
-        </span>
-      )}
+      {goal === 0 && <span className="unlimited-note">Unlimited tracking</span>}
     </div>
   );
 }
@@ -231,7 +229,12 @@ export function OutcomeHistory({
                 {e.taskName ||
                   s.tasks.find((t) => t.id === e.taskId)?.name ||
                   "Archived task"}{" "}
-                · {e.kind}
+                ·{" "}
+                {e.kind === "finishDay"
+                  ? "Done for today"
+                  : e.kind === "reopenDay"
+                    ? "Reopened"
+                    : e.kind}
                 {e.kind === "step"
                   ? ": " +
                     (e.stepName ||

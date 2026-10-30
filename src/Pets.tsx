@@ -1138,7 +1138,7 @@ export function PetChoices({
 }) {
   return (
     <fieldset className="pet-choices">
-      <legend>Choose your little companion</legend>
+      <legend>Choose your pet</legend>
       <div>
         {(Object.keys(pets) as PetKind[]).map((kind) => (
           <label className={value === kind ? "chosen" : ""} key={kind}>

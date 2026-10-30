@@ -7,6 +7,7 @@ import "./polish.css";
 import "./careVisuals.css";
 import "./habits.css";
 import "./alternative.css";
+import "./mobile.css";
 class SaveBoundary extends React.Component<
   React.PropsWithChildren,
   { error: boolean; message: string }

@@ -56,6 +56,7 @@ export function PetNeeds({
       className={`pet-needs health-stage-${level}`}
       aria-label="Pet health and needs"
     >
+      <h3 className="care-stats-heading">Care Stats</h3>
       <div className="quick-care" role="group" aria-label="Quick pet care">
         {(
           [

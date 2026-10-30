@@ -131,7 +131,15 @@ export type HabitEvent = {
   date: string;
   at: number;
   kind:
-    "skip" | "pause" | "resume" | "reschedule" | "snooze" | "step" | "restore";
+    | "skip"
+    | "pause"
+    | "resume"
+    | "reschedule"
+    | "snooze"
+    | "step"
+    | "restore"
+    | "finishDay"
+    | "reopenDay";
   reason?: string;
   taskName?: string;
   stepName?: string;
@@ -404,9 +412,28 @@ export function taskCounts(s: State, id: string, date: string) {
       .sort((a, b) => b.sequence - a.sequence)[0],
   };
 }
-/** Presentation only: unlimited tracking never moves out of the active list. */
+/** UI targets do not change recurrence minimums or funded reward limits. */
+export const taskProgressGoal = (task: Task) =>
+  task.repetitions === "multiple"
+    ? Math.max(
+        2,
+        Math.min(
+          100,
+          Math.round(task.dailyGoal && task.dailyGoal > 1 ? task.dailyGoal : 3),
+        ),
+      )
+    : goalFor(task);
 export const taskFinishedToday = (s: State, task: Task, date: string) =>
-  goalFor(task) > 0 && taskCounts(s, task.id, date).completed >= goalFor(task);
+  task.repetitions === "unlimited"
+    ? (s.habitEvents || [])
+        .filter(
+          (e) =>
+            e.taskId === task.id &&
+            e.date === date &&
+            ["finishDay", "reopenDay"].includes(e.kind),
+        )
+        .at(-1)?.kind === "finishDay"
+    : taskCounts(s, task.id, date).completed >= taskProgressGoal(task);
 export const rewardKey = (c: Completion) =>
   c.ballId || c.id || occurrenceKey(c.taskId, c.date);
 export function recordAttempt(
@@ -1210,6 +1237,35 @@ const upgradedEntry = (o: Occurrence, index: number): Occurrence => {
   };
 };
 export function parseState(x: unknown, n = Date.now()): State | null {
+  // Catalog additions only: fill missing new keys, never replace saved stock/history.
+  if (
+    x &&
+    typeof x === "object" &&
+    (x as State).version === 4 &&
+    (x as State).inventory &&
+    typeof (x as State).inventory === "object"
+  ) {
+    const original = x as State;
+    const added: Supply[] = [
+      "juiceBox",
+      "snackPack",
+      "bubbleBath",
+      "toyBall",
+      "donut",
+      "cupcake",
+      "hotDog",
+      "fries",
+      "ramenCup",
+      "milkshake",
+    ];
+    x = {
+      ...original,
+      inventory: {
+        ...Object.fromEntries(added.map((id) => [id, 0])),
+        ...original.inventory,
+      },
+    };
+  }
   if (validModel(x, 3)) {
     const old = x as State;
     return decay(
@@ -1465,6 +1521,8 @@ export function validHabitData(s: State) {
             "snooze",
             "step",
             "restore",
+            "finishDay",
+            "reopenDay",
           ].includes(e.kind) &&
           (e.reason === undefined ||
             (typeof e.reason === "string" && e.reason.length <= 500)) &&

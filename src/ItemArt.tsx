@@ -1,5 +1,11 @@
 import { useId } from "react";
-import { isOutfit, type ShopItem, type Outfit } from "./catalog";
+import {
+  isOutfit,
+  EXTRA_SUPPLY_IDS,
+  type ShopItem,
+  type Outfit,
+} from "./catalog";
+import { ExtraSupplyArt } from "./ExtraSupplyArt";
 export function OutfitGlyph({ item }: { item: Outfit }) {
   return (
     <g stroke="#80745f" strokeWidth="2" strokeLinejoin="round">
@@ -135,6 +141,8 @@ export function ItemArt({
       >
         {isOutfit(item) ? (
           <OutfitGlyph item={item} />
+        ) : EXTRA_SUPPLY_IDS.some((id) => id === item) ? (
+          <ExtraSupplyArt item={item} />
         ) : item === "food" ? (
           <>
             <ellipse cx="50" cy="47" rx="33" ry="12" fill="#e3d4b7" />

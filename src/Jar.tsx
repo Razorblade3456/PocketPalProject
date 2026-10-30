@@ -86,7 +86,7 @@ export function Jar({
             );
           })}
         </div>
-        <span className="jar-label">little wins</span>
+        <span className="jar-label">completed</span>
       </div>
     </motion.div>
   );

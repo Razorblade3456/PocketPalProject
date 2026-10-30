@@ -8,7 +8,17 @@ export type Supply =
   | "icecream"
   | "cookie"
   | "smoothie"
-  | "pancakes";
+  | "pancakes"
+  | "juiceBox"
+  | "snackPack"
+  | "bubbleBath"
+  | "toyBall"
+  | "donut"
+  | "cupcake"
+  | "hotDog"
+  | "fries"
+  | "ramenCup"
+  | "milkshake";
 export type Outfit =
   | "beanie"
   | "bowtie"
@@ -33,6 +43,106 @@ export const SUPPLIES: Record<
     tab: "essentials" | "treats";
   }
 > = {
+  juiceBox: {
+    name: "Juice Box",
+    shopName: "Juice Box",
+    price: 7,
+    category: "water",
+    boost: 20,
+    morale: 3,
+    description: "Fruit juice. Restores hydration.",
+    tab: "essentials",
+  },
+  snackPack: {
+    name: "Snack Pack",
+    shopName: "Snack Pack",
+    price: 8,
+    category: "food",
+    boost: 20,
+    morale: 4,
+    description: "A portable snack. Restores nourishment.",
+    tab: "essentials",
+  },
+  bubbleBath: {
+    name: "Bubble Bath",
+    shopName: "Bubble Bath",
+    price: 9,
+    category: "clean",
+    boost: 25,
+    morale: 5,
+    description: "Extra suds. Restores cleanliness.",
+    tab: "essentials",
+  },
+  toyBall: {
+    name: "Toy Ball",
+    shopName: "Toy Ball",
+    price: 8,
+    category: "happy",
+    boost: 20,
+    morale: 0,
+    description: "One play session. Restores happiness.",
+    tab: "essentials",
+  },
+  donut: {
+    name: "Donut",
+    shopName: "Donut",
+    price: 12,
+    category: "food",
+    boost: 12,
+    morale: 10,
+    description: "Chocolate glaze with a crooked drizzle.",
+    tab: "treats",
+  },
+  cupcake: {
+    name: "Cupcake",
+    shopName: "Cupcake",
+    price: 15,
+    category: "food",
+    boost: 12,
+    morale: 15,
+    description: "Dark berry frosting and a cherry.",
+    tab: "treats",
+  },
+  hotDog: {
+    name: "Hot Dog",
+    shopName: "Hot Dog",
+    price: 16,
+    category: "food",
+    boost: 25,
+    morale: 6,
+    description: "Toasted bun, mustard, no sharing.",
+    tab: "treats",
+  },
+  fries: {
+    name: "Fries",
+    shopName: "Fries",
+    price: 12,
+    category: "food",
+    boost: 18,
+    morale: 7,
+    description: "Crisp fries in a burgundy carton.",
+    tab: "treats",
+  },
+  ramenCup: {
+    name: "Ramen Cup",
+    shopName: "Ramen Cup",
+    price: 20,
+    category: "food",
+    boost: 30,
+    morale: 7,
+    description: "Hot noodles for an after-hours meal.",
+    tab: "treats",
+  },
+  milkshake: {
+    name: "Milkshake",
+    shopName: "Milkshake",
+    price: 18,
+    category: "water",
+    boost: 20,
+    morale: 12,
+    description: "Chocolate shake with whipped cream.",
+    tab: "treats",
+  },
   food: {
     name: "Food",
     shopName: "Basic Pet Food",
@@ -40,7 +150,7 @@ export const SUPPLIES: Record<
     category: "food",
     boost: 15,
     morale: 4,
-    description: "A nourishing little bowl for everyday adventures.",
+    description: "Everyday food. Restores nourishment.",
     tab: "essentials",
   },
   water: {
@@ -50,7 +160,7 @@ export const SUPPLIES: Record<
     category: "water",
     boost: 15,
     morale: 4,
-    description: "A cool sip in a tiny handmade glass.",
+    description: "Fresh water. Restores hydration.",
     tab: "essentials",
   },
   soap: {
@@ -60,7 +170,7 @@ export const SUPPLIES: Record<
     category: "clean",
     boost: 15,
     morale: 4,
-    description: "Gentle suds for soft paws and fresh stitches.",
+    description: "Soap for a fresh start. Restores cleanliness.",
     tab: "essentials",
   },
   burger: {
@@ -100,7 +210,7 @@ export const SUPPLIES: Record<
     category: "food",
     boost: 5,
     morale: 15,
-    description: "A sweet little scoop for a happy little afternoon.",
+    description: "A frosted scoop with a crisp cone.",
     tab: "treats",
   },
   cookie: {
@@ -110,7 +220,7 @@ export const SUPPLIES: Record<
     category: "food",
     boost: 5,
     morale: 10,
-    description: "A pocket-sized hug with chocolate freckles.",
+    description: "Chocolate chips, crisp edges.",
     tab: "treats",
   },
   smoothie: {
@@ -120,7 +230,7 @@ export const SUPPLIES: Record<
     category: "water",
     boost: 10,
     morale: 10,
-    description: "Berry-bright refreshment in a stitched little cup.",
+    description: "A berry smoothie. Pippin’s favorite.",
     tab: "treats",
   },
   pancakes: {
@@ -130,7 +240,7 @@ export const SUPPLIES: Record<
     category: "food",
     boost: 30,
     morale: 8,
-    description: "A tiny stack made for a slow, lovely morning.",
+    description: "Pancakes with butter and syrup.",
     tab: "treats",
   },
 };
@@ -188,6 +298,18 @@ export const OUTFITS: Record<
   },
 };
 export const SUPPLY_IDS = Object.keys(SUPPLIES) as Supply[];
+export const EXTRA_SUPPLY_IDS = [
+  "juiceBox",
+  "snackPack",
+  "bubbleBath",
+  "toyBall",
+  "donut",
+  "cupcake",
+  "hotDog",
+  "fries",
+  "ramenCup",
+  "milkshake",
+] as const;
 export const OUTFIT_IDS = Object.keys(OUTFITS) as Outfit[];
 export const isSupply = (id: unknown): id is Supply =>
   typeof id === "string" && SUPPLY_IDS.includes(id as Supply);

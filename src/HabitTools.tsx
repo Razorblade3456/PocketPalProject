@@ -13,6 +13,8 @@ import {
   changeRewardPolicy,
   dateKey,
   goalFor,
+  taskProgressGoal,
+  taskFinishedToday,
   pausedOn,
   policyFor,
   reminderFor,
@@ -45,11 +47,11 @@ export function TodayThree({
     return (
       <div className="focus-invite">
         <Star size={13} />
-        <span>Star up to three tasks for a little extra focus.</span>
+        <span>Star up to three focus tasks.</span>
       </div>
     );
-  const finished = selected.filter(
-    (t) => taskCounts(s, t.id, today).completed >= (goalFor(t) || 1),
+  const finished = selected.filter((t) =>
+    taskFinishedToday(s, t, today),
   ).length;
   return (
     <section className="today-three" aria-label="Today's 3">
@@ -59,7 +61,7 @@ export function TodayThree({
           Today's 3
         </span>
         <small>
-          {finished}/{selected.length} little priorities
+          {finished}/{selected.length} priorities
         </small>
       </div>
       <div
@@ -74,7 +76,7 @@ export function TodayThree({
       </div>
       {selected.map((t) => {
         const c = taskCounts(s, t.id, today);
-        const done = c.completed >= (goalFor(t) || 1);
+        const done = taskFinishedToday(s, t, today);
         return (
           <div className={"focus-row " + (done ? "done" : "")} key={t.id}>
             <button
@@ -88,9 +90,9 @@ export function TodayThree({
             <span>
               {t.name}
               <small>
-                {c.completed}/{goalFor(t) || "∞"} ·{" "}
+                {c.completed}/{taskProgressGoal(t) || "∞"} ·{" "}
                 {taskDue(s, t)
-                  ? "one tap, one little win"
+                  ? "one tap to complete"
                   : "resting or not scheduled today"}
               </small>
             </span>
@@ -497,7 +499,7 @@ export function RewardSettings({ s, setS }: { s: State; setS: Setter }) {
   const policy = policyFor(s);
   return (
     <section className="reward-settings">
-      <h3>Little wins, fair rewards</h3>
+      <h3>Reward Settings</h3>
       <p>
         Extra entries always count in history. Only eligible entries earn coins
         and jar balls. Changes apply to new entries.

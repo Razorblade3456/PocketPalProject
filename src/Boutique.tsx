@@ -35,9 +35,9 @@ export function Boutique({
     <>
       <div className="boutique-heading">
         <div>
-          <span className="eyebrow">LITTLE TREASURES FOR LITTLE FRIENDS</span>
-          <h2>PocketPal Shop</h2>
-          <p>A tiny boutique, made of everyday magic.</p>
+          <span className="eyebrow">SUPPLIES & GEAR</span>
+          <h2>Shop</h2>
+          <p>Care supplies, food, and outfits.</p>
         </div>
         <span className="boutique-wallet">
           <Coins size={17} />
@@ -53,8 +53,8 @@ export function Boutique({
         {(
           [
             ["essentials", "Essentials"],
-            ["treats", "Treats & Food"],
-            ["outfits", "Outfits & Accessories"],
+            ["treats", "Premium Food"],
+            ["outfits", "Outfits"],
           ] as const
         ).map(([value, label]) => (
           <button
@@ -85,8 +85,8 @@ export function Boutique({
           tab === "essentials"
             ? "Essentials"
             : tab === "treats"
-              ? "Treats & Food"
-              : "Outfits & Accessories"
+              ? "Premium Food"
+              : "Outfits"
         }
         className="boutique-grid"
       >
@@ -119,10 +119,12 @@ export function Boutique({
                       ? "nourishment"
                       : SUPPLIES[item].category === "water"
                         ? "hydration"
-                        : "cleanliness") +
-                    " · +" +
-                    SUPPLIES[item].morale +
-                    " joy"
+                        : SUPPLIES[item].category === "happy"
+                          ? "happiness"
+                          : "cleanliness") +
+                    (SUPPLIES[item].morale
+                      ? " · +" + SUPPLIES[item].morale + " happiness"
+                      : "")
                   : "Permanent unlock · " + OUTFITS[item].slot + " slot"}
               </span>
               <button
@@ -146,7 +148,7 @@ export function Boutique({
               </button>
               {!owned && s.coins < product.price && (
                 <small className="coins-needed">
-                  {product.price - s.coins} more coins to save up
+                  {product.price - s.coins} more coins needed
                 </small>
               )}
             </article>
@@ -160,8 +162,7 @@ export function Boutique({
         </p>
       )}
       <p className="boutique-note">
-        Essentials are always here. Treats are little extras. Buy now, then feed
-        from your inventory whenever your pal needs care.
+        Buy supplies here, then tap Feed / Use in Inventory.
       </p>
     </>
   );
@@ -180,7 +181,7 @@ export function Wardrobe({
       <span className="eyebrow">THE TINIEST LITTLE CLOSET</span>
       <h2>Your pal's wardrobe</h2>
       <p>
-        A little outfit, a lot of personality. One item per slot; hats,
+        One item per slot; hats,
         neckwear, backpacks and clothing can be combined.
       </p>
       <div className="wardrobe-preview">
@@ -239,7 +240,7 @@ export function Wardrobe({
       ) : (
         <div className="closet-empty">
           <Shirt size={28} />
-          <h3>A little room for personality</h3>
+          <h3>No outfits yet</h3>
           <p>
             Your first outfit will have a home here. Essentials always come
             first.

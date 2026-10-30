@@ -21,7 +21,7 @@ export function LocalClock() {
     <div className="local-clock" title="Your device's local time">
       <span className="clock-icon"><Clock3 size={18} strokeWidth={1.5} /></span>
       <div>
-        <span className="clock-caption">HERE & NOW</span>
+        <span className="clock-caption">LOCAL TIME</span>
         <time dateTime={now.toISOString()} aria-label={"Local time: " + time + ", " + date}>{time}</time>
         <span className="clock-date">{date}</span>
       </div>

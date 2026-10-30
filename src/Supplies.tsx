@@ -21,13 +21,13 @@ export function Supplies({
       id="supplies"
     >
       <div className="supplies-heading">
-        <h3>The little supply shelf</h3>
+        <h3>Shop</h3>
         <span>
           <Coins size={13} />
           {s.coins}
         </span>
       </div>
-      <p>Little wins become little comforts.</p>
+      <p>Essentials · buy or use your supplies.</p>
       {(["food", "water", "soap"] as const).map((item) => {
         const v = SUPPLIES[item],
           Icon = icons[item];
@@ -85,7 +85,7 @@ export function Supplies({
         <button onClick={onInventory}>Open inventory</button>
       </div>
       <p className="supply-hint">
-        Buy now, use when your pal needs a little care. Each use adds +4
+        Buy supplies, then use them for care. Basic items add +4
         happiness.
       </p>
       {s.debt > 0 && (
