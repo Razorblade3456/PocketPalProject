@@ -7,7 +7,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "test": "tsx --test src/model.test.ts src/careVisuals.test.ts src/habits.test.ts",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "desktop:build": "tsc -b && vite build --config vite.desktop.config.ts",
+    "desktop": "npm run desktop:build && electron desktop/main.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -21,6 +23,7 @@
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.5.0",
+    "electron": "^45.2.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.1.0",
     "tsx": "^4.20.0",
