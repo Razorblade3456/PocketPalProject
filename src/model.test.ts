@@ -10,6 +10,8 @@ import {
   goalFor,
   rewardKey,
   buyItem,
+  buyAndUseBasic,
+  taskFinishedToday,
   equipOutfit,
   OUTFITS,
   OUTFIT_IDS,
@@ -725,6 +727,48 @@ function earn(s: State, count: number, n = now) {
     s = recordAttempt(s, "a", dateKey(n), "completed", n, "earn-" + i);
   return s;
 }
+test("approved basic care buys and consumes once, preserves prices/effects, and survives refresh", () => {
+  for (const item of ["food", "water", "soap"] as const) {
+    const before = earn(setup(), 4);
+    const next = buyAndUseBasic(before, item, now, "approved");
+    assert.equal(next.coins, before.coins - SUPPLIES[item].price);
+    assert.equal(next.inventory[item], 0);
+    assert.equal(next.care[SUPPLIES[item].category], 100);
+    assert.equal(next.care.happy, 94);
+    assert.equal(next.careEvents.filter(e => e.kind === "buy").length, 1);
+    assert.equal(next.careEvents.filter(e => e.kind === "use").length, 1);
+    assert.deepEqual(buyAndUseBasic(next, item, now, "approved"), next);
+    assert.deepEqual(reload(next), next);
+  }
+});
+test("approved quick care uses newly stocked inventory and never charges when funds or health prevent use", () => {
+  const funded = earn(setup(), 4);
+  const stocked = buyItem(funded, "food", now, "existing-stock");
+  const used = buyAndUseBasic(stocked, "food", now, "approved");
+  assert.equal(used.coins, stocked.coins);
+  assert.equal(used.inventory.food, 0);
+  assert.equal(used.careEvents.filter(e => e.kind === "buy").length, 1);
+  const poor = setup();
+  assert.deepEqual(buyAndUseBasic(poor, "food", now, "too-poor"), decay(poor, now));
+  const dead = {...funded, settings:{...funded.settings, cozy:false}, baseline:{...funded.baseline, cozy:false, care:{food:0,water:0,clean:0,happy:0}}};
+  assert.deepEqual(buyAndUseBasic(dead, "soap", now, "dead"), decay(dead, now));
+});
+test("finished-today grouping is derived from the daily target and reverses after undo/corrections", () => {
+  let s = setup(); s.tasks[0] = {...s.tasks[0], repetitions:"goal", dailyGoal:3};
+  for (let i=0;i<3;i++) {
+    assert.equal(taskFinishedToday(s, s.tasks[0], dateKey(now)), false);
+    s = recordAttempt(s, "a", dateKey(now), "completed", now, `finish-${i}`);
+  }
+  const snapshot = JSON.stringify(s);
+  assert.equal(taskFinishedToday(s, s.tasks[0], dateKey(now)), true);
+  assert.equal(JSON.stringify(s), snapshot);
+  assert.equal(taskFinishedToday(s, {...s.tasks[0], repetitions:"unlimited"}, dateKey(now)), false);
+  assert.equal(taskFinishedToday(s, s.tasks[0], shiftDate(dateKey(now),1)), false);
+  const undone = undoLatest(s, "a", dateKey(now), now);
+  assert.equal(taskFinishedToday(undone, undone.tasks[0], dateKey(now)), false);
+  const corrected = correctAttempt(s, "finish-2", "missed", now);
+  assert.equal(taskFinishedToday(corrected, corrected.tasks[0], dateKey(now)), false);
+});
 test("each intentional positive and negative press is a unique independent entry", () => {
   let s = setup();
   for (let i = 0; i < 3; i++)

@@ -10,8 +10,16 @@ export function OutfitLayer({
   equipped?: Equipped;
   back?: boolean;
 }) {
-  const hy = kind === "mochi" ? 66 : kind === "pippin" ? 104 : 52,
-    ny = kind === "mochi" ? 205 : kind === "pippin" ? 218 : 219;
+  const hy =
+      kind === "mochi" || kind === "rattle" ? 66 : kind === "pippin" ? 104 : 52,
+    ny =
+      kind === "rattle"
+        ? 216
+        : kind === "mochi"
+          ? 205
+          : kind === "pippin"
+            ? 218
+            : 219;
   const head = equipped.head,
     neck = equipped.neck,
     body = equipped.body;
@@ -19,7 +27,7 @@ export function OutfitLayer({
     return equipped.back === "backpack" ? (
       <g
         data-outfit="backpack"
-        transform={`translate(${kind === "pippin" ? 257 : kind === "crumb" ? 239 : 242} 219)`}
+        transform={`translate(${kind === "rattle" ? 205 : kind === "pippin" ? 257 : kind === "crumb" ? 239 : 242} 219)`}
         stroke="#8a755e"
         strokeWidth="2"
       >

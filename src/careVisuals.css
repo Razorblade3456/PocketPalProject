@@ -869,6 +869,60 @@
 .species-crumb .arm-right {
   transform-origin: 215px 181px;
 }
+.species-rattle .arm-left {
+  transform-origin: 115px 217px;
+  --rub-x: 0px;
+  --rub-y: 0px;
+}
+.species-rattle .arm-right {
+  transform-origin: 205px 217px;
+}
+/* A single main idle owns the body. Reactions/sleep override need animations. */
+.care-kind-rattle[data-body-motion="huff"] .care-idle {
+  animation: rattle-huff 4s ease-in-out infinite;
+}
+.care-kind-rattle.care-awake .care-face,
+.care-kind-rattle.care-awake .care-eyes {
+  animation: none;
+}
+.care-body[data-body-motion="reaction"] .care-idle,
+.care-body[data-body-motion="reaction"] .care-face,
+.care-body[data-body-motion="reaction"] .care-eyes {
+  animation: none;
+}
+.care-body[data-body-motion="sleep"] .care-idle {
+  animation: care-quiet-breathe 7s ease-in-out infinite;
+}
+.care-body[data-body-motion="dead"] .care-idle {
+  animation: none;
+}
+.pet-button.is-eating .care-mouth,
+.pet-button.is-drinking .care-mouth {
+  animation-duration: 0.6s;
+}
+@keyframes rattle-huff {
+  0%,
+  65%,
+  100% {
+    transform: translateY(0);
+  }
+  72%,
+  86% {
+    transform: translateY(-3px) rotate(-1deg);
+  }
+  79%,
+  93% {
+    transform: translateY(1px) rotate(1deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .care-kind-rattle .care-idle {
+    animation: none !important;
+  }
+}
+.pet-choices > div {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
 .care-awake[data-limb-motion="tummy"] .arm-left {
   animation: existing-arm-tummy 7s ease-in-out infinite;
 }

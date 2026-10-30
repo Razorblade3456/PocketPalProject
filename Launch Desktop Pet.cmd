@@ -2,6 +2,8 @@
 setlocal
 cd /d "%~dp0"
 if errorlevel 1 goto failed
+echo PocketPal Windows Desktop Pet - separate from browser Picture-in-Picture.
+echo Starting from "%CD%"
 where node >nul 2>&1
 if errorlevel 1 (
   echo Node.js was not found. Install Node.js 22.12 or newer, then reopen this launcher.

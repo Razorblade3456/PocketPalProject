@@ -4,7 +4,7 @@ import { stageForCare, type Care, type Category, type PetKind } from "./model";
 import type { Equipped } from "./Outfits";
 import { Pet } from "./Pets";
 import {
-  careConditions,
+  conditionsFor,
   careLabels,
   careNames,
   careTier,
@@ -78,8 +78,8 @@ export function CareGuide({
             <span className="eyebrow">
               {careLabels[category]} · {careValues[selected]}/100
             </span>
-            <h3>{careConditions[category][selected].name}</h3>
-            <p>{careConditions[category][selected].description}</p>
+            <h3>{conditionsFor(kind, category)[selected].name}</h3>
+            <p>{conditionsFor(kind, category)[selected].description}</p>
             <span className="preview-badge">
               Preview only · other needs at 100
             </span>
@@ -94,7 +94,7 @@ export function CareGuide({
               key={value}
               className={selected === i ? "selected" : ""}
               aria-pressed={selected === i}
-              aria-label={`Preview ${careLabels[category]} ${value}: ${careConditions[category][i].name}`}
+              aria-label={`Preview ${careLabels[category]} ${value}: ${conditionsFor(kind, category)[i].name}`}
               onClick={() => setSelected(i)}
             >
               <div className="care-card-art" aria-hidden="true">
@@ -110,9 +110,9 @@ export function CareGuide({
                 {value}
                 <small>/100</small>
               </strong>
-              <h4>{careConditions[category][i].name}</h4>
+              <h4>{conditionsFor(kind, category)[i].name}</h4>
               <span>{careNames[i]}</span>
-              <p>{careConditions[category][i].description}</p>
+              <p>{conditionsFor(kind, category)[i].description}</p>
             </button>
           ))}
         </div>
@@ -136,6 +136,7 @@ export function CareGuide({
             <option value="mochi">Mochi</option>
             <option value="pippin">Pippin</option>
             <option value="crumb">Crumb</option>
+            <option value="rattle">Rattle</option>
           </select>
         </label>
         <div className="simulator-content">
@@ -175,7 +176,9 @@ export function CareGuide({
                     setSource("Your preview mix");
                   }}
                 />
-                <small>{careConditions[key][careTier(sim[key])].name}</small>
+                <small>
+                  {conditionsFor(simSpecies, key)[careTier(sim[key])].name}
+                </small>
               </label>
             ))}
           </div>

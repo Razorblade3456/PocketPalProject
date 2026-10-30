@@ -1,8 +1,18 @@
 import { AnimatePresence, motion } from "motion/react";
 import type { Care, Category, PetKind } from "./model";
 import { careTiers, type CareTier } from "./careVisuals";
+import { petExpression, type FaceAction } from "./petExpression";
+import { RattleFace } from "./RattleFace";
 
 const anatomy = {
+  rattle: {
+    eye: 138,
+    left: 120,
+    right: 200,
+    mouth: 177,
+    cheek: 163,
+    tummy: 247,
+  },
   mochi: {
     eye: 138,
     left: 115,
@@ -219,26 +229,43 @@ export function HappinessExpression({
   care,
   look,
   anticipating = false,
+  action = null,
+  level = 0,
 }: {
   kind: PetKind;
   care: Care;
   look: { x: number; y: number };
   anticipating?: boolean;
+  action?: FaceAction;
+  level?: number;
 }) {
-  const { happy: mood, water: thirst } = careTiers(care),
+  const face = petExpression(kind, care, level, false, action, anticipating);
+  const { mood, thirst, feisty } = face,
     a = anatomy[kind];
   const eyeY = a.eye + (mood >= 2 ? 3 : 0);
   const mouthY = a.mouth;
+  if (kind === "rattle")
+    return (
+      <RattleFace
+        care={care}
+        level={level}
+        look={look}
+        action={action}
+        anticipating={anticipating}
+      />
+    );
   return (
     <g
       className={`care-face mood-${mood}`}
       data-happiness-layer={mood}
+      data-active-face="care"
+      data-eye-variant={face.eyes}
       transform={`translate(${look.x},${look.y + (mood >= 2 ? 4 : 0)})`}
     >
       <g className="care-eyes">
         {[a.left, a.right].map((x, i) => (
           <g key={x}>
-            {mood === 4 ? (
+            {mood === 4 && !feisty ? (
               <path
                 d={`M${x - 10} ${eyeY}q10-12 20 0`}
                 fill="none"
@@ -252,7 +279,9 @@ export function HappinessExpression({
                   cx={x}
                   cy={eyeY}
                   rx={kind === "pippin" ? 13 : 10}
-                  ry={mood === 2 ? 10 : 15}
+                  ry={
+                    feisty && mood > 0 ? 8 : mood === 2 || level >= 3 ? 10 : 15
+                  }
                   fill={kind === "crumb" ? "#4d3b32" : "#414638"}
                 />
                 <ellipse
@@ -271,7 +300,7 @@ export function HappinessExpression({
                     opacity=".7"
                   />
                 )}
-                {mood >= 3 && (
+                {face.tears && (
                   <path
                     d={`M${x - 10} ${eyeY + 8}q10-4 20 0q-1 9-10 8t-10-8`}
                     fill="#a8d6de"
@@ -283,14 +312,18 @@ export function HappinessExpression({
             )}
             {mood > 0 && (
               <path
-                d={`M${x - 11} ${eyeY - 21}q10 ${i === 0 ? -mood * 2 : mood * 2} 21 ${i === 0 ? -mood * 2 : mood * 2}`}
+                d={
+                  feisty
+                    ? `M${x - 12} ${eyeY - 17 + (i ? mood * 2 : -mood * 2)}l24 ${i ? -mood * 4 : mood * 4}`
+                    : `M${x - 11} ${eyeY - 21}q10 ${i === 0 ? -mood * 2 : mood * 2} 21 ${i === 0 ? -mood * 2 : mood * 2}`
+                }
                 fill="none"
                 stroke="var(--pet-dark)"
                 strokeWidth="3.5"
                 strokeLinecap="round"
               />
             )}
-            {mood === 4 && (
+            {mood === 4 && !feisty && (
               <g
                 className={`rolling-tears tear-${i}`}
                 fill="#a7d8e0"
@@ -329,13 +362,16 @@ export function HappinessExpression({
         <path d={`M151 ${mouthY - 22}q10-5 20 0l-10 10z`} fill="#6c5142" />
       )}
       <g
-        className={`mouth care-mouth ${thirst === 4 ? "panting-mouth" : ""} ${mood >= 3 ? "trembling-lip" : ""}`}
+        data-mouth-variant={face.mouth}
+        className={`mouth care-mouth ${action ? "" : thirst === 4 ? "panting-mouth" : face.tears ? "trembling-lip" : ""}`}
       >
-        {anticipating || mood === 0 || mood === 4 ? (
+        {face.mouth === "sip" ? (
+          <ellipse cx="160" cy={mouthY + 7} rx="7" ry="9" fill="#57463f" />
+        ) : face.open ? (
           <>
             <path
               d={
-                mood === 4 && !anticipating
+                face.mouth === "sob"
                   ? `M147 ${mouthY + 5}q13-20 26 0q-2 13-13 8q-11 5-13-8`
                   : `M140 ${mouthY - 5}q20 7 40 0q-1 29-20 29q-19 0-20-29`
               }
@@ -345,17 +381,18 @@ export function HappinessExpression({
             />
             <ellipse
               cx="160"
-              cy={mouthY + (mood === 4 && !anticipating ? 7 : 16)}
+              cy={mouthY + (face.mouth === "sob" ? 7 : 16)}
               rx="10"
               ry="5"
               fill="#d59a95"
             />
-            {kind === "mochi" && mood === 0 && (
-              <path
-                d={`M146 ${mouthY - 2}l5 10 7-8m8 0 5 8 6-10`}
-                fill="#fff5dd"
-              />
-            )}
+            {kind === "mochi" &&
+              face.mouth === "open" && (
+                <path
+                  d={`M146 ${mouthY - 2}l5 10 7-8m8 0 5 8 6-10`}
+                  fill="#fff5dd"
+                />
+              )}
           </>
         ) : (
           <path
@@ -374,25 +411,18 @@ export function HappinessExpression({
             strokeWidth={thirst >= 3 ? 3.5 : 2}
             strokeLinecap="round"
           >
-            {kind !== "mochi" && (
-              <path
-                d={`M142 ${mouthY + 9}q18 9 36 0`}
-                strokeDasharray={thirst === 1 ? "3 5" : "5 3"}
-              />
+            {!face.open && (
+              <path d={`M138 ${mouthY + 7}l-2 3M182 ${mouthY + 7}l2 3`} />
             )}
             {thirst >= 3 && (
               <path
-                transform={
-                  kind === "mochi" && (anticipating || mood === 0 || mood === 4)
-                    ? "translate(0 20)"
-                    : undefined
-                }
+                transform={face.open ? "translate(0 20)" : undefined}
                 d={`M148 ${mouthY + 5}l-2 8m14-6 1 8m10-11 3 8`}
               />
             )}
           </g>
         )}
-        {thirst > 0 && thirst < 4 && (
+        {thirst > 0 && thirst < 4 && !face.open && (
           <ellipse
             className="lip-lick"
             cx="166"
@@ -403,6 +433,19 @@ export function HappinessExpression({
           />
         )}
       </g>
+      {feisty && mood >= 3 && (
+        <g
+          className="frustration-marks"
+          fill="none"
+          stroke="#b67c94"
+          strokeWidth="3"
+          strokeLinecap="round"
+          data-feisty="true"
+        >
+          <path d="M231 106l-2 9 8 1m-15-2-8-1 2-8m14 18-2 8-8-2" />
+          {mood === 4 && <path d="M83 118q-10-9-4-16m-2 20q-14-5-11-14" />}
+        </g>
+      )}
     </g>
   );
 }
@@ -464,12 +507,14 @@ export function CareBody({
   kind,
   level,
   sleeping,
+  action = null,
   children,
 }: {
   care?: Care;
   kind: PetKind;
   level: number;
   sleeping: boolean;
+  action?: FaceAction;
   children: import("react").ReactNode;
 }) {
   const t = careTiers(
@@ -482,13 +527,13 @@ export function CareBody({
   const weakness = Math.max(food, thirst, mood);
   // Existing limbs have one owner; care overlays never create body parts.
   const limbMotion =
-    !active || sleeping
+    !active || sleeping || action
       ? "rest"
       : food > 0
         ? food === 4
           ? "food"
           : "tummy"
-        : mood === 4
+        : mood === 4 && kind !== "rattle"
           ? "cover"
           : thirst >= 3
             ? "water"
@@ -505,6 +550,17 @@ export function CareBody({
       data-clean-tier={active ? t.clean : 0}
       data-happy-tier={mood}
       data-care-energy={weakness}
+      data-body-motion={
+        level === 5
+          ? "dead"
+          : sleeping
+            ? "sleep"
+            : action
+              ? "reaction"
+              : kind === "rattle" && mood >= 3
+                ? "huff"
+                : "idle"
+      }
       data-limb-motion={limbMotion}
       style={{ filter: active ? `saturate(${1 - thirst * 0.065})` : undefined }}
     >
@@ -560,6 +616,7 @@ export function CareFace({
   look,
   anticipating,
   offsetY,
+  action,
 }: {
   kind: PetKind;
   care?: Care;
@@ -568,6 +625,7 @@ export function CareFace({
   look: { x: number; y: number };
   anticipating?: boolean;
   offsetY: number;
+  action?: FaceAction;
 }) {
   if (!care || sleeping || level === 5) return null;
   return (
@@ -576,6 +634,8 @@ export function CareFace({
       care={care}
       look={{ x: look.x, y: look.y + offsetY }}
       anticipating={anticipating}
+      action={action}
+      level={level}
     />
   );
 }

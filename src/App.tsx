@@ -30,6 +30,8 @@ import {
 import {
   SUPPLIES,
   buyItem,
+  buyAndUseBasic,
+  taskFinishedToday,
   recordAttempt,
   correctAttempt,
   deleteAttempt,
@@ -82,6 +84,8 @@ import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
 import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
 import { LocalClock } from "./LocalClock";
 import { PetNeeds } from "./PetNeeds";
+import { useImportantAlarms } from "./ImportantAlarms";
+import { quietNow } from "./alarms";
 import { MiniMochi } from "./MiniMochi";
 import { Supplies } from "./Supplies";
 import { Boutique, Wardrobe } from "./Boutique";
@@ -137,6 +141,7 @@ export default function App() {
   const [jarPulse, setJarPulse] = useState(0);
   const jarRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(Date.now());
+  const importantAlarms = useImportantAlarms(s, setS, now);
   const [storageError, setStorageError] = useState(false);
   const reminded = useRef(new Set<string>());
   const file = useRef<HTMLInputElement>(null);
@@ -151,6 +156,10 @@ export default function App() {
         (new Date(now).getHours() < 7 || new Date(now).getHours() >= 19));
   const rhythm = petRhythm(now);
   const todayTasks = s.tasks.filter((t) => taskDue(s, t, now));
+  const finishedTasks = todayTasks.filter((t) =>
+    taskFinishedToday(s, t, today),
+  );
+  const activeTasks = todayTasks.filter((t) => !taskFinishedToday(s, t, today));
   const earned = s.completions.filter((c) => c.date === today);
   const dailyTarget = todayTasks.reduce((sum, t) => sum + goalFor(t), 0);
   const done = todayTasks.reduce(
@@ -186,31 +195,44 @@ export default function App() {
     };
     const i = setInterval(tick, 30000);
     let lastDay = dateKey(),
-      offset = new Date().getTimezoneOffset();
+      offset = new Date().getTimezoneOffset(),
+      minute = Math.floor(Date.now() / 60000);
     const calendarWatch = setInterval(() => {
       const nextDay = dateKey(),
         nextOffset = new Date().getTimezoneOffset();
-      if (nextDay !== lastDay || nextOffset !== offset) {
+      const nextMinute = Math.floor(Date.now() / 60000);
+      if (
+        nextDay !== lastDay ||
+        nextOffset !== offset ||
+        nextMinute !== minute
+      ) {
         lastDay = nextDay;
         offset = nextOffset;
+        minute = nextMinute;
         tick();
       }
     }, 1000);
     window.addEventListener("focus", tick);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(i);
       clearInterval(calendarWatch);
       window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
   useEffect(() => {
-    if (!s.settings.reminders || !s.name) return;
+    if (!s.settings.reminders || !s.name || quietNow(s.settings, now)) return;
     const d = new Date(now),
       time = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     todayTasks
       .filter(
         (t) =>
           t.reminderEnabled !== false &&
+          !t.importantAlarm &&
           reminderFor(s, t, today) <= time &&
           taskCounts(s, t.id, today).completed < (goalFor(t) || 1),
       )
@@ -222,7 +244,7 @@ export default function App() {
         if ("Notification" in window && Notification.permission === "granted")
           new Notification("A little moment for you", { body: t.name });
       });
-  }, [now, s.settings.reminders, s.name, today, s.tasks, s.outcomes]);
+  }, [now, s.settings, s.name, today, s.tasks, s.outcomes]);
   useEffect(() => {
     if (panel || edit !== undefined) {
       dialog.current?.showModal();
@@ -409,13 +431,18 @@ export default function App() {
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
   }, [inventoryOpen]);
-  const careFor = (item: Supply): boolean => {
+  const careFor = (item: Supply, purchaseApproved = false): boolean => {
     const at = Date.now(),
       lock = "use:" + item;
     if (at - (actionLocks.current.get(lock) || 0) < 350) return false;
     actionLocks.current.set(lock, at);
-    const id = crypto.randomUUID(),
-      next = useSupply(s, item, at, id);
+    const id = crypto.randomUUID();
+    const applyCare = (state: State) =>
+      purchaseApproved &&
+      (item === "food" || item === "water" || item === "soap")
+        ? buyAndUseBasic(state, item, at, id)
+        : useSupply(state, item, at, id);
+    const next = applyCare(s);
     if (next.careEvents.length === s.careEvents.length) {
       setMessage(
         level === 5
@@ -424,7 +451,7 @@ export default function App() {
       );
       return false;
     }
-    setS((p) => useSupply(p, item, at, id));
+    setS(applyCare);
     const v = SUPPLIES[item],
       gain = Math.max(
         0,
@@ -474,6 +501,63 @@ export default function App() {
         " happiness.",
     );
     return true;
+  };
+  const renderTask = (t: Task) => {
+    const counts = taskCounts(s, t.id, today),
+      status = counts.completed
+        ? "completed"
+        : counts.missed
+          ? "missed"
+          : "pending";
+    return (
+      <motion.article
+        layout
+        className={`task-card outcome-card ${status} ${s.focusDays?.[today]?.includes(t.id) ? "focus-task" : ""}`}
+        key={t.id}
+      >
+        <div className="task-content">
+          <h3>{t.name}</h3>
+          <TaskMeta s={s} task={t} today={today} setS={setS} />
+          <div>
+            <time hidden={t.reminderEnabled === false}>
+              {new Date(`2000-01-01T${t.time}`).toLocaleTimeString([], {
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+            </time>
+          </div>
+          {t.description && (
+            <span className="task-description">{t.description}</span>
+          )}
+        </div>
+        <OutcomeControls
+          counts={counts}
+          missPenalty={t.careLinked === false ? 0 : 8}
+          goal={goalFor(t)}
+          rewardCoins={
+            counts.completed < rewardLimitFor(s, t) ? policyFor(s).coins : 0
+          }
+          canUndo={!!counts.latest}
+          onUndo={() => {
+            if (counts.latest) removeEntry(counts.latest.id);
+          }}
+          name={t.name}
+          onChange={(status, source) => reward(t, status, dateKey(), source)}
+        />
+        <div className="habit-card-tools">
+          <TaskRewardNote s={s} task={t} today={today} />
+          <TinySteps s={s} task={t} today={today} setS={setS} />
+          <TaskQuickActions s={s} task={t} today={today} setS={setS} />
+        </div>
+        <button
+          className="edit-button"
+          aria-label={`Edit ${t.name}`}
+          onClick={() => setEdit(t)}
+        >
+          <Pencil size={14} />
+        </button>
+      </motion.article>
+    );
   };
   return (
     <MotionConfig reducedMotion={s.settings.motion ? "user" : "always"}>
@@ -611,78 +695,20 @@ export default function App() {
                     </p>
                   </div>
                 ) : (
-                  todayTasks.map((t) => {
-                    const counts = taskCounts(s, t.id, today),
-                      status = counts.completed
-                        ? "completed"
-                        : counts.missed
-                          ? "missed"
-                          : "pending";
-                    return (
-                      <motion.article
-                        layout
-                        className={`task-card outcome-card ${status} ${s.focusDays?.[today]?.includes(t.id) ? "focus-task" : ""}`}
-                        key={t.id}
-                      >
-                        <div className="task-content">
-                          <h3>{t.name}</h3>
-                          <TaskMeta s={s} task={t} today={today} setS={setS} />
-                          <div>
-                            <time hidden={t.reminderEnabled === false}>
-                              {new Date(
-                                `2000-01-01T${t.time}`,
-                              ).toLocaleTimeString([], {
-                                hour: "numeric",
-                                minute: "2-digit",
-                              })}
-                            </time>
-                          </div>
-                          {t.description && (
-                            <span className="task-description">
-                              {t.description}
-                            </span>
-                          )}
-                        </div>
-                        <OutcomeControls
-                          counts={counts}
-                          missPenalty={t.careLinked === false ? 0 : 8}
-                          goal={goalFor(t)}
-                          rewardCoins={
-                            counts.completed < rewardLimitFor(s, t)
-                              ? policyFor(s).coins
-                              : 0
-                          }
-                          canUndo={!!counts.latest}
-                          onUndo={() => {
-                            if (counts.latest) removeEntry(counts.latest.id);
-                          }}
-                          name={t.name}
-                          onChange={(status, source) =>
-                            reward(t, status, dateKey(), source)
-                          }
-                        />
-                        <div className="habit-card-tools">
-                          <TaskRewardNote s={s} task={t} today={today} />
-                          <TinySteps s={s} task={t} today={today} setS={setS} />
-                          <TaskQuickActions
-                            s={s}
-                            task={t}
-                            today={today}
-                            setS={setS}
-                          />
-                        </div>
-                        <button
-                          className="edit-button"
-                          aria-label={`Edit ${t.name}`}
-                          onClick={() => setEdit(t)}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      </motion.article>
-                    );
-                  })
+                  activeTasks.map(renderTask)
                 )}
               </div>
+              {finishedTasks.length > 0 && (
+                <details className="finished-today">
+                  <summary>
+                    Finished Today <span>{finishedTasks.length}</span>
+                    <ChevronRight size={13} />
+                  </summary>
+                  <div className="task-list">
+                    {finishedTasks.map(renderTask)}
+                  </div>
+                </details>
+              )}
               <button className="add-task" onClick={() => setEdit(null)}>
                 <Plus size={18} /> Add a little thing
               </button>
@@ -776,10 +802,16 @@ export default function App() {
                       : stages[level]}
                 </span>
               </div>
-              <MiniMochi s={s} level={level} sleep={rhythm.sleeping && level < 3} calm={rhythm.calm} />
+              <MiniMochi
+                s={s}
+                level={level}
+                sleep={rhythm.sleeping && level < 3}
+                calm={rhythm.calm}
+              />
               <PetNeeds
                 s={s}
                 onUse={careFor}
+                onBuyAndUse={(item) => careFor(item, true)}
                 onPat={pat}
                 onSupplies={() =>
                   document.getElementById("supplies")?.scrollIntoView({
@@ -1112,6 +1144,7 @@ export default function App() {
                   restores care. Petting gives affection, without replacing your
                   habits.
                 </p>
+                {importantAlarms.settings}
                 <RewardSettings s={s} setS={setS} />
                 <div className="button-row">
                   <button
@@ -1336,7 +1369,9 @@ export default function App() {
               </>
             )}
           </div>
+          {(panel || edit !== undefined) && importantAlarms.popup}
         </dialog>
+        {!panel && edit === undefined && importantAlarms.popup}
       </div>
     </MotionConfig>
   );
@@ -1404,9 +1439,34 @@ function TaskEditor({
           onChange={(e) => update({ description: e.target.value })}
         />
       </label>
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={!!t.importantAlarm}
+          onChange={(e) =>
+            update({
+              importantAlarm: e.target.checked,
+              ...(e.target.checked
+                ? { reminderEnabled: true, alarmEnabledAt: Date.now() }
+                : {}),
+            })
+          }
+        />
+        Important Alarm 🔔
+      </label>
+      {t.importantAlarm && (
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={!!t.alarmOverrideQuiet}
+            onChange={(e) => update({ alarmOverrideQuiet: e.target.checked })}
+          />
+          Allow this alarm’s sound and notification during quiet hours
+        </label>
+      )}
       <div className="button-row">
         <label>
-          Reminder
+          {t.importantAlarm ? "Alarm time" : "Reminder"}
           <input
             required
             type="time"

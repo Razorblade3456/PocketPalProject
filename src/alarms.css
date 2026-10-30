@@ -1,0 +1,90 @@
+.app .important-alarm {
+  position: fixed;
+  bottom: 18px;
+  right: 18px;
+  width: 300px;
+  max-width: calc(100vw - 36px);
+  box-sizing: border-box;
+  z-index: 1200;
+  padding: 16px;
+  border: 1px solid #866691;
+  border-top: 3px solid #784258;
+  border-radius: 14px;
+  background: #28222f;
+  color: #e6dfd2;
+  box-shadow: 0 8px 32px #0006;
+  text-align: center;
+}
+.important-alarm .alarm-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #c9b4d7;
+}
+.alarm-heading svg {
+  animation: alarm-bell-pulse 1.6s ease-in-out infinite;
+}
+.app .important-alarm h3 {
+  margin: 12px 0 7px;
+  font: 600 17px/1.3 system-ui;
+  overflow-wrap: anywhere;
+}
+.app .important-alarm p {
+  margin: 0 0 12px;
+  font: 11px/1.5 system-ui;
+  color: #c6b9cb;
+}
+.app .important-alarm button {
+  padding: 8px 6px;
+  min-height: 34px;
+  border: 1px solid #82628f;
+  border-radius: 7px;
+  background: #3d2c48;
+  color: #e6dfd2;
+  font: 11px system-ui;
+  cursor: pointer;
+}
+.important-alarm .alarm-snooze {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin: 10px 0;
+}
+.app .important-alarm .alarm-stop {
+  width: 100%;
+  background: #602c42;
+  border-color: #92536b;
+}
+.important-alarm small {
+  display: block;
+  margin-top: 7px;
+  font: 10px/1.4 system-ui;
+  color: #baaac2;
+}
+.app .alarm-settings {
+  border-block: 1px dashed #776087;
+  padding: 8px 0;
+  margin: 16px 0;
+}
+.alarm-settings h3 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.alarm-settings input[type="range"] {
+  width: 100%;
+}
+@keyframes alarm-bell-pulse {
+  50% {
+    opacity: 0.5;
+    transform: rotate(8deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .alarm-heading svg {
+    animation: none;
+  }
+}

@@ -559,6 +559,59 @@
 .app .quick-care button {
   border-radius: 8px;
 }
+.app .quick-care-confirm {
+  margin: 7px 0 12px;
+  padding: 9px 11px;
+  border: 1px solid #776087;
+  border-radius: 9px;
+  background: #302538;
+  text-align: center;
+  font-size: 11px;
+}
+.app .quick-care-confirm p {
+  margin: 0 0 7px;
+  color: #e6dfd2;
+}
+.app .quick-care-confirm > div {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+.app .quick-care-confirm button {
+  padding: 5px 10px;
+  border: 1px solid #776087;
+  border-radius: 6px;
+  background: #342544;
+  color: #e6dfd2;
+  font-size: 11px;
+}
+.app .quick-care-confirm button:disabled {
+  opacity: 0.4;
+}
+.app .finished-today {
+  margin: 12px 0;
+  border-top: 1px dashed #776087;
+}
+.app .finished-today > summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 3px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 12px;
+  color: #c8b6d5;
+}
+.app .finished-today > summary::-webkit-details-marker {
+  display: none;
+}
+.app .finished-today > summary span {
+  margin-left: auto;
+  font-size: 10px;
+}
+.app .finished-today[open] > summary svg {
+  transform: rotate(90deg);
+}
 .app :is(.room-footer, .life-guide-button) {
   background: #211d2a;
   color: #bdafca;

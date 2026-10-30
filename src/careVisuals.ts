@@ -1,4 +1,4 @@
-import type { Care, Category } from "./model";
+import type { Care, Category, PetKind } from "./model";
 export type CareTier = 0 | 1 | 2 | 3 | 4;
 export const excellentCare: Care = {
   food: 100,
@@ -131,3 +131,23 @@ export const careConditions: Record<
     },
   ],
 };
+const feistyConditions = [
+  {
+    name: "Mischievous",
+    description: "Bright eyes, a smug little grin, and playful energy.",
+  },
+  { name: "Unimpressed", description: "A tiny pout and mildly narrowed eyes." },
+  { name: "Grumpy", description: "Pointed brows and a stubborn little scowl." },
+  {
+    name: "Mad",
+    description: "Angry eyes, a sharp pout, and a tiny impatient huff.",
+  },
+  {
+    name: "Fuming",
+    description: "Comic frustration marks and a full, feisty scowl. No tears.",
+  },
+] as const;
+export const conditionsFor = (kind: PetKind, category: Category) =>
+  kind === "rattle" && category === "happy"
+    ? feistyConditions
+    : careConditions[category];

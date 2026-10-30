@@ -404,7 +404,8 @@ export function TaskAdvancedFields({
       <label className="habit-check">
         <input
           type="checkbox"
-          checked={task.reminderEnabled !== false}
+          checked={task.importantAlarm || task.reminderEnabled !== false}
+          disabled={!!task.importantAlarm}
           onChange={(e) => update({ reminderEnabled: e.target.checked })}
         />
         Use reminder time

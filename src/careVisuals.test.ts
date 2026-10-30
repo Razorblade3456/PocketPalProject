@@ -10,9 +10,24 @@ import {
   careValues,
 } from "./careVisuals";
 import { Pet, LifeGuide } from "./Pets";
-import { stageForCare, stage, initial, type Care, type PetKind } from "./model";
+import {
+  stageForCare,
+  stage,
+  initial,
+  parseState,
+  buyItem,
+  useSupply,
+  equipOutfit,
+  recordAttempt,
+  dateKey,
+  type State,
+  type Care,
+  type PetKind,
+} from "./model";
+import { petExpression } from "./petExpression";
+import { OUTFIT_IDS } from "./catalog";
 import { CareGuide } from "./CareGuide";
-const species: PetKind[] = ["mochi", "pippin", "crumb"];
+const species: PetKind[] = ["mochi", "pippin", "crumb", "rattle"];
 const render = (kind: PetKind, care: Care, level = 0, sleep = false) =>
   renderToStaticMarkup(
     createElement(Pet, {
@@ -82,7 +97,7 @@ test("example mixture visibly combines a full belly, dryness, dirt and sobbing o
       'data-hydration-layer="3"',
       'data-cleanliness-layer="2"',
       'data-happiness-layer="4"',
-      "rolling-tears",
+      ...(kind === "rattle" ? ["frustration-marks"] : ["rolling-tears"]),
       "dry-lips",
       "mud-marks",
     ])
@@ -105,7 +120,175 @@ test("all 625 tier combinations render together on each species without dropping
               assert.ok(html.includes(`data-${key}-tier="${careTier(value)}"`));
             assert.ok(html.includes("worn-outfits"));
             assert.ok(html.includes("care-shape"));
+            assert.equal(
+              (html.match(/data-active-face=/g) || []).length,
+              1,
+              `${kind}: one mounted face`,
+            );
+            assert.equal(
+              (html.match(/data-mouth-variant=/g) || []).length,
+              1,
+              `${kind}: one mouth`,
+            );
+            assert.equal(
+              (html.match(/class="[^"]*pet-arm /g) || []).length,
+              2,
+              `${kind}: two original arms/wings`,
+            );
+            if (kind === "rattle") assert.ok(!html.includes("rolling-tears"));
           }
+});
+
+test("expression priorities keep open mouths free of closed-lip curves and licking overlays", () => {
+  for (const kind of species)
+    for (const happy of careValues)
+      for (const water of careValues)
+        for (const feeding of [null, "food", "water", "soap"] as const) {
+          const care = { food: 10, water, clean: 10, happy };
+          const html = renderToStaticMarkup(
+            createElement(Pet, {
+              kind,
+              care,
+              level: 0,
+              feeding,
+              incoming: { item: "food", near: true, x: 0, y: 0 },
+              reaction: feeding ? "Yay" : "",
+            }),
+          );
+          assert.equal((html.match(/data-active-face=/g) || []).length, 1);
+          assert.equal((html.match(/data-mouth-variant=/g) || []).length, 1);
+          // Food anticipation can override the need mouth, never adds a second one.
+          assert.ok(!html.includes('class="lip-lick"'));
+          assert.ok(!html.includes('stroke-dasharray="5 3"'));
+          if (feeding) assert.ok(html.includes('data-limb-motion="rest"'));
+        }
+});
+
+test("sleep and death outrank reactions; Rattle anger never borrows tears or face-covering limbs", () => {
+  for (const kind of species) {
+    const hurt = renderToStaticMarkup(
+      createElement(Pet, {
+        kind,
+        level: 0,
+        care: excellentCare,
+        feeding: "food",
+        reaction: "− Ouch",
+      }),
+    );
+    assert.ok(hurt.includes('data-mouth-variant="frown"'));
+    assert.ok(!hurt.includes("is-eating"));
+    const dead = renderToStaticMarkup(
+      createElement(Pet, {
+        kind,
+        level: 5,
+        care: excellentCare,
+        reaction: "♥ Yay",
+      }),
+    );
+    assert.ok(!dead.includes("pet-reaction"));
+    assert.equal(
+      petExpression(kind, excellentCare, 5, false, "food", true).mouth,
+      "dead",
+    );
+    assert.equal(
+      petExpression(kind, excellentCare, 0, true, "happy", true).eyes,
+      "sleep",
+    );
+    for (let level = 0; level < 6; level++)
+      for (const sleep of [true, false]) {
+        const html = render(
+          kind,
+          { food: 10, water: 10, clean: 10, happy: 10 },
+          level,
+          sleep,
+        );
+        assert.equal((html.match(/data-active-face=/g) || []).length, 1);
+        assert.equal((html.match(/class="[^"]*pet-arm /g) || []).length, 2);
+      }
+  }
+  for (const happy of [75, 50, 25, 10, 0]) {
+    const care = { ...excellentCare, happy };
+    const face = petExpression("rattle", care);
+    assert.equal(face.eyes, "angry");
+    assert.equal(face.mouth, "frown");
+    assert.equal(face.tears, false);
+    const html = render("rattle", care);
+    assert.ok(!html.includes('data-limb-motion="cover"'));
+    assert.ok(!html.includes("rolling-tears"));
+  }
+  assert.equal(
+    petExpression("mochi", excellentCare, 0, false, "hurt").mouth,
+    "frown",
+  );
+  assert.equal(
+    petExpression("mochi", excellentCare, 0, false, "water", true).mouth,
+    "sip",
+  );
+  assert.equal(
+    petExpression("rattle", { ...excellentCare, happy: 0 }, 0, false, "happy")
+      .eyes,
+    "bright",
+  );
+});
+
+test("Rattle round-trips through saves, purchases, care and every outfit at all stages", () => {
+  const at = Date.now();
+  let state: State = { ...initial(at), pet: "rattle" };
+  state.tasks = [
+    {
+      id: "earn",
+      name: "Test habit",
+      description: "",
+      time: "08:00",
+      repeat: "daily",
+      days: [],
+      date: dateKey(at),
+      category: "happy",
+      createdAt: at,
+      repetitions: "goal",
+      dailyGoal: 100,
+    },
+  ];
+  for (let i = 0; i < 100; i++)
+    state = recordAttempt(
+      state,
+      "earn",
+      dateKey(at),
+      "completed",
+      at,
+      `earn-${i}`,
+    );
+  state = useSupply(
+    buyItem(state, "food", at, "buy"),
+    "food",
+    at,
+    "feed",
+  ) as typeof state;
+  assert.ok(state.careEvents.length > 0);
+  assert.equal(
+    parseState(JSON.parse(JSON.stringify(state)), at)?.pet,
+    "rattle",
+  );
+  for (const item of OUTFIT_IDS) {
+    const dressed = equipOutfit(
+      buyItem(state, item, at, `buy-${item}`),
+      item,
+      at,
+    );
+    for (let level = 0; level < 6; level++) {
+      const html = renderToStaticMarkup(
+        createElement(Pet, {
+          kind: "rattle",
+          care: state.care,
+          level,
+          equipped: dressed.equipped,
+        }),
+      );
+      assert.ok(html.includes(`data-outfit="${item}"`));
+      assert.equal((html.match(/class="[^"]*pet-arm /g) || []).length, 2);
+      assert.equal((html.match(/data-leg=/g) || []).length, 2);
+    }
+  }
 });
 test("six life stages remain renderable alongside care, with dead emotion override", () => {
   for (const kind of species)
@@ -197,7 +380,7 @@ test("care rendering is a pure view and stat improvements immediately clear bad 
   for (const kind of species) {
     const bad = render(kind, { food: 5, water: 5, clean: 5, happy: 5 });
     const good = render(kind, { ...excellentCare });
-    assert.ok(bad.includes("rolling-tears"));
+    assert.equal(bad.includes("rolling-tears"), kind !== "rattle");
     assert.ok(bad.includes("mud-marks"));
     assert.ok(bad.includes("dry-lips"));
     assert.ok(!good.includes("rolling-tears"));

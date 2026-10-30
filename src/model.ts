@@ -26,10 +26,13 @@ export const petRhythm = (n = Date.now()) => {
   const h = new Date(n).getHours();
   return { sleeping: h >= 21 || h < 6, calm: h >= 19 && h < 21 };
 };
-export type PetKind = "mochi" | "pippin" | "crumb";
+export type PetKind = "mochi" | "pippin" | "crumb" | "rattle";
 export type OutcomeStatus = "pending" | "completed" | "missed";
 export type Care = Record<Category, number>;
 export type Task = {
+  importantAlarm?: boolean;
+  alarmEnabledAt?: number;
+  alarmOverrideQuiet?: boolean;
   id: string;
   name: string;
   description: string;
@@ -78,6 +81,10 @@ export type Occurrence = Completion & {
   timeZone?: string;
 };
 type Settings = {
+  alarmVolume?: number;
+  quietHours?: boolean;
+  quietStart?: string;
+  quietEnd?: string;
   sound: boolean;
   motion: boolean;
   theme: "auto" | "day" | "night";
@@ -135,6 +142,8 @@ export type HabitEvent = {
 };
 export type RewardPolicy = { coins: number; dailyCap: number };
 export type State = {
+  alarms?: import("./alarms").AlarmRecord[];
+  alarmsCheckedAt?: number;
   rewardPolicy?: RewardPolicy;
   rewardLedger?: RewardTransaction[];
   habitEvents?: HabitEvent[];
@@ -395,6 +404,9 @@ export function taskCounts(s: State, id: string, date: string) {
       .sort((a, b) => b.sequence - a.sequence)[0],
   };
 }
+/** Presentation only: unlimited tracking never moves out of the active list. */
+export const taskFinishedToday = (s: State, task: Task, date: string) =>
+  goalFor(task) > 0 && taskCounts(s, task.id, date).completed >= goalFor(task);
 export const rewardKey = (c: Completion) =>
   c.ballId || c.id || occurrenceKey(c.taskId, c.date);
 export function recordAttempt(
@@ -947,6 +959,26 @@ export function useSupply(
     n,
   );
 }
+export type BasicSupply = "food" | "water" | "soap";
+/** Called only after explicit UI approval. One id makes the whole purchase/use idempotent. */
+export function buyAndUseBasic(
+  s: State,
+  item: BasicSupply,
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
+  if (!["food", "water", "soap"].includes(item)) return s;
+  const buyId = id + ":buy",
+    useId = id + ":use";
+  if (s.careEvents.some((e) => "id" in e && (e.id === buyId || e.id === useId)))
+    return s;
+  s = decay(s, n);
+  if (stage(s) === 5) return s;
+  const stocked = s.inventory[item] > 0 ? s : buyItem(s, item, n, buyId);
+  const used = useSupply(stocked, item, n, useId);
+  // Never retain a charge if use failed after a changed balance or pet state.
+  return used.careEvents.some((e) => "id" in e && e.id === useId) ? used : s;
+}
 export function streak(s: State, n = Date.now()) {
   const days = new Set(s.completions.map((c) => c.date));
   let day = dateKey(n);
@@ -1034,7 +1066,7 @@ function validModel(x: unknown, version: number): x is State {
     (s.version as number) === version &&
     Number.isSafeInteger(s.lastSequence) &&
     s.lastSequence >= 0 &&
-    ["mochi", "pippin", "crumb"].includes(s.pet) &&
+    ["mochi", "pippin", "crumb", "rattle"].includes(s.pet) &&
     !!s.baseline &&
     Number.isFinite(s.baseline.at) &&
     careValid(s.baseline.care) &&
@@ -1356,6 +1388,43 @@ export function validHabitData(s: State) {
     return false;
   const bounded = (v: unknown, lo: number, hi: number) =>
     Number.isSafeInteger(v) && (v as number) >= lo && (v as number) <= hi;
+  const timeValid = (v: unknown) =>
+    typeof v === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+  if (
+    s.alarmsCheckedAt !== undefined &&
+    (!Number.isFinite(s.alarmsCheckedAt) || s.alarmsCheckedAt < 0)
+  )
+    return false;
+  if (
+    s.alarms !== undefined &&
+    (!Array.isArray(s.alarms) ||
+      s.alarms.some(
+        (a) =>
+          !a ||
+          typeof a.id !== "string" ||
+          typeof a.taskId !== "string" ||
+          !isDate(a.date) ||
+          typeof a.schedule !== "string" ||
+          !Number.isFinite(a.scheduledAt) ||
+          !Number.isFinite(a.dueAt) ||
+          !["pending", "ringing", "stopped"].includes(a.status),
+      ) ||
+      new Set(s.alarms.map((a) => a.id)).size !== s.alarms.length)
+  )
+    return false;
+  if (
+    s.settings &&
+    ((s.settings.alarmVolume !== undefined &&
+      (!Number.isFinite(s.settings.alarmVolume) ||
+        s.settings.alarmVolume < 0 ||
+        s.settings.alarmVolume > 1)) ||
+      (s.settings.quietHours !== undefined &&
+        typeof s.settings.quietHours !== "boolean") ||
+      (s.settings.quietStart !== undefined &&
+        !timeValid(s.settings.quietStart)) ||
+      (s.settings.quietEnd !== undefined && !timeValid(s.settings.quietEnd)))
+  )
+    return false;
   if (
     s.rewardPolicy &&
     (!bounded(s.rewardPolicy.coins, 0, 100) ||
@@ -1424,6 +1493,12 @@ export function validHabitData(s: State) {
   return (
     (s.tasks || []).every(
       (t) =>
+        (t.importantAlarm === undefined ||
+          typeof t.importantAlarm === "boolean") &&
+        (t.alarmEnabledAt === undefined ||
+          (Number.isFinite(t.alarmEnabledAt) && t.alarmEnabledAt >= 0)) &&
+        (t.alarmOverrideQuiet === undefined ||
+          typeof t.alarmOverrideQuiet === "boolean") &&
         (t.intervalDays === undefined || bounded(t.intervalDays, 1, 365)) &&
         (t.createdDate === undefined || isDate(t.createdDate)) &&
         (t.durationMinutes === undefined ||

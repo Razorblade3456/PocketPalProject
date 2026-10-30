@@ -201,4 +201,5 @@ export const favorites = {
   mochi: ["pizza", "icecream"],
   pippin: ["cake", "smoothie"],
   crumb: ["burger", "pancakes"],
+  rattle: ["pizza", "cake"],
 } as const;

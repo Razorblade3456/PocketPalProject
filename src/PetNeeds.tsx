@@ -1,5 +1,12 @@
 import { Apple, Droplets, Sparkles, Heart, ShoppingBag } from "lucide-react";
-import { stage, type State, type Supply } from "./model";
+import { useRef, useState } from "react";
+import {
+  SUPPLIES,
+  stage,
+  type State,
+  type Supply,
+  type BasicSupply,
+} from "./model";
 const needs = [
   { key: "food", name: "Food", hint: "Use food from your shelf", icon: Apple },
   {
@@ -26,12 +33,20 @@ export function PetNeeds({
   onPat,
   onSupplies,
   onUse,
+  onBuyAndUse,
 }: {
   s: State;
   onPat: () => void;
   onSupplies: () => void;
   onUse: (item: Supply) => boolean;
+  onBuyAndUse: (item: BasicSupply) => boolean;
 }) {
+  const [pending, setPending] = useState<BasicSupply | null>(null);
+  const approval = useRef<BasicSupply | null>(null);
+  const dismiss = () => {
+    approval.current = null;
+    setPending(null);
+  };
   const health = Math.round(
       Object.values(s.care).reduce((sum, value) => sum + value, 0) / 4,
     ),
@@ -53,16 +68,29 @@ export function PetNeeds({
             key={item}
             type="button"
             className={item}
-            disabled={s.inventory[item] < 1 || level === 5}
+            disabled={
+              level === 5 ||
+              (s.inventory[item] < 1 && s.coins < SUPPLIES[item].price)
+            }
             aria-label={`${label} pet, ${s.inventory[item]} available`}
             title={
               level === 5
                 ? "Revive your pal first"
                 : s.inventory[item]
                   ? `Use one ${item} from inventory`
-                  : "Get supplies below to refill"
+                  : s.coins >= SUPPLIES[item].price
+                    ? `Buy & Use one ${SUPPLIES[item].name} for ${SUPPLIES[item].price} coins · confirmation required`
+                    : `Need ${SUPPLIES[item].price} coins to Buy & Use`
             }
-            onClick={() => onUse(item)}
+            onClick={() => {
+              if (s.inventory[item] > 0) {
+                dismiss();
+                onUse(item);
+              } else {
+                approval.current = item;
+                setPending(item);
+              }
+            }}
           >
             <Icon size={14} />
             <span>{label}</span>
@@ -70,6 +98,41 @@ export function PetNeeds({
           </button>
         ))}
       </div>
+      {pending && (
+        <div
+          className="quick-care-confirm"
+          role="group"
+          aria-label="Buy & Use confirmation"
+          onKeyDown={(e) => {
+            if (e.key === "Escape") dismiss();
+          }}
+        >
+          <p role="status">
+            Buy & Use one {SUPPLIES[pending].name} for{" "}
+            <strong>{SUPPLIES[pending].price} coins</strong>?
+          </p>
+          <div>
+            <button type="button" onClick={dismiss}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={
+                level === 5 ||
+                (s.inventory[pending] < 1 && s.coins < SUPPLIES[pending].price)
+              }
+              onClick={() => {
+                if (approval.current !== pending) return;
+                const item = pending;
+                dismiss();
+                onBuyAndUse(item);
+              }}
+            >
+              Buy & Use
+            </button>
+          </div>
+        </div>
+      )}
       <div className="overall-health-label">
         <span>
           <Heart size={15} />

@@ -55,9 +55,10 @@ export function MiniMochi({ s, level, sleep, calm }: {
   return <>
     <div className="mini-mochi-control">
       <button type="button" className="mini-mochi-button" aria-pressed={!!target}
-        title={target ? "Close Mini Mochi" : "Float your pet · keep this tab open"} onClick={() => void toggle()}>
-        <Monitor size={13} aria-hidden="true" /> Mini Mochi
+        title={target ? "Close browser Mini" : "Browser Picture-in-Picture has a browser frame. For the transparent Windows pet, double-click Launch Desktop Pet.cmd in your project folder."} onClick={() => void toggle()}>
+        <Monitor size={13} aria-hidden="true" /> Mini Mochi · Browser
       </button>
+      <small>Browser frame stays. Transparent Windows pet: Launch Desktop Pet.cmd.</small>
       {message && <small role="status">{message}</small>}
     </div>
     {target && createPortal(<main className={`mini-mochi-content ${s.settings.motion ? "" : "still"}`}>

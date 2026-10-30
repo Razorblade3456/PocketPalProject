@@ -1,6 +1,8 @@
 # Tiny Windows companion
 
-Install dependencies once with `npm install --include=dev`. Double-click **Launch Desktop Pet.cmd** in the project folder, or run `npm run desktop`. Node.js 22.12 or newer is required. The command builds the companion and starts the project-local Electron executable with an absolute entry path; it does not require the website to be running to display the pet. It clears inherited Electron node-only/path overrides. If the Electron binary is missing, its existing downloader uses project-local temporary/cache folders instead of moving files between restricted Windows cache locations.
+The website's **Mini Mochi · Browser** button uses browser Picture-in-Picture. It retains browser-controlled chrome and an opaque canvas; it cannot be a transparent Windows desktop pet. No native protocol handler is installed, so the website does not launch Electron. Use the Windows launcher below for the separate transparent companion.
+
+Install dependencies once with `npm install --include=dev`. Double-click **Launch Desktop Pet.cmd** in the project folder, or run `npm run desktop`. Node.js 22.12 or newer is required. The command builds the companion and starts the project-local Electron executable with an absolute entry path; it does not require the website to be running to display the pet. It clears inherited Electron node-only/path overrides. If the Electron binary is missing, its existing downloader uses project-local temporary/cache folders instead of moving files between restricted Windows cache locations. Those download settings are restored before launching the actual Electron app, which uses the normal Windows temporary directory.
 
 The companion is a transparent, frameless, shadow-free 100×100 window. Drag the pet to move it. Hover to reveal the tiny X; clicking X closes the companion without starting a drag. Click the pet for the existing stats and companion selection. Click outside the popup to dismiss. Right-click for **Open PocketPal** or **Close Pet**. Position is remembered and clamped to an available monitor. Only one companion runs at a time.
 
@@ -12,7 +14,7 @@ Checks: `npm test`, `npm run build`, `npm run desktop:build`. Manual Windows che
 
 ## If the Windows launcher fails
 
-The command window now stays open on failure. Read its actual error; Electron output and native exit codes are also saved to `desktop-launch.log` in the project folder (overwritten on each Electron launch).
+The command window stays open on failure. Read its actual error; Electron output, OS/architecture, executable path, and native exit codes are also saved to `desktop-launch.log` in the project folder (overwritten on each Electron launch). A successful load of the app entry prints `[PocketPal desktop] main entry reached`. A missing marker plus an unsuccessful `electron.exe --version` indicates a failure before PocketPal's code loads, rather than a pet renderer or file-path error.
 
 Open PowerShell and run:
 

@@ -12,6 +12,8 @@ import type { IncomingFood } from "./Inventory";
 import { careTier, excellentCare } from "./careVisuals";
 import { CareBody, CareSurface, CareFace, CareRecovery } from "./CareLayers";
 import { CareGuide } from "./CareGuide";
+import { Rattle } from "./Rattle";
+import type { FaceAction } from "./petExpression";
 export const stages = [
   "Healthy",
   "Tired",
@@ -24,8 +26,13 @@ export const pets: Record<PetKind, { name: string; description: string }> = {
   mochi: { name: "Mochi", description: "Cheerful little felt monster" },
   pippin: { name: "Pippin", description: "Shy, sleepy & affectionate" },
   crumb: { name: "Crumb", description: "Curious, clumsy & always hungry" },
+  rattle: {
+    name: "Rattle",
+    description: "Bratty skull gremlin. Tiny boots, big attitude.",
+  },
 };
-type ArtProps = {
+export type ArtProps = {
+  action?: FaceAction;
   care?: Care;
   recovering?: Category[];
   equipped?: Equipped;
@@ -232,6 +239,7 @@ function Mochi({
   anticipating,
   care,
   recovering = [],
+  action = null,
 }: ArtProps) {
   const texture = useId(),
     belly = useId();
@@ -262,7 +270,13 @@ function Mochi({
           <stop offset="1" stopColor="#ddd8b3" />
         </radialGradient>
       </defs>
-      <CareBody care={care} kind="mochi" level={level} sleeping={sleep}>
+      <CareBody
+        care={care}
+        kind="mochi"
+        level={level}
+        sleeping={sleep}
+        action={action}
+      >
         <OutfitLayer kind="mochi" equipped={equipped} back />
         <g className="pet-body" filter={`url(#${texture})`}>
           <path
@@ -337,71 +351,74 @@ function Mochi({
         </g>
         <CareSurface kind="mochi" care={care} level={level} sleeping={sleep} />
         <OutfitLayer kind="mochi" equipped={equipped} />
-        <g
-          transform={`translate(${look.x},${look.y + (level >= 3 ? 6 : 0)})`}
-          className={`face ${care && !sleep && level !== 5 ? "base-face-hidden" : ""}`}
-        >
-          {level === 5 ? (
-            <g stroke="#454c42" strokeWidth="6">
-              <path d="M102 128l20 22m0-22l-20 22m96-22l20 22m0-22l-20 22" />
-            </g>
-          ) : sleep || sad ? (
-            <g
-              stroke="#414b3d"
-              strokeWidth="6"
-              strokeLinecap="round"
-              fill="none"
-            >
-              <path d="M104 143q11 9 22-1M194 142q11 9 22-1" />
-            </g>
-          ) : (
-            <g className="eyes" fill="#354334">
-              <ellipse cx="115" cy="138" rx="10" ry={level > 2 ? 7 : 13} />
-              <ellipse cx="205" cy={level > 2 ? 145 : 138} rx="10" ry="13" />
-              <circle cx="118" cy="134" r="3" fill="#fff7df" />
-              <circle cx="208" cy="134" r="3" fill="#fff7df" />
-            </g>
-          )}
-          <ellipse
-            cx="94"
-            cy="166"
-            rx="15"
-            ry="8"
-            fill="#e5a69b"
-            opacity=".75"
-          />
-          <ellipse
-            cx="224"
-            cy="166"
-            rx="15"
-            ry="8"
-            fill="#e5a69b"
-            opacity=".75"
-          />
-          {sleep || sad ? (
-            <path
-              d="M152 170q8 8 16 0"
-              stroke="#485440"
-              strokeWidth="4"
-              fill="none"
+        {(!care || sleep || level === 5) && (
+          <g
+            transform={`translate(${look.x},${look.y + (level >= 3 ? 6 : 0)})`}
+            className="face"
+            data-active-face="base"
+          >
+            {level === 5 ? (
+              <g stroke="#454c42" strokeWidth="6">
+                <path d="M102 128l20 22m0-22l-20 22m96-22l20 22m0-22l-20 22" />
+              </g>
+            ) : sleep || sad ? (
+              <g
+                stroke="#414b3d"
+                strokeWidth="6"
+                strokeLinecap="round"
+                fill="none"
+              >
+                <path d="M104 143q11 9 22-1M194 142q11 9 22-1" />
+              </g>
+            ) : (
+              <g className="eyes" fill="#354334">
+                <ellipse cx="115" cy="138" rx="10" ry={level > 2 ? 7 : 13} />
+                <ellipse cx="205" cy={level > 2 ? 145 : 138} rx="10" ry="13" />
+                <circle cx="118" cy="134" r="3" fill="#fff7df" />
+                <circle cx="208" cy="134" r="3" fill="#fff7df" />
+              </g>
+            )}
+            <ellipse
+              cx="94"
+              cy="166"
+              rx="15"
+              ry="8"
+              fill="#e5a69b"
+              opacity=".75"
             />
-          ) : (
-            <g className="mouth">
+            <ellipse
+              cx="224"
+              cy="166"
+              rx="15"
+              ry="8"
+              fill="#e5a69b"
+              opacity=".75"
+            />
+            {sleep || sad ? (
               <path
-                d={
-                  anticipating
-                    ? "M130 159Q160 147 190 159L190 190Q160 216 130 190Z"
-                    : level > 1
-                      ? "M131 178Q160 158 188 178L186 193Q157 202 133 192Z"
-                      : "M130 163Q160 170 190 163L187 187Q161 213 134 187Z"
-                }
-                fill="#514840"
+                d="M152 170q8 8 16 0"
+                stroke="#485440"
+                strokeWidth="4"
+                fill="none"
               />
-              <path d="M138 166l7 12 8-10m14 0l8 10 7-12" fill="#fff9df" />
-              <ellipse cx="160" cy="192" rx="15" ry="6" fill="#d79089" />
-            </g>
-          )}
-        </g>
+            ) : (
+              <g className="mouth">
+                <path
+                  d={
+                    anticipating
+                      ? "M130 159Q160 147 190 159L190 190Q160 216 130 190Z"
+                      : level > 1
+                        ? "M131 178Q160 158 188 178L186 193Q157 202 133 192Z"
+                        : "M130 163Q160 170 190 163L187 187Q161 213 134 187Z"
+                  }
+                  fill="#514840"
+                />
+                <path d="M138 166l7 12 8-10m14 0l8 10 7-12" fill="#fff9df" />
+                <ellipse cx="160" cy="192" rx="15" ry="6" fill="#d79089" />
+              </g>
+            )}
+          </g>
+        )}
         <CareFace
           kind="mochi"
           care={care}
@@ -409,6 +426,7 @@ function Mochi({
           sleeping={sleep}
           look={look}
           anticipating={anticipating}
+          action={action}
           offsetY={level >= 3 ? 6 : 0}
         />
         {level !== 5 && <CareRecovery changes={recovering} />}
@@ -530,6 +548,7 @@ function Pippin({
   anticipating,
   care,
   recovering = [],
+  action = null,
 }: ArtProps) {
   const texture = useId();
   const folded = sad || sleep || (!!care && careTier(care.happy) >= 2);
@@ -556,7 +575,13 @@ function Pippin({
           <feComposite in2="SourceAlpha" operator="in" />
         </filter>
       </defs>
-      <CareBody care={care} kind="pippin" level={level} sleeping={sleep}>
+      <CareBody
+        care={care}
+        kind="pippin"
+        level={level}
+        sleeping={sleep}
+        action={action}
+      >
         <OutfitLayer kind="pippin" equipped={equipped} back />
         <g filter={`url(#${texture})`}>
           <g
@@ -678,34 +703,37 @@ function Pippin({
         <CareSurface kind="pippin" care={care} level={level} sleeping={sleep} />
         <OutfitLayer kind="pippin" equipped={equipped} />
         <SpookyWear kind="pippin" level={level} />
-        <g
-          className={`face ${care && !sleep && level !== 5 ? "base-face-hidden" : ""}`}
-          transform={`translate(${look.x},${look.y})`}
-        >
-          <Eyes
-            level={level}
-            sleep={sleep}
-            sad={sad}
-            x={124}
-            gap={72}
-            y={159}
-            large
-          />
-          <path
-            className="mouth"
-            d={
-              anticipating
-                ? "M149 201q11-10 22 0q0 20-22 0Z"
-                : sad || level > 1
-                  ? "M150 209q10-8 20 0"
-                  : "M151 201q9 12 18 0"
-            }
-            stroke="#7f697c"
-            strokeWidth="4"
-            fill={anticipating ? "#766274" : "none"}
-            strokeLinecap="round"
-          />
-        </g>
+        {(!care || sleep || level === 5) && (
+          <g
+            className="face"
+            data-active-face="base"
+            transform={`translate(${look.x},${look.y})`}
+          >
+            <Eyes
+              level={level}
+              sleep={sleep}
+              sad={sad}
+              x={124}
+              gap={72}
+              y={159}
+              large
+            />
+            <path
+              className="mouth"
+              d={
+                anticipating
+                  ? "M149 201q11-10 22 0q0 20-22 0Z"
+                  : sad || level > 1
+                    ? "M150 209q10-8 20 0"
+                    : "M151 201q9 12 18 0"
+              }
+              stroke="#7f697c"
+              strokeWidth="4"
+              fill={anticipating ? "#766274" : "none"}
+              strokeLinecap="round"
+            />
+          </g>
+        )}
         <CareFace
           kind="pippin"
           care={care}
@@ -713,6 +741,7 @@ function Pippin({
           sleeping={sleep}
           look={look}
           anticipating={anticipating}
+          action={action}
           offsetY={0}
         />
         {level !== 5 && <CareRecovery changes={recovering} />}
@@ -735,6 +764,7 @@ function Crumb({
   anticipating,
   care,
   recovering = [],
+  action = null,
 }: ArtProps) {
   const texture = useId(),
     curl = sleep || level === 1 || (!!care && careTier(care.happy) >= 2);
@@ -761,7 +791,13 @@ function Crumb({
           <feComposite in2="SourceAlpha" operator="in" />
         </filter>
       </defs>
-      <CareBody care={care} kind="crumb" level={level} sleeping={sleep}>
+      <CareBody
+        care={care}
+        kind="crumb"
+        level={level}
+        sleeping={sleep}
+        action={action}
+      >
         <OutfitLayer kind="crumb" equipped={equipped} back />
         <g
           filter={`url(#${texture})`}
@@ -890,34 +926,37 @@ function Crumb({
         </g>
         <CareSurface kind="crumb" care={care} level={level} sleeping={sleep} />
         <OutfitLayer kind="crumb" equipped={equipped} />
-        <g
-          className={`face ${care && !sleep && level !== 5 ? "base-face-hidden" : ""}`}
-          transform={`translate(${look.x},${look.y + (curl ? 17 : 0)})`}
-        >
-          <Eyes
-            level={level}
-            sleep={sleep}
-            sad={sad}
-            x={122}
-            gap={77}
-            y={167}
-          />
-          <path d="M151 185q10-5 20 0l-10 12z" fill="#6c5142" />
-          <path
-            className="mouth"
-            d={
-              anticipating
-                ? "M148 204q13-11 26 0q0 24-26 0Z"
-                : sad || level > 1
-                  ? "M149 211q12-9 24 0"
-                  : "M161 197v9m-12-2q12 15 24 0"
-            }
-            fill={anticipating ? "#6c5142" : "none"}
-            stroke="#7c5b4b"
-            strokeWidth="3"
-            strokeLinecap="round"
-          />
-        </g>
+        {(!care || sleep || level === 5) && (
+          <g
+            className="face"
+            data-active-face="base"
+            transform={`translate(${look.x},${look.y + (curl ? 17 : 0)})`}
+          >
+            <Eyes
+              level={level}
+              sleep={sleep}
+              sad={sad}
+              x={122}
+              gap={77}
+              y={167}
+            />
+            <path d="M151 185q10-5 20 0l-10 12z" fill="#6c5142" />
+            <path
+              className="mouth"
+              d={
+                anticipating
+                  ? "M148 204q13-11 26 0q0 24-26 0Z"
+                  : sad || level > 1
+                    ? "M149 211q12-9 24 0"
+                    : "M161 197v9m-12-2q12 15 24 0"
+              }
+              fill={anticipating ? "#6c5142" : "none"}
+              stroke="#7c5b4b"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+          </g>
+        )}
         <CareFace
           kind="crumb"
           care={care}
@@ -925,6 +964,7 @@ function Crumb({
           sleeping={sleep}
           look={look}
           anticipating={anticipating}
+          action={action}
           offsetY={curl && !care ? 17 : 0}
         />
         {level !== 5 && <CareRecovery changes={recovering} />}
@@ -944,6 +984,8 @@ function PetDrawing({ kind, level }: { kind: PetKind; level: number }) {
     <Mochi {...props} />
   ) : kind === "pippin" ? (
     <Pippin {...props} />
+  ) : kind === "rattle" ? (
+    <Rattle {...props} />
   ) : (
     <Crumb {...props} />
   );
@@ -1002,15 +1044,18 @@ export function Pet({
       });
   }, [incoming, level, preview]);
   const sad = reaction.startsWith("−");
-  const careAction =
+  const careAction: FaceAction =
     level === 5
       ? null
-      : feeding
-        ? SUPPLIES[feeding].category
-        : reaction.startsWith("♥")
-          ? "happy"
-          : null;
+      : sad
+        ? "hurt"
+        : feeding
+          ? SUPPLIES[feeding].category
+          : reaction.startsWith("♥")
+            ? "happy"
+            : null;
   const art = {
+    action: careAction,
     care: level === 5 ? undefined : care,
     recovering: [
       ...new Set([
@@ -1068,10 +1113,12 @@ export function Pet({
         <Mochi {...art} />
       ) : kind === "pippin" ? (
         <Pippin {...art} />
+      ) : kind === "rattle" ? (
+        <Rattle {...art} />
       ) : (
         <Crumb {...art} />
       )}{" "}
-      {reaction && !preview && (
+      {reaction && !preview && level !== 5 && (
         <span
           className={`pet-reaction ${sad ? "damage-reaction" : ""}`}
           role="status"
@@ -1103,28 +1150,7 @@ export function PetChoices({
               onChange={() => onChange(kind)}
             />
             <div className={`choice-art species-${kind} stage-0`}>
-              {kind === "mochi" ? (
-                <Mochi
-                  level={0}
-                  sleep={false}
-                  sad={false}
-                  look={{ x: 0, y: 0 }}
-                />
-              ) : kind === "pippin" ? (
-                <Pippin
-                  level={0}
-                  sleep={false}
-                  sad={false}
-                  look={{ x: 0, y: 0 }}
-                />
-              ) : (
-                <Crumb
-                  level={0}
-                  sleep={false}
-                  sad={false}
-                  look={{ x: 0, y: 0 }}
-                />
-              )}
+              <PetDrawing kind={kind} level={0} />
             </div>
             <b>{pets[kind].name}</b>
             <small>{pets[kind].description}</small>

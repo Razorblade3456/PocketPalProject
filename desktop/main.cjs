@@ -1,3 +1,4 @@
+console.log('[PocketPal desktop] main entry reached');
 const { app, BrowserWindow, ipcMain, Menu, shell, screen, dialog } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -54,7 +55,7 @@ app.whenReady().then(async () => {
 const trusted = event => [pet, popup].some(w => w && !w.isDestroyed() && w.webContents === event.sender);
 ipcMain.handle('pet:settings', event => trusted(event) ? settings : {});
 ipcMain.handle('pet:select', (event, kind) => {
-  if (!trusted(event) || !['mochi', 'pippin', 'crumb'].includes(kind)) return;
+  if (!trusted(event) || !['mochi', 'pippin', 'crumb', 'rattle'].includes(kind)) return;
   settings.kind = kind; save(); pet.webContents.send('pet:changed');
 });
 ipcMain.handle('pet:import', async event => {
