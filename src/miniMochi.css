@@ -3,12 +3,14 @@
 .app .mini-mochi-button:hover, .app .mini-mochi-button:focus-visible { border-color:#b497cb; box-shadow:0 0 12px #a28ab845; }
 .app .mini-mochi-button[aria-pressed="true"] { background:#493357; }
 .mini-mochi-control small { max-width:260px; text-align:center; font-size:10px; color:#c8b6d5; }
-html:has(body.mini-mochi-window), body.mini-mochi-window { margin:0; padding:0; min-width:0; height:100%; background:#24212c; color:#e6dfd2; }
-.mini-mochi-content { display:flex; flex-direction:column; align-items:center; padding:5px; min-height:100%; box-sizing:border-box; }
-.mini-mochi-content .pet-button { position:relative; inset:auto; margin:0; width:130px; height:130px; max-width:100%; padding:6px; border:0; border-radius:0; background:transparent; box-shadow:none; flex-shrink:0; cursor:pointer; }
+/* Chromium's PiP canvas is opaque; a flat neutral canvas avoids any card/frame. */
+html:has(body.mini-mochi-window), body.mini-mochi-window { margin:0; padding:0; min-width:0; width:100%; height:100%; overflow:hidden; background:#19191f; color:#e6dfd2; }
+.mini-mochi-window > div { width:100%; height:100%; }
+.mini-mochi-content { display:grid; place-items:center; width:100%; height:100%; padding:0; border:0; background:transparent; }
+.mini-mochi-pet-area { position:relative; width:min(130px, 100vw, 100vh); aspect-ratio:1; background:transparent; }
+.mini-mochi-content .pet-button { position:relative; inset:auto; margin:0; width:100%; height:100%; max-width:100%; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; filter:none; cursor:default; }
 .mini-mochi-content .pet-button:focus-visible { outline:1px solid #a28ab8; }
-.mini-mochi-stats { box-sizing:border-box; width:100%; padding:4px 8px 10px; font:10px/1.5 system-ui; }
-.mini-mochi-stats label { display:block; margin:4px 0; }
-.mini-mochi-stats b { float:right; }
-.mini-mochi-stats progress { display:block; width:100%; height:7px; accent-color:#a4bc63; }
+.mini-mochi-content .mini-mochi-close { position:absolute; top:2px; right:2px; display:grid; place-items:center; width:19px; height:19px; min-height:0; padding:0; border:1px solid #776087; border-radius:50%; background:#302538; color:#e6dfd2; box-shadow:none; opacity:0; pointer-events:none; cursor:pointer; }
+.mini-mochi-pet-area:hover .mini-mochi-close, .mini-mochi-pet-area:focus-within .mini-mochi-close { opacity:1; pointer-events:auto; }
+.mini-mochi-content .mini-mochi-close:hover, .mini-mochi-content .mini-mochi-close:focus-visible { background:#493357; outline:1px solid #b497cb; }
 @media(prefers-reduced-motion:reduce) { .mini-mochi-button { transition:none !important; } }

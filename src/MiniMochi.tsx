@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Monitor } from "lucide-react";
+import { Monitor, X } from "lucide-react";
 import { Pet } from "./Pets";
-import { categories, labels, type State } from "./model";
+import type { State } from "./model";
 import "./miniMochi.css";
 
-type PictureInPicture = { requestWindow(options: { width: number; height: number }): Promise<Window> };
+type PictureInPicture = { requestWindow(options: { width: number; height: number; disallowReturnToOpener?: boolean }): Promise<Window> };
 
 export function MiniMochi({ s, level, sleep, calm }: {
   s: State; level: number; sleep: boolean; calm: boolean;
@@ -15,7 +15,6 @@ export function MiniMochi({ s, level, sleep, calm }: {
   const pending = useRef(false);
   const mounted = useRef(true);
   const [target, setTarget] = useState<HTMLElement | null>(null);
-  const [stats, setStats] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -31,7 +30,7 @@ export function MiniMochi({ s, level, sleep, calm }: {
     setMessage("");
     try {
       // Call directly from this click to preserve browser user activation.
-      const win = await pip.requestWindow({ width: 160, height: 160 });
+      const win = await pip.requestWindow({ width: 140, height: 140, disallowReturnToOpener: true });
       if (!mounted.current) { win.close(); return; }
       active.current = win;
       win.document.title = "Mini Mochi";
@@ -45,9 +44,8 @@ export function MiniMochi({ s, level, sleep, calm }: {
       win.addEventListener("pagehide", () => {
         if (active.current !== win) return;
         active.current = null;
-        if (mounted.current) { setTarget(null); setStats(false); }
+        if (mounted.current) setTarget(null);
       }, { once: true });
-      setStats(false);
       setTarget(root);
     } catch {
       setMessage("Mini Mochi couldn’t open. Try Chrome or Edge and allow Picture-in-Picture. Keep this tab open.");
@@ -63,17 +61,12 @@ export function MiniMochi({ s, level, sleep, calm }: {
       {message && <small role="status">{message}</small>}
     </div>
     {target && createPortal(<main className={`mini-mochi-content ${s.settings.motion ? "" : "still"}`}>
+      <div className="mini-mochi-pet-area">
       <Pet kind={s.pet} care={s.care} equipped={s.equipped} level={level} sleep={sleep} calm={calm}
-        onPet={() => {
-          setStats(value => !value);
-          // Browsers enforce their own minimum size; resizing is only a hint.
-          try { active.current?.resizeTo(160, stats ? 190 : 350); } catch { /* Keep stats scrollable if resize is blocked. */ }
-        }} />
-      {stats && <section className="mini-mochi-stats" aria-label="Live pet needs">
-        {categories.map(key => <label key={key}>{labels[key]} <b>{Math.round(s.care[key])}%</b>
-          <progress max={100} value={s.care[key]} aria-label={labels[key]} />
-        </label>)}
-      </section>}
+      />
+      <button type="button" className="mini-mochi-close" aria-label="Close Mini Mochi" title="Close Mini Mochi"
+        onClick={() => active.current?.close()}><X size={12} aria-hidden="true" /></button>
+      </div>
     </main>, target)}
   </>;
 }
