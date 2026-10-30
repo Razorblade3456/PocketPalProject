@@ -104,14 +104,14 @@ The original raw save is backed up under `pocketpal-before-boutique` when storag
 - `src/Pets.tsx`: three original pet drawings, species-specific spooky details, reactions and preview guide.
 - `src/TaskOutcomes.tsx`: shared outcome controls and history corrections.
 - `src/App.tsx`: existing room, layout, onboarding, settings and integration.
-- `src/model.test.ts`: 64 behavioral/rendering checks covering schedules, offline elapsed time, missed days, caps, corrections, coins, purchases, item use, exploit prevention, migration, all 18 pet-stage drawings and real-time sleep boundaries. Additional checks cover head-pat happiness, tired open-eye drawings and legacy coin-only corrections.
+- `src/model.test.ts`: 106 behavioral/rendering checks covering schedules, offline elapsed time, missed days, caps, corrections, coins, purchases, item use, exploit prevention, migration, all 18 pet-stage drawings and real-time sleep boundaries. Additional checks cover head-pat happiness, tired open-eye drawings and legacy coin-only corrections.
 
 Browser QA covers desktop/mobile layouts, source-to-jar flight and landing, coin gain, purchase versus use behavior, corrections after spending, refresh, theme/sleep separation, and disabled animations. Run tests with `TZ=America/Los_Angeles` to explicitly exercise that timezone's daylight-saving dates.
 
 
 ## Repeatable tasks and daily targets
 
-Every deliberate + or − press records a separate entry. A 350 ms lock prevents rapid accidental duplicates. Choose Once (target 1), Multiple (minimum 1), Custom goal (1–100), or Unlimited (no automatic misses). All modes allow extra entries beyond the target. Each positive earns 5 coins and a distinct jar ball. Each negative applies the category penalty within existing daily caps. Counters reset on the local date; history retains every entry.
+Every deliberate + or − press records a separate entry. A 120 ms lock prevents rapid accidental duplicates. Choose Once (target 1), Multiple (minimum 1), Custom goal (1–100), or Unlimited (no automatic misses). All modes allow extra entries beyond the target. Each positive earns 5 coins and a distinct jar ball. Each negative applies the category penalty within existing daily caps. Counters reset on the local date; history retains every entry.
 
 Undo removes only the latest entry. History corrects or removes individual entries. Automatic reconciliation records only the finite target shortfall once, counting manual completed and missed entries toward the target. Goal progress is capped per task; every positive, including extras, remains in the jar.
 
@@ -136,3 +136,26 @@ Inventory, outfit ownership, equipped items and transactions persist through ref
 ## Visual polish and local clock
 
 The Here & Now card displays your device-local time and date using your locale's 12/24-hour format. It refreshes each second and on focus or visibility changes, independently of the room theme. A dedicated component keeps clock updates isolated from game state. Navigation, task cards, need panels, boutique, dialogs, and inventory share refined spacing, rounded corners, restrained shadows, and day/night styling. Phone layouts preserve visible controls without horizontal overflow; reduced-motion preferences are respected.
+
+
+## Phase 1: Smart habits & reward economy
+
+The existing schema-4 local save now includes an append-only reward ledger, a reward policy, planning events and per-date focus selections. Older outcomes keep their already-earned rewards and purchases. A pre-upgrade raw save is kept under pocketpal-before-smart-habits when storage permits. No data or paid AI service is used outside the browser.
+
+Tasks support one-time, daily, weekly, selected weekdays, fixed calendar intervals, and intervals anchored after the most recent completion. Daily entry modes remain once, multiple, custom target, and unlimited. Add optional duration, priority, reminder, a missed-attempt care category, and a per-task reward cap under More options. Turning the care category off makes both positive and negative task entries tracking/coin actions without directly affecting care.
+
+Default economy: 5 coins per eligible completion, up to 3 rewarded completions per task per local day without a custom target. Custom targets reward up to the target. Configure the defaults in Settings or override an individual task's cap. Extra positives and all negatives remain separate history entries; only rewarded positives add jar balls. Each entry snapshots its reward rate and limit. Policy changes apply to new entries. Corrections may promote already tracked extras into freed reward slots, while total funded entries stay within their recorded quota.
+
+Reward adjustments append transactions rather than overwriting previous ledger rows. Purchase and consumption IDs remain idempotent. Historical corrections recompute the wallet and reserve spent-coin shortfalls against future earnings, retaining owned items and already-applied care. Repeated positive/negative corrections cannot create profit or duplicate jar balls. The History view includes the reward ledger and planning/step actions.
+
+Star up to three tasks each local day to create the optional Today's 3 strip. It shows compact progress and one-tap completion; other tasks stay available. Break larger tasks into manually edited tiny steps or use Clean room, Gentle morning, and Study session templates. Completing all steps contributes one parent occurrence, with no separate step rewards. Unchecking/rechecking adjusts that same parent occurrence; finishing steps after a manual completion does not create a second reward.
+
+Plan & rest provides snoozing, rescheduling one occurrence, skipping with a reason, and pausing through an optional inclusive date. Recover skipped/moved occurrences or resume routines from Manage all tasks. Planning history is retained. Paused/skipped dates have no automatic misses; unlimited tasks have none. Manual misses count toward finite targets so reconciliation records only genuinely unaccounted slots. Recurrence uses local calendar dates, creation-date snapshots, and calendar-day interval math across DST. Midnight, timezone-offset changes, focus, and the existing periodic reconciliation update the current day.
+
+Manual checks:
+1. Create a 6-per-day habit, press + 8 times, and confirm 8 history entries but 6 rewarded balls/30 coins. Undo or correct individual entries.
+2. Buy/use an item, then correct the funding results. Verify the item is not duplicated and any shortfall is reserved from future coins.
+3. Star three tasks, complete one via Today's 3, add a three-step template to another, and verify the steps give only one parent completion.
+4. Skip, restore, snooze, reschedule, and pause a routine. Refresh and check the persisted plan, focus, history, inventory, and pet needs on desktop and phone.
+
+Automated checks cover reward caps and transaction replay, correction cycles, purchases/debt, all recurrence modes, DST, creation boundaries, automatic shortfalls, pauses/skips/restoration, focus persistence, tiny-step reward deduplication, older-save migration, and all existing care/appearance checks.

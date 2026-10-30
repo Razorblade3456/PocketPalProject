@@ -34,7 +34,16 @@ export type Task = {
   name: string;
   description: string;
   time: string;
-  repeat: "daily" | "weekly" | "selected" | "once";
+  repeat:
+    "daily" | "weekly" | "selected" | "once" | "interval" | "afterCompletion";
+  intervalDays?: number;
+  createdDate?: string;
+  durationMinutes?: number;
+  priority?: "low" | "normal" | "high";
+  reminderEnabled?: boolean;
+  careLinked?: boolean;
+  rewardCap?: number;
+  steps?: { id: string; name: string }[];
   days: number[];
   date: string;
   category: Category;
@@ -64,6 +73,9 @@ export type Occurrence = Completion & {
   legacyRetired?: boolean;
   rewardCare: number;
   rewardCoins: number;
+  rewardRate?: number;
+  rewardLimit?: number;
+  timeZone?: string;
 };
 type Settings = {
   sound: boolean;
@@ -100,7 +112,33 @@ type CareEvent =
       boost: number;
       morale: number;
     };
+export type RewardTransaction = {
+  id: string;
+  entryId: string;
+  amount: number;
+  at: number;
+};
+export type HabitEvent = {
+  id: string;
+  taskId: string;
+  date: string;
+  at: number;
+  kind:
+    "skip" | "pause" | "resume" | "reschedule" | "snooze" | "step" | "restore";
+  reason?: string;
+  taskName?: string;
+  stepName?: string;
+  until?: string;
+  time?: string;
+  stepId?: string;
+  done?: boolean;
+};
+export type RewardPolicy = { coins: number; dailyCap: number };
 export type State = {
+  rewardPolicy?: RewardPolicy;
+  rewardLedger?: RewardTransaction[];
+  habitEvents?: HabitEvent[];
+  focusDays?: Record<string, string[]>;
   version: 4;
   ownedOutfits: Outfit[];
   equipped: Partial<Record<OutfitSlot, Outfit>>;
@@ -159,6 +197,10 @@ export function initial(n = Date.now()): State {
   const care = { food: 85, water: 85, clean: 90, happy: 90 };
   return {
     version: 4,
+    rewardPolicy: { coins: 5, dailyCap: 3 },
+    rewardLedger: [],
+    habitEvents: [],
+    focusDays: {},
     ownedOutfits: [],
     equipped: {},
     coins: 0,
@@ -188,18 +230,132 @@ export function initial(n = Date.now()): State {
     settledThrough: shiftDate(dateKey(n), -1),
   };
 }
-export const due = (t: Task, n = Date.now()) => {
+/** Calendar distance ignores 23/25-hour DST days. */
+export const calendarDays = (a: string, b: string) =>
+  (Date.parse(a + "T00:00:00Z") - Date.parse(b + "T00:00:00Z")) / 86400000;
+export const due = (t: Task, n = Date.now(), outcomes: Occurrence[] = []) => {
   const d = new Date(n),
     key = dateKey(n);
-  return (
-    key >= t.date &&
-    key >= dateKey(t.createdAt ?? 0) &&
-    (t.repeat === "daily" ||
-      (t.repeat === "once" && t.date === key) ||
-      (t.repeat === "weekly" && d.getDay() === localDate(t.date).getDay()) ||
-      (t.repeat === "selected" && t.days.includes(d.getDay())))
-  );
+  if (key < t.date || key < (t.createdDate ?? dateKey(t.createdAt ?? 0)))
+    return false;
+  if (t.repeat === "daily") return true;
+  if (t.repeat === "once") return key === t.date;
+  if (t.repeat === "weekly") return d.getDay() === localDate(t.date).getDay();
+  if (t.repeat === "selected") return t.days.includes(d.getDay());
+  const interval = Math.max(1, t.intervalDays || 1);
+  const last = outcomes
+    .filter(
+      (o) =>
+        o.taskId === t.id &&
+        o.date < key &&
+        o.status === "completed" &&
+        !o.deleted,
+    )
+    .map((o) => o.date)
+    .sort()
+    .at(-1);
+  const anchor =
+    t.repeat === "afterCompletion" && last ? shiftDate(last, interval) : t.date;
+  return key >= anchor && calendarDays(key, anchor) % interval === 0;
 };
+export function pausedOn(s: State, taskId: string, date: string) {
+  const events = (s.habitEvents || [])
+    .filter(
+      (e) =>
+        e.taskId === taskId &&
+        (e.kind === "pause" || e.kind === "resume") &&
+        e.date <= date,
+    )
+    .sort((a, b) => a.at - b.at);
+  const last = events.at(-1);
+  return last?.kind === "pause" && (!last.until || date <= last.until);
+}
+export function taskDue(s: State, t: Task, n = Date.now()) {
+  const day = dateKey(n);
+  if (
+    day < (t.createdDate ?? dateKey(t.createdAt ?? 0)) ||
+    pausedOn(s, t.id, day)
+  )
+    return false;
+  const events = (s.habitEvents || []).filter((e) => e.taskId === t.id);
+  const plan = events
+    .filter(
+      (e) =>
+        e.date === day && ["skip", "reschedule", "restore"].includes(e.kind),
+    )
+    .at(-1);
+  if (plan?.kind === "skip") return false;
+  const moves = events.filter(
+    (e) =>
+      e.kind === "reschedule" &&
+      events
+        .filter(
+          (other) =>
+            other.date === e.date &&
+            ["reschedule", "restore"].includes(other.kind),
+        )
+        .at(-1)?.id === e.id,
+  );
+  const movedFrom = moves.some((e) => e.date === day);
+  const movedTo = moves
+    .filter((e) => e.until === day)
+    .some((e) => moves.filter((m) => m.date === e.date).at(-1)?.id === e.id);
+  return movedTo || (!movedFrom && due(t, n, s.outcomes));
+}
+export function reminderFor(s: State, t: Task, day: string) {
+  return (
+    (s.habitEvents || [])
+      .filter((e) => e.kind === "snooze" && e.taskId === t.id && e.date === day)
+      .at(-1)?.time || t.time
+  );
+}
+export const policyFor = (s: State) =>
+  s.rewardPolicy || { coins: 5, dailyCap: 3 };
+export const rewardLimitFor = (s: State, t: Task) =>
+  t.repetitions === "goal"
+    ? goalFor(t)
+    : (t.rewardCap ?? policyFor(s).dailyCap);
+function reconcileRewards(s: State, n: number): State {
+  const counts = new Map<string, number>();
+  const outcomes = [...s.outcomes]
+    .sort((a, b) => a.sequence - b.sequence)
+    .map((o) => {
+      const key = occurrenceKey(o.taskId, o.date),
+        count = counts.get(key) || 0;
+      const completed = o.status === "completed" && !o.deleted;
+      const amount =
+        o.rewardLimit === undefined
+          ? o.rewardCoins
+          : completed && count < o.rewardLimit
+            ? (o.rewardRate ?? 5)
+            : 0;
+      if (completed) counts.set(key, count + 1);
+      return o.rewardCoins === amount ? o : { ...o, rewardCoins: amount };
+    });
+  const totals = new Map<string, number>();
+  const ledger = [...(s.rewardLedger || [])];
+  for (const e of ledger)
+    totals.set(e.entryId, (totals.get(e.entryId) || 0) + e.amount);
+  for (const o of outcomes) {
+    const desired = o.status === "completed" && !o.deleted ? o.rewardCoins : 0;
+    const difference = desired - (totals.get(o.id) || 0);
+    if (difference)
+      ledger.push({
+        id: crypto.randomUUID(),
+        entryId: o.id,
+        amount: difference,
+        at: n,
+      });
+  }
+  return {
+    ...s,
+    outcomes,
+    rewardLedger: ledger,
+    rewardPolicy: policyFor(s),
+    habitEvents: s.habitEvents || [],
+    focusDays: s.focusDays || {},
+  };
+}
 export const stageForCare = (care: Care, cozy = false) => {
   const avg = categories.reduce((a, c) => a + care[c], 0) / 4;
   return avg > 70
@@ -214,7 +370,8 @@ export const stageForCare = (care: Care, cozy = false) => {
             ? 4
             : 5;
 };
-export const stage = (s: Pick<State, "care" | "settings">) => stageForCare(s.care, s.settings.cozy);
+export const stage = (s: Pick<State, "care" | "settings">) =>
+  stageForCare(s.care, s.settings.cozy);
 export function outcomeFor(s: State, id: string, date: string) {
   return s.outcomes.find(
     (o) => o.taskId === id && o.date === date && !o.deleted,
@@ -251,7 +408,7 @@ export function recordAttempt(
   s = decay(s, n);
   if (s.outcomes.some((o) => o.id === id) || date > dateKey(n)) return s;
   const task = s.tasks.find((t) => t.id === taskId);
-  if (!task || !due(task, +localDate(date))) return s;
+  if (!task || !taskDue(s, task, +localDate(date))) return s;
   const entry: Occurrence = {
     id,
     ballId: "ball:" + id,
@@ -265,8 +422,11 @@ export function recordAttempt(
     automatic: false,
     sequence: s.lastSequence + 1,
     rewardCare: 0,
-    rewardCoins: BALANCE.completedCoins,
-    penalty: BALANCE.missed,
+    rewardCoins: policyFor(s).coins,
+    rewardRate: policyFor(s).coins,
+    rewardLimit: rewardLimitFor(s, task),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    penalty: task.careLinked === false ? 0 : BALANCE.missed,
   };
   return project(
     {
@@ -337,6 +497,7 @@ export function undoLatest(
 }
 /** Recompute from an immutable checkpoint. Never reverse a clamped value by subtraction. */
 function project(s: State, n: number): State {
+  s = reconcileRewards(s, n);
   let care = { ...s.baseline.care },
     speed = s.baseline.speed,
     cozy = s.baseline.cozy,
@@ -450,7 +611,7 @@ function project(s: State, n: number): State {
   }
   advance(n);
   const completions = s.outcomes
-    .filter((o) => o.status === "completed" && !o.deleted)
+    .filter((o) => o.status === "completed" && !o.deleted && o.rewardCoins > 0)
     .map(({ id, ballId, taskId, name, category, at, date }) => ({
       id,
       ballId,
@@ -467,7 +628,7 @@ function project(s: State, n: number): State {
   if (new Set(completions.map((c) => c.date)).size >= 7)
     achievements.add("Best Buddies");
   const day = dateKey(n),
-    planned = s.tasks.filter((t) => due(t, n));
+    planned = s.tasks.filter((t) => taskDue(s, t, n));
   if (
     planned.length &&
     planned.every((t) => taskCounts(s, t.id, day).completed >= goalFor(t))
@@ -480,16 +641,11 @@ function project(s: State, n: number): State {
     care,
     coins: Math.max(
       0,
-      s.outcomes
-        .filter((o) => o.status === "completed")
-        .reduce((sum, o) => sum + o.rewardCoins, 0) - spent,
+      (s.rewardLedger || []).reduce((sum, e) => sum + e.amount, 0) - spent,
     ),
     debt: Math.max(
       0,
-      spent -
-        s.outcomes
-          .filter((o) => o.status === "completed")
-          .reduce((sum, o) => sum + o.rewardCoins, 0),
+      spent - (s.rewardLedger || []).reduce((sum, e) => sum + e.amount, 0),
     ),
     inventory,
     ownedOutfits: [...ownedOutfits],
@@ -519,7 +675,7 @@ export function decay(s: State, n = Date.now()): State {
     day = shiftDate(day, 1)
   ) {
     for (const task of s.tasks) {
-      if (!due(task, +localDate(day))) continue;
+      if (!taskDue({ ...s, outcomes }, task, +localDate(day))) continue;
       const records = outcomes.filter(
         (o) => o.taskId === task.id && o.date === day && !o.deleted,
       );
@@ -543,8 +699,10 @@ export function decay(s: State, n = Date.now()): State {
           automatic: true,
           sequence: ++lastSequence,
           rewardCare: 0,
-          rewardCoins: BALANCE.completedCoins,
-          penalty: BALANCE.missed,
+          rewardCoins: policyFor(s).coins,
+          rewardRate: policyFor(s).coins,
+          rewardLimit: rewardLimitFor(s, task),
+          penalty: task.careLinked === false ? 0 : BALANCE.missed,
         };
         if (old) outcomes[outcomes.indexOf(old)] = occurrence;
         else outcomes.push(occurrence);
@@ -570,7 +728,7 @@ export function setOutcome(
     task = old?.task ?? s.tasks.find((t) => t.id === id);
   if (
     !task ||
-    (!old && !due(task, +localDate(date))) ||
+    (!old && !taskDue(s, task, +localDate(date))) ||
     old?.status === status ||
     (!old && status === "pending")
   )
@@ -586,7 +744,7 @@ export function setOutcome(
     : {
         id: crypto.randomUUID(),
         ballId: crypto.randomUUID(),
-        penalty: BALANCE.missed,
+        penalty: task.careLinked === false ? 0 : BALANCE.missed,
         taskId: id,
         name: task.name,
         category: task.category,
@@ -597,7 +755,9 @@ export function setOutcome(
         automatic: false,
         sequence: s.lastSequence + 1,
         rewardCare: 0,
-        rewardCoins: BALANCE.completedCoins,
+        rewardCoins: policyFor(s).coins,
+        rewardRate: policyFor(s).coins,
+        rewardLimit: rewardLimitFor(s, task),
       };
   return project(
     {
@@ -615,7 +775,11 @@ export const complete = (s: State, id: string, n = Date.now()) =>
 export function saveTask(s: State, task: Task, n = Date.now()): State {
   s = decay(s, n);
   const old = s.tasks.find((t) => t.id === task.id);
-  const next = { ...task, createdAt: old?.createdAt ?? n };
+  const next = {
+    ...task,
+    createdAt: old?.createdAt ?? n,
+    createdDate: old?.createdDate ?? dateKey(old?.createdAt ?? n),
+  };
   return {
     ...s,
     tasks: old
@@ -625,7 +789,16 @@ export function saveTask(s: State, task: Task, n = Date.now()): State {
 }
 export function deleteTask(s: State, id: string, n = Date.now()): State {
   s = decay(s, n);
-  return { ...s, tasks: s.tasks.filter((t) => t.id !== id) };
+  return {
+    ...s,
+    tasks: s.tasks.filter((t) => t.id !== id),
+    focusDays: Object.fromEntries(
+      Object.entries(s.focusDays || {}).map(([day, ids]) => [
+        day,
+        day >= dateKey(n) ? ids.filter((taskId) => taskId !== id) : ids,
+      ]),
+    ),
+  };
 }
 export function changeSettings(
   s: State,
@@ -804,7 +977,14 @@ const taskValid = (t: Task) =>
   typeof t.name === "string" &&
   typeof t.description === "string" &&
   /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time) &&
-  ["daily", "weekly", "selected", "once"].includes(t.repeat) &&
+  [
+    "daily",
+    "weekly",
+    "selected",
+    "once",
+    "interval",
+    "afterCompletion",
+  ].includes(t.repeat) &&
   Array.isArray(t.days) &&
   t.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) &&
   isDate(t.date) &&
@@ -914,7 +1094,7 @@ function validModel(x: unknown, version: number): x is State {
             o.rewardCare <= 28 &&
             Number.isSafeInteger(o.rewardCoins) &&
             o.rewardCoins >= 0 &&
-            o.rewardCoins <= 5)) &&
+            o.rewardCoins <= 100)) &&
         (o.legacy === undefined || typeof o.legacy === "boolean") &&
         (o.legacyRetired === undefined || typeof o.legacyRetired === "boolean"),
     ) &&
@@ -936,6 +1116,7 @@ function validModel(x: unknown, version: number): x is State {
   );
 }
 export function validState(x: unknown): x is State {
+  if (!validHabitData(x as State)) return false;
   if (!validModel(x, 4)) return false;
   const s = x as State;
   if (
@@ -1003,6 +1184,7 @@ export function parseState(x: unknown, n = Date.now()): State | null {
       {
         ...old,
         version: 4,
+        rewardLedger: [],
         ownedOutfits: [],
         equipped: {},
         inventory: { ...emptyInventory(), ...old.inventory },
@@ -1016,6 +1198,7 @@ export function parseState(x: unknown, n = Date.now()): State | null {
     const upgraded: State = {
       ...old,
       version: 4,
+      rewardLedger: [],
       ownedOutfits: [],
       equipped: {},
       coins: 0,
@@ -1100,6 +1283,16 @@ export function load(): State {
     const raw = localStorage.getItem("pocketpal-v1");
     if (raw) {
       const parsed = JSON.parse(raw);
+      if (
+        !parsed.rewardLedger &&
+        !localStorage.getItem("pocketpal-before-smart-habits")
+      ) {
+        try {
+          localStorage.setItem("pocketpal-before-smart-habits", raw);
+        } catch {
+          /* The original save remains available on storage failure. */
+        }
+      }
       const s = parseState(parsed);
       if (s) {
         if (
@@ -1139,4 +1332,222 @@ export const demoTasks = (n = Date.now()): Task[] =>
     days: [],
     date: dateKey(n),
     createdAt: n,
+    createdDate: dateKey(n),
+    careLinked: false,
   }));
+
+export function validHabitData(s: State) {
+  if (
+    !s ||
+    typeof s !== "object" ||
+    !Array.isArray(s.tasks) ||
+    !Array.isArray(s.outcomes)
+  )
+    return false;
+  const bounded = (v: unknown, lo: number, hi: number) =>
+    Number.isSafeInteger(v) && (v as number) >= lo && (v as number) <= hi;
+  if (
+    s.rewardPolicy &&
+    (!bounded(s.rewardPolicy.coins, 0, 100) ||
+      !bounded(s.rewardPolicy.dailyCap, 0, 100))
+  )
+    return false;
+  if (
+    s.rewardLedger !== undefined &&
+    (!Array.isArray(s.rewardLedger) ||
+      !s.rewardLedger.every(
+        (e) =>
+          e &&
+          typeof e.id === "string" &&
+          typeof e.entryId === "string" &&
+          bounded(e.amount, -100, 100) &&
+          e.amount !== 0 &&
+          Number.isFinite(e.at) &&
+          s.outcomes?.some((o) => o.id === e.entryId),
+      ) ||
+      new Set(s.rewardLedger.map((e) => e.id)).size !== s.rewardLedger.length)
+  )
+    return false;
+  if (
+    s.habitEvents !== undefined &&
+    (!Array.isArray(s.habitEvents) ||
+      !s.habitEvents.every(
+        (e) =>
+          e &&
+          typeof e.id === "string" &&
+          typeof e.taskId === "string" &&
+          isDate(e.date) &&
+          Number.isFinite(e.at) &&
+          [
+            "skip",
+            "pause",
+            "resume",
+            "reschedule",
+            "snooze",
+            "step",
+            "restore",
+          ].includes(e.kind) &&
+          (e.reason === undefined ||
+            (typeof e.reason === "string" && e.reason.length <= 500)) &&
+          (e.until === undefined || (isDate(e.until) && e.until >= e.date)) &&
+          (e.time === undefined || /^([01]\d|2[0-3]):[0-5]\d$/.test(e.time)) &&
+          (e.kind !== "reschedule" || (!!e.until && e.until >= e.date)) &&
+          (e.kind !== "step" ||
+            (typeof e.stepId === "string" && typeof e.done === "boolean")),
+      ) ||
+      new Set(s.habitEvents.map((e) => e.id)).size !== s.habitEvents.length)
+  )
+    return false;
+  if (
+    s.focusDays &&
+    (typeof s.focusDays !== "object" ||
+      !Object.entries(s.focusDays).every(
+        ([day, ids]) =>
+          isDate(day) &&
+          Array.isArray(ids) &&
+          ids.length <= 3 &&
+          ids.every((id) => typeof id === "string") &&
+          new Set(ids).size === ids.length,
+      ))
+  )
+    return false;
+  return (
+    (s.tasks || []).every(
+      (t) =>
+        (t.intervalDays === undefined || bounded(t.intervalDays, 1, 365)) &&
+        (t.createdDate === undefined || isDate(t.createdDate)) &&
+        (t.durationMinutes === undefined ||
+          bounded(t.durationMinutes, 0, 1440)) &&
+        (t.priority === undefined ||
+          ["low", "normal", "high"].includes(t.priority)) &&
+        (t.reminderEnabled === undefined ||
+          typeof t.reminderEnabled === "boolean") &&
+        (t.careLinked === undefined || typeof t.careLinked === "boolean") &&
+        (t.rewardCap === undefined || bounded(t.rewardCap, 0, 100)) &&
+        (t.steps === undefined ||
+          (Array.isArray(t.steps) &&
+            t.steps.length <= 30 &&
+            t.steps.every(
+              (step) =>
+                step &&
+                typeof step.id === "string" &&
+                typeof step.name === "string" &&
+                step.name.length <= 120,
+            ) &&
+            new Set(t.steps.map((step) => step.id)).size === t.steps.length)),
+    ) &&
+    (s.outcomes || []).every(
+      (o) =>
+        (o.rewardRate === undefined || bounded(o.rewardRate, 0, 100)) &&
+        (o.rewardLimit === undefined || bounded(o.rewardLimit, 0, 100)),
+    )
+  );
+}
+export function changeRewardPolicy(
+  s: State,
+  policy: RewardPolicy,
+  n = Date.now(),
+): State {
+  s = decay(s, n);
+  if (
+    ![policy.coins, policy.dailyCap].every(
+      (v) => Number.isSafeInteger(v) && v >= 0 && v <= 100,
+    )
+  )
+    return s;
+  return { ...s, rewardPolicy: { ...policy } };
+}
+export function addHabitEvent(
+  s: State,
+  event: Omit<HabitEvent, "at" | "id">,
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
+  s = decay(s, n);
+  if (
+    !s.tasks.some((t) => t.id === event.taskId) ||
+    (s.habitEvents || []).some((e) => e.id === id) ||
+    event.date < dateKey(n)
+  )
+    return s;
+  const task = s.tasks.find((t) => t.id === event.taskId)!;
+  const next = {
+    ...s,
+    habitEvents: [
+      ...(s.habitEvents || []),
+      {
+        ...event,
+        taskName: task.name,
+        ...(event.stepId
+          ? {
+              stepName:
+                task.steps?.find((step) => step.id === event.stepId)?.name ||
+                "Tiny step",
+            }
+          : {}),
+        id,
+        at: n,
+      },
+    ],
+  };
+  return validHabitData(next) ? next : s;
+}
+export function toggleFocus(s: State, taskId: string, date = dateKey()): State {
+  const ids = s.focusDays?.[date] || [];
+  const next = ids.includes(taskId)
+    ? ids.filter((id) => id !== taskId)
+    : ids.length < 3
+      ? [...ids, taskId]
+      : ids;
+  return { ...s, focusDays: { ...s.focusDays, [date]: next } };
+}
+export function stepIsDone(
+  s: State,
+  taskId: string,
+  stepId: string,
+  date: string,
+) {
+  return (
+    (s.habitEvents || [])
+      .filter(
+        (e) =>
+          e.kind === "step" &&
+          e.taskId === taskId &&
+          e.stepId === stepId &&
+          e.date === date,
+      )
+      .at(-1)?.done || false
+  );
+}
+export function setStep(
+  s: State,
+  taskId: string,
+  stepId: string,
+  done: boolean,
+  date = dateKey(),
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
+  s = decay(s, n);
+  const task = s.tasks.find((t) => t.id === taskId);
+  if (
+    !task?.steps?.some((step) => step.id === stepId) ||
+    !taskDue(s, task, +localDate(date)) ||
+    stepIsDone(s, taskId, stepId, date) === done ||
+    (s.habitEvents || []).some((e) => e.id === id)
+  )
+    return s;
+  s = addHabitEvent(s, { kind: "step", taskId, stepId, done, date }, n, id);
+  const parentId = JSON.stringify(["steps", taskId, date]);
+  const parent = s.outcomes.find((o) => o.id === parentId);
+  const allDone = task.steps.every((step) =>
+    stepIsDone(s, taskId, step.id, date),
+  );
+  if (!allDone && parent && !parent.deleted)
+    return correctAttempt(s, parentId, "pending", n);
+  if (allDone && taskCounts(s, taskId, date).completed === 0)
+    return parent
+      ? correctAttempt(s, parentId, "completed", n)
+      : recordAttempt(s, taskId, date, "completed", n, parentId);
+  return s;
+}

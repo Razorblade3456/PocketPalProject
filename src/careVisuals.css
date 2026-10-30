@@ -1,156 +1,851 @@
 /* Individual needs live inside the same SVG as the existing species and outfits. */
-.base-face-hidden { display: none; }
-.care-body,.care-shape { transition: transform .65s ease, filter .65s ease; }
-.care-shape { transform-origin: 160px 285px; }
-.care-idle { transform-origin: 160px 280px; }
-.care-face { transition: transform .6s ease; }
-.care-face path,.care-face ellipse,.care-face circle,.mud-marks { transition: opacity .5s, fill .5s; }
-.has-care.care-awake[data-care-energy="0"] .care-idle { animation: care-content-bounce 8s ease-in-out infinite; }
-.has-care.care-awake[data-care-energy="1"] .care-idle { animation: care-quiet-breathe 7s ease-in-out infinite; }
-.has-care.care-awake[data-care-energy="2"] .care-idle { animation: care-low-breathe 9s ease-in-out infinite; }
+.base-face-hidden {
+  display: none;
+}
+.care-body,
+.care-shape {
+  transition:
+    transform 0.65s ease,
+    filter 0.65s ease;
+}
+.care-shape {
+  transform-origin: 160px 285px;
+}
+.care-idle {
+  transform-origin: 160px 280px;
+}
+.care-face {
+  transition: transform 0.6s ease;
+}
+.care-face path,
+.care-face ellipse,
+.care-face circle,
+.mud-marks {
+  transition:
+    opacity 0.5s,
+    fill 0.5s;
+}
+.has-care.care-awake[data-care-energy="0"] .care-idle {
+  animation: care-content-bounce 8s ease-in-out infinite;
+}
+.has-care.care-awake[data-care-energy="1"] .care-idle {
+  animation: care-quiet-breathe 7s ease-in-out infinite;
+}
+.has-care.care-awake[data-care-energy="2"] .care-idle {
+  animation: care-low-breathe 9s ease-in-out infinite;
+}
 .has-care.care-awake[data-care-energy="3"] .care-idle,
-.has-care.care-awake[data-care-energy="4"] .care-idle { animation: care-low-breathe 11s ease-in-out infinite; }
-.care-awake[data-happy-tier="1"] .care-eyes { animation: care-down-glance 9s ease-in-out infinite; }
-.care-awake[data-happy-tier="3"] .care-face { animation: care-sniffle 5s ease-in-out infinite; }
-.care-awake[data-happy-tier="4"] .care-idle { animation: care-sobbing 3s ease-in-out infinite; }
-.care-awake .rolling-tears .tear-drop { animation: care-tear-roll 1.8s ease-in infinite; }
-.care-awake .tear-1 .tear-drop { animation-delay: -.85s; }
-.care-awake .trembling-lip { transform-origin: 160px 205px; animation: care-lip-tremble 3s ease-in-out infinite; }
-.face-cover-paws { opacity: 0; }
-.care-awake .face-cover-paws { animation: care-cover-face 10s ease-in-out infinite; transform-origin: 160px 205px; }
-.care-awake .tummy-rubbing-paw { animation: care-tummy-rub 7s ease-in-out infinite; transform-origin: 103px 230px; }
-.care-awake .hunger-2 .tummy-rubbing-paw { animation-duration: 5s; }
-.care-awake .hunger-3 .tummy-rubbing-paw { animation-duration: 9s; }
-.care-awake .food-reaching-paw { animation: care-reach-food 7s ease-in-out infinite; transform-origin: 97px 220px; }
-.care-awake .water-reaching-paw { animation: care-reach-water 6.5s ease-in-out infinite; transform-origin: 223px 223px; }
-.care-awake .tummy-rumble { animation: care-rumble 5s ease-in-out infinite; transform-origin: 160px 245px; }
-.lip-lick { opacity: 0; }
-.care-awake .lip-lick { animation: care-lip-lick 8s ease-in-out infinite; }
-.care-awake .thirst-2 ~ .care-face .lip-lick { animation-duration: 5s; }
-.care-awake .panting-mouth { animation: care-pant 2.5s ease-in-out infinite; transform-origin: 160px 205px; }
-.care-awake .care-dust circle { animation: care-dust 5s ease-in-out infinite; }
-.care-awake .care-fly { animation: care-fly 4.5s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-.care-awake[data-clean-tier="4"] .cleanliness-overlay { animation: care-dirty-shake 10s ease-in-out infinite; transform-origin: 160px 220px; }
-.care-awake[data-clean-tier="1"] .messy-fibers { animation: care-scratch 7s ease-in-out infinite; }
-.care-recovery { pointer-events: none; }
-.wash-bubbles > g { animation: care-wash 1.8s ease-out both; }
-.refresh-drops,.satisfied-spark,.joy-hearts { animation: care-perk 1.8s ease-out both; }
-.joy-hearts { transform-origin: 239px 125px; }
+.has-care.care-awake[data-care-energy="4"] .care-idle {
+  animation: care-low-breathe 11s ease-in-out infinite;
+}
+.care-awake[data-happy-tier="1"] .care-eyes {
+  animation: care-down-glance 9s ease-in-out infinite;
+}
+.care-awake[data-happy-tier="3"] .care-face {
+  animation: care-sniffle 5s ease-in-out infinite;
+}
+.care-awake[data-happy-tier="4"] .care-idle {
+  animation: care-sobbing 3s ease-in-out infinite;
+}
+.care-awake .rolling-tears .tear-drop {
+  animation: care-tear-roll 1.8s ease-in infinite;
+}
+.care-awake .tear-1 .tear-drop {
+  animation-delay: -0.85s;
+}
+.care-awake .trembling-lip {
+  transform-origin: 160px 205px;
+  animation: care-lip-tremble 3s ease-in-out infinite;
+}
+.face-cover-paws {
+  opacity: 0;
+}
+.care-awake .face-cover-paws {
+  animation: care-cover-face 10s ease-in-out infinite;
+  transform-origin: 160px 205px;
+}
+.care-awake .tummy-rubbing-paw {
+  animation: care-tummy-rub 7s ease-in-out infinite;
+  transform-origin: 103px 230px;
+}
+.care-awake .hunger-2 .tummy-rubbing-paw {
+  animation-duration: 5s;
+}
+.care-awake .hunger-3 .tummy-rubbing-paw {
+  animation-duration: 9s;
+}
+.care-awake .food-reaching-paw {
+  animation: care-reach-food 7s ease-in-out infinite;
+  transform-origin: 97px 220px;
+}
+.care-awake .water-reaching-paw {
+  animation: care-reach-water 6.5s ease-in-out infinite;
+  transform-origin: 223px 223px;
+}
+.care-awake .tummy-rumble {
+  animation: care-rumble 5s ease-in-out infinite;
+  transform-origin: 160px 245px;
+}
+.lip-lick {
+  opacity: 0;
+}
+.care-awake .lip-lick {
+  animation: care-lip-lick 8s ease-in-out infinite;
+}
+.care-awake .thirst-2 ~ .care-face .lip-lick {
+  animation-duration: 5s;
+}
+.care-awake .panting-mouth {
+  animation: care-pant 2.5s ease-in-out infinite;
+  transform-origin: 160px 205px;
+}
+.care-awake .care-dust circle {
+  animation: care-dust 5s ease-in-out infinite;
+}
+.care-awake .care-fly {
+  animation: care-fly 4.5s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.care-awake[data-clean-tier="4"] .cleanliness-overlay {
+  animation: care-dirty-shake 10s ease-in-out infinite;
+  transform-origin: 160px 220px;
+}
+.care-awake[data-clean-tier="1"] .messy-fibers {
+  animation: care-scratch 7s ease-in-out infinite;
+}
+.care-recovery {
+  pointer-events: none;
+}
+.wash-bubbles > g {
+  animation: care-wash 1.8s ease-out both;
+}
+.refresh-drops,
+.satisfied-spark,
+.joy-hearts {
+  animation: care-perk 1.8s ease-out both;
+}
+.joy-hearts {
+  transform-origin: 239px 125px;
+}
 /* Individual need idles replace generic healthy bobbing; lifecycle decay remains. */
-.pet-art:has(.has-care) { animation: none !important; }
+.pet-art:has(.has-care) {
+  animation: none !important;
+}
 .pet-art:has(.has-care[data-happy-tier="2"]) .wing-left,
 .pet-art:has(.has-care[data-happy-tier="2"]) .wing-right,
 .pet-art:has(.has-care[data-happy-tier="3"]) .wing-left,
 .pet-art:has(.has-care[data-happy-tier="3"]) .wing-right,
 .pet-art:has(.has-care[data-happy-tier="4"]) .wing-left,
-.pet-art:has(.has-care[data-happy-tier="4"]) .wing-right { animation: none; }
-@keyframes care-content-bounce { 0%,70%,100% { transform: translateY(0); } 77%,89% { transform: translateY(-5px); } 83%,95% { transform: translateY(0); } }
-@keyframes care-quiet-breathe { 0%,100%{transform:translateY(1px)}50%{transform:translateY(3px)} }
-@keyframes care-low-breathe { 0%,100%{transform:translateY(2px) rotate(-.5deg)}50%{transform:translateY(5px) rotate(.5deg)} }
-@keyframes care-down-glance { 0%,65%,100%{transform:translateY(0)}75%,85%{transform:translateY(5px)} }
-@keyframes care-sniffle { 0%,70%,100%{translate:0 0}75%,82%{translate:0 1px}78%,85%{translate:0 -1px} }
-@keyframes care-sobbing { 0%,30%,100%{transform:translateY(3px)}35%,45%,55%{transform:translateY(1px) rotate(-.6deg)}40%,50%,60%{transform:translateY(4px) rotate(.6deg)} }
-@keyframes care-tear-roll { 0%{translate:0 0;opacity:0}15%{opacity:1}85%{opacity:.8}100%{translate:0 30px;opacity:0} }
-@keyframes care-lip-tremble { 0%,65%,100%{translate:0 0}70%,80%{translate:-.8px 0}75%,85%{translate:.8px 0} }
-@keyframes care-cover-face { 0%,65%,100%{opacity:0;transform:translateY(25px)}72%,88%{opacity:1;transform:translateY(0)} }
-@keyframes care-tummy-rub { 0%,55%,100%{transform:rotate(0)}65%,85%{transform:rotate(-9deg)}75%,95%{transform:rotate(4deg)} }
-@keyframes care-reach-food { 0%,45%,100%{transform:rotate(0)}60%,80%{transform:rotate(10deg) translateX(-5px)} }
-@keyframes care-reach-water { 0%,45%,100%{transform:rotate(0)}60%,80%{transform:rotate(-10deg) translateX(4px)} }
-@keyframes care-rumble { 0%,65%,100%{opacity:.15;transform:scale(.9)}72%,82%{opacity:.8;transform:scale(1.06)}77%,87%{opacity:.3;transform:scale(.96)} }
-@keyframes care-lip-lick { 0%,70%,100%{opacity:0;translate:0 0}76%,83%{opacity:1;translate:-4px -3px} }
-@keyframes care-pant { 0%,100%{scale:1 .85}50%{scale:1 1.1} }
-@keyframes care-dust { 0%,100%{translate:0 0;opacity:0}30%{opacity:.5}85%{translate:4px -23px;opacity:0} }
-@keyframes care-fly { 0%,100%{translate:0 0;rotate:-10deg}30%{translate:8px -7px;rotate:8deg}65%{translate:-5px -12px;rotate:-5deg} }
-@keyframes care-dirty-shake { 0%,76%,100%{translate:0 0}80%,88%{translate:-1.5px 0}84%,92%{translate:1.5px 0} }
-@keyframes care-scratch { 0%,65%,100%{translate:0 0}70%,80%{translate:0 -2px}75%,85%{translate:0 2px} }
-@keyframes care-wash { 0%{translate:0 12px;opacity:0;scale:.7}25%{opacity:1;scale:1}100%{translate:0 -45px;opacity:0;scale:1.15} }
-@keyframes care-perk { 0%{translate:0 10px;opacity:0}20%,65%{opacity:1}100%{translate:0 -12px;opacity:0} }
-.care-guide { margin-top: 28px; padding-top: 26px; border-top: 1px solid var(--line); }
-.care-guide-heading h2 { margin: 8px 0 12px; }
-.care-guide-heading p { line-height: 1.7; }
-.care-tabs { display: flex; gap: 4px; padding: 5px; background: #e6eadc77; border: 1px solid #a8b58e30; border-radius: 14px; margin: 20px 0; }
-.care-tabs button { flex: 1; padding: 11px 7px; border-radius: 10px; background: transparent; font-size: 11px; color: #899476; }
-.care-tabs button[aria-selected="true"] { background: #fdfbf2; box-shadow: 0 2px 8px #596c4310; color: #647b51; }
-.care-focus-preview { display: flex; align-items: center; gap: 24px; background: linear-gradient(135deg,#eff1e4,#f6f3e9); border: 1px solid #d3dcc4; border-radius: 70px 70px 20px 20px; padding: 14px 25px 20px; min-height: 250px; }
-.care-focus-preview .pet-preview { flex-shrink: 0; width: 200px; height: 215px; }
-.care-focus-preview h3 { font: 24px Georgia,serif; margin: 10px 0; }
-.modal .care-focus-preview p { font-size: 12px; line-height: 1.7; margin-bottom: 15px; }
-.care-condition-gallery { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 8px; margin: 15px 0 28px; }
-.care-condition-gallery > button { background: #f6f4e9; border: 1px solid #dce0cf; border-radius: 14px; padding: 8px 8px 12px; text-align: center; min-width: 0; display:flex; flex-direction:column; align-items:center; }
-.care-condition-gallery > button.selected { border-color: #9aaf7e; background: #edf1e2; box-shadow: inset 0 0 0 1px #9aaf7e55; }
-.care-card-art { height: 104px; width: 100%; pointer-events: none; }
-.care-card-art .pet-preview { width: 100%; height: 100%; }
-.care-card-art *, .care-card-art .pet-art { animation: none !important; }
-.care-card-art .face-cover-paws { display: none; }
-.care-condition-gallery strong { font: 18px Georgia,serif; color: #879a6e; }
-.care-condition-gallery strong small { font: 9px "Trebuchet MS",sans-serif; opacity: .65; }
-.care-condition-gallery h4 { font-size: 10px; margin: 9px 0 5px; line-height: 1.4; }
-.care-condition-gallery > button > span { font-size: 8px; color: #9a9f8d; }
-.modal .care-condition-gallery p { font-size: 9px; line-height: 1.6; margin: 9px 0 0; color: #858c77; }
-.care-simulator { border: 1px solid #d5ddc9; background: #f3f3e8; border-radius: 20px; padding: 20px; margin: 18px 0 24px; }
-.simulator-heading { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.simulator-heading > svg { color: #93a77b; }
-.simulator-heading h3 { font: 19px Georgia,serif; }
-.simulator-heading .preview-badge { margin-left: auto; }
-.modal .care-simulator > p { font-size: 11px; line-height: 1.7; margin: 12px 0; }
-.modal .sim-species { display: flex; align-items: center; gap: 12px; margin: 17px 0 5px; font-size: 11px; }
-.sim-species select { width: auto; flex: 1; max-width: 170px; padding: 8px 10px; }
-.simulator-content { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 18px; }
-.simulator-pet { min-width: 0; text-align: center; }
-.simulator-pet .pet-preview { width: min(100%,230px); height: 240px; }
-.simulator-pet > small { display: block; font-size: 9px; color: #8c957e; line-height: 1.6; }
-.modal .care-slider { margin: 15px 0; display: block; }
-.care-slider > span { display: flex; justify-content: space-between; font-size: 11px; }
-.care-slider output { font-variant-numeric: tabular-nums; color: #82976e; }
-.care-slider small { font-size: 9px; color: #9b9f8d; }
-.care-slider output small { margin-left: 2px; }
-.modal .care-slider input { appearance: auto; width: 100%; accent-color: #96aa7c; margin: 8px 0 4px; padding: 0; border: 0; box-shadow: none; background: transparent; min-height: 22px; cursor: pointer; }
-.modal .sim-stage-toggle { display: flex; align-items: center; gap: 8px; margin: 19px 0; font-size: 10px; }
-.sim-stage-toggle input { width: 15px; height: 15px; margin: 0; accent-color: #96aa7c; }
-.simulator-actions { display: flex; gap: 9px; flex-wrap: wrap; }
-.simulator-actions button { display: flex; align-items: center; gap: 6px; min-height: 40px; font-size: 10px; padding: 10px 13px; }
-.night .care-tabs { background: #1f2c354d; border-color: #b5c69a22; }
-.night .care-tabs button { color: #bdc9b0; }
-.night .care-tabs button[aria-selected="true"] { background: #485a43; color: #dfe8cf; }
-.night .care-focus-preview { background: linear-gradient(135deg,#3a4a43,#35424d); border-color: #647555; }
-.night .care-condition-gallery > button { background: #35424c; border-color: #b2c39725; }
-.night .care-condition-gallery > button.selected { background: #43543f; border-color: #a5b987; }
-.night .care-condition-gallery strong { color: #c3d2a8; }
-.night .care-condition-gallery > button > span,.night .care-condition-gallery p,.night .care-slider small,.night .simulator-pet > small { color: #b0bba3; }
-.night .care-simulator { background: #2e3c45; border-color: #b2c39725; }
+.pet-art:has(.has-care[data-happy-tier="4"]) .wing-right {
+  animation: none;
+}
+@keyframes care-content-bounce {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0);
+  }
+  77%,
+  89% {
+    transform: translateY(-5px);
+  }
+  83%,
+  95% {
+    transform: translateY(0);
+  }
+}
+@keyframes care-quiet-breathe {
+  0%,
+  100% {
+    transform: translateY(1px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+@keyframes care-low-breathe {
+  0%,
+  100% {
+    transform: translateY(2px) rotate(-0.5deg);
+  }
+  50% {
+    transform: translateY(5px) rotate(0.5deg);
+  }
+}
+@keyframes care-down-glance {
+  0%,
+  65%,
+  100% {
+    transform: translateY(0);
+  }
+  75%,
+  85% {
+    transform: translateY(5px);
+  }
+}
+@keyframes care-sniffle {
+  0%,
+  70%,
+  100% {
+    translate: 0 0;
+  }
+  75%,
+  82% {
+    translate: 0 1px;
+  }
+  78%,
+  85% {
+    translate: 0 -1px;
+  }
+}
+@keyframes care-sobbing {
+  0%,
+  30%,
+  100% {
+    transform: translateY(3px);
+  }
+  35%,
+  45%,
+  55% {
+    transform: translateY(1px) rotate(-0.6deg);
+  }
+  40%,
+  50%,
+  60% {
+    transform: translateY(4px) rotate(0.6deg);
+  }
+}
+@keyframes care-tear-roll {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    translate: 0 30px;
+    opacity: 0;
+  }
+}
+@keyframes care-lip-tremble {
+  0%,
+  65%,
+  100% {
+    translate: 0 0;
+  }
+  70%,
+  80% {
+    translate: -0.8px 0;
+  }
+  75%,
+  85% {
+    translate: 0.8px 0;
+  }
+}
+@keyframes care-cover-face {
+  0%,
+  65%,
+  100% {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  72%,
+  88% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes care-tummy-rub {
+  0%,
+  55%,
+  100% {
+    transform: rotate(0);
+  }
+  65%,
+  85% {
+    transform: rotate(-9deg);
+  }
+  75%,
+  95% {
+    transform: rotate(4deg);
+  }
+}
+@keyframes care-reach-food {
+  0%,
+  45%,
+  100% {
+    transform: rotate(0);
+  }
+  60%,
+  80% {
+    transform: rotate(10deg) translateX(-5px);
+  }
+}
+@keyframes care-reach-water {
+  0%,
+  45%,
+  100% {
+    transform: rotate(0);
+  }
+  60%,
+  80% {
+    transform: rotate(-10deg) translateX(4px);
+  }
+}
+@keyframes care-rumble {
+  0%,
+  65%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.9);
+  }
+  72%,
+  82% {
+    opacity: 0.8;
+    transform: scale(1.06);
+  }
+  77%,
+  87% {
+    opacity: 0.3;
+    transform: scale(0.96);
+  }
+}
+@keyframes care-lip-lick {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+    translate: 0 0;
+  }
+  76%,
+  83% {
+    opacity: 1;
+    translate: -4px -3px;
+  }
+}
+@keyframes care-pant {
+  0%,
+  100% {
+    scale: 1 0.85;
+  }
+  50% {
+    scale: 1 1.1;
+  }
+}
+@keyframes care-dust {
+  0%,
+  100% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.5;
+  }
+  85% {
+    translate: 4px -23px;
+    opacity: 0;
+  }
+}
+@keyframes care-fly {
+  0%,
+  100% {
+    translate: 0 0;
+    rotate: -10deg;
+  }
+  30% {
+    translate: 8px -7px;
+    rotate: 8deg;
+  }
+  65% {
+    translate: -5px -12px;
+    rotate: -5deg;
+  }
+}
+@keyframes care-dirty-shake {
+  0%,
+  76%,
+  100% {
+    translate: 0 0;
+  }
+  80%,
+  88% {
+    translate: -1.5px 0;
+  }
+  84%,
+  92% {
+    translate: 1.5px 0;
+  }
+}
+@keyframes care-scratch {
+  0%,
+  65%,
+  100% {
+    translate: 0 0;
+  }
+  70%,
+  80% {
+    translate: 0 -2px;
+  }
+  75%,
+  85% {
+    translate: 0 2px;
+  }
+}
+@keyframes care-wash {
+  0% {
+    translate: 0 12px;
+    opacity: 0;
+    scale: 0.7;
+  }
+  25% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    translate: 0 -45px;
+    opacity: 0;
+    scale: 1.15;
+  }
+}
+@keyframes care-perk {
+  0% {
+    translate: 0 10px;
+    opacity: 0;
+  }
+  20%,
+  65% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 -12px;
+    opacity: 0;
+  }
+}
+.care-guide {
+  margin-top: 28px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+.care-guide-heading h2 {
+  margin: 8px 0 12px;
+}
+.care-guide-heading p {
+  line-height: 1.7;
+}
+.care-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  background: #e6eadc77;
+  border: 1px solid #a8b58e30;
+  border-radius: 14px;
+  margin: 20px 0;
+}
+.care-tabs button {
+  flex: 1;
+  padding: 11px 7px;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 11px;
+  color: #899476;
+}
+.care-tabs button[aria-selected="true"] {
+  background: #fdfbf2;
+  box-shadow: 0 2px 8px #596c4310;
+  color: #647b51;
+}
+.care-focus-preview {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: linear-gradient(135deg, #eff1e4, #f6f3e9);
+  border: 1px solid #d3dcc4;
+  border-radius: 70px 70px 20px 20px;
+  padding: 14px 25px 20px;
+  min-height: 250px;
+}
+.care-focus-preview .pet-preview {
+  flex-shrink: 0;
+  width: 200px;
+  height: 215px;
+}
+.care-focus-preview h3 {
+  font:
+    24px Georgia,
+    serif;
+  margin: 10px 0;
+}
+.modal .care-focus-preview p {
+  font-size: 12px;
+  line-height: 1.7;
+  margin-bottom: 15px;
+}
+.care-condition-gallery {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 15px 0 28px;
+}
+.care-condition-gallery > button {
+  background: #f6f4e9;
+  border: 1px solid #dce0cf;
+  border-radius: 14px;
+  padding: 8px 8px 12px;
+  text-align: center;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.care-condition-gallery > button.selected {
+  border-color: #9aaf7e;
+  background: #edf1e2;
+  box-shadow: inset 0 0 0 1px #9aaf7e55;
+}
+.care-card-art {
+  height: 104px;
+  width: 100%;
+  pointer-events: none;
+}
+.care-card-art .pet-preview {
+  width: 100%;
+  height: 100%;
+}
+.care-card-art *,
+.care-card-art .pet-art {
+  animation: none !important;
+}
+.care-card-art .face-cover-paws {
+  display: none;
+}
+.care-condition-gallery strong {
+  font:
+    18px Georgia,
+    serif;
+  color: #879a6e;
+}
+.care-condition-gallery strong small {
+  font:
+    9px "Trebuchet MS",
+    sans-serif;
+  opacity: 0.65;
+}
+.care-condition-gallery h4 {
+  font-size: 10px;
+  margin: 9px 0 5px;
+  line-height: 1.4;
+}
+.care-condition-gallery > button > span {
+  font-size: 8px;
+  color: #9a9f8d;
+}
+.modal .care-condition-gallery p {
+  font-size: 9px;
+  line-height: 1.6;
+  margin: 9px 0 0;
+  color: #858c77;
+}
+.care-simulator {
+  border: 1px solid #d5ddc9;
+  background: #f3f3e8;
+  border-radius: 20px;
+  padding: 20px;
+  margin: 18px 0 24px;
+}
+.simulator-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.simulator-heading > svg {
+  color: #93a77b;
+}
+.simulator-heading h3 {
+  font:
+    19px Georgia,
+    serif;
+}
+.simulator-heading .preview-badge {
+  margin-left: auto;
+}
+.modal .care-simulator > p {
+  font-size: 11px;
+  line-height: 1.7;
+  margin: 12px 0;
+}
+.modal .sim-species {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 17px 0 5px;
+  font-size: 11px;
+}
+.sim-species select {
+  width: auto;
+  flex: 1;
+  max-width: 170px;
+  padding: 8px 10px;
+}
+.simulator-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 18px;
+}
+.simulator-pet {
+  min-width: 0;
+  text-align: center;
+}
+.simulator-pet .pet-preview {
+  width: min(100%, 230px);
+  height: 240px;
+}
+.simulator-pet > small {
+  display: block;
+  font-size: 9px;
+  color: #8c957e;
+  line-height: 1.6;
+}
+.modal .care-slider {
+  margin: 15px 0;
+  display: block;
+}
+.care-slider > span {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.care-slider output {
+  font-variant-numeric: tabular-nums;
+  color: #82976e;
+}
+.care-slider small {
+  font-size: 9px;
+  color: #9b9f8d;
+}
+.care-slider output small {
+  margin-left: 2px;
+}
+.modal .care-slider input {
+  appearance: auto;
+  width: 100%;
+  accent-color: #96aa7c;
+  margin: 8px 0 4px;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  min-height: 22px;
+  cursor: pointer;
+}
+.modal .sim-stage-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 19px 0;
+  font-size: 10px;
+}
+.sim-stage-toggle input {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: #96aa7c;
+}
+.simulator-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.simulator-actions button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  font-size: 10px;
+  padding: 10px 13px;
+}
+.night .care-tabs {
+  background: #1f2c354d;
+  border-color: #b5c69a22;
+}
+.night .care-tabs button {
+  color: #bdc9b0;
+}
+.night .care-tabs button[aria-selected="true"] {
+  background: #485a43;
+  color: #dfe8cf;
+}
+.night .care-focus-preview {
+  background: linear-gradient(135deg, #3a4a43, #35424d);
+  border-color: #647555;
+}
+.night .care-condition-gallery > button {
+  background: #35424c;
+  border-color: #b2c39725;
+}
+.night .care-condition-gallery > button.selected {
+  background: #43543f;
+  border-color: #a5b987;
+}
+.night .care-condition-gallery strong {
+  color: #c3d2a8;
+}
+.night .care-condition-gallery > button > span,
+.night .care-condition-gallery p,
+.night .care-slider small,
+.night .simulator-pet > small {
+  color: #b0bba3;
+}
+.night .care-simulator {
+  background: #2e3c45;
+  border-color: #b2c39725;
+}
 @media (max-width: 650px) {
-  .care-focus-preview { gap: 8px; padding: 14px; border-radius: 45px 45px 16px 16px; }
-  .care-focus-preview .pet-preview { width: 150px; height: 180px; }
-  .care-focus-preview h3 { font-size: 21px; }
-  .care-condition-gallery { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  .simulator-content { gap: 8px; }
-  .simulator-pet .pet-preview { height: 210px; }
+  .care-focus-preview {
+    gap: 8px;
+    padding: 14px;
+    border-radius: 45px 45px 16px 16px;
+  }
+  .care-focus-preview .pet-preview {
+    width: 150px;
+    height: 180px;
+  }
+  .care-focus-preview h3 {
+    font-size: 21px;
+  }
+  .care-condition-gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .simulator-content {
+    gap: 8px;
+  }
+  .simulator-pet .pet-preview {
+    height: 210px;
+  }
 }
 @media (max-width: 440px) {
-  .care-tabs button { padding: 10px 3px; font-size: 10px; }
-  .care-focus-preview { flex-direction: column; text-align: center; gap: 0; }
-  .care-focus-preview .pet-preview { width: 190px; height: 200px; }
-  .care-focus-preview > div { padding: 0 8px 10px; }
-  .care-condition-gallery { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  .care-card-art { height: 130px; }
-  .care-condition-gallery h4 { font-size: 11px; }
-  .care-condition-gallery > button > span,.modal .care-condition-gallery p { font-size: 9px; }
-  .care-simulator { padding: 15px; }
-  .simulator-heading .preview-badge { margin-left: 0; }
-  .simulator-content { grid-template-columns: 1fr; }
-  .simulator-pet .pet-preview { width: 230px; height: 240px; }
+  .care-tabs button {
+    padding: 10px 3px;
+    font-size: 10px;
+  }
+  .care-focus-preview {
+    flex-direction: column;
+    text-align: center;
+    gap: 0;
+  }
+  .care-focus-preview .pet-preview {
+    width: 190px;
+    height: 200px;
+  }
+  .care-focus-preview > div {
+    padding: 0 8px 10px;
+  }
+  .care-condition-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .care-card-art {
+    height: 130px;
+  }
+  .care-condition-gallery h4 {
+    font-size: 11px;
+  }
+  .care-condition-gallery > button > span,
+  .modal .care-condition-gallery p {
+    font-size: 9px;
+  }
+  .care-simulator {
+    padding: 15px;
+  }
+  .simulator-heading .preview-badge {
+    margin-left: 0;
+  }
+  .simulator-content {
+    grid-template-columns: 1fr;
+  }
+  .simulator-pet .pet-preview {
+    width: 230px;
+    height: 240px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .care-body,.care-shape,.care-face,.care-face * { transition: none !important; }
-  .care-body * { animation: none !important; }
-  .face-cover-paws { display: none; }
-  .lip-lick { opacity: 0; }
+  .care-body,
+  .care-shape,
+  .care-face,
+  .care-face * {
+    transition: none !important;
+  }
+  .care-body * {
+    animation: none !important;
+  }
+  .face-cover-paws {
+    display: none;
+  }
+  .lip-lick {
+    opacity: 0;
+  }
 }
-.animations-off .care-body * { animation: none !important; transition: none !important; }
-.animations-off .face-cover-paws { display: none; }
-.has-care .pet-body { transform: none; }
-.care-awake .care-scratch-paw { animation: care-scratch-paw 9s ease-in-out infinite; transform-origin: 90px 220px; }
-.care-awake[data-clean-tier="4"]:not([data-happy-tier="4"]) .care-idle { animation: care-body-shake 10s ease-in-out infinite; }
-@keyframes care-scratch-paw { 0%,65%,100%{opacity:0;rotate:0deg}70%,90%{opacity:1;rotate:-4deg}75%,85%{opacity:1;rotate:5deg} }
-@keyframes care-body-shake { 0%,75%,100%{transform:translateY(2px) rotate(0deg)}80%,88%{transform:translateY(2px) rotate(-1.2deg)}84%,92%{transform:translateY(2px) rotate(1.2deg)} }
-@media (prefers-reduced-motion: reduce) { .care-awake .care-scratch-paw,.care-awake[data-clean-tier="4"] .care-idle { animation: none !important; } .care-scratch-paw { opacity: 0; } }
+.animations-off .care-body * {
+  animation: none !important;
+  transition: none !important;
+}
+.animations-off .face-cover-paws {
+  display: none;
+}
+.has-care .pet-body {
+  transform: none;
+}
+.care-awake .care-scratch-paw {
+  animation: care-scratch-paw 9s ease-in-out infinite;
+  transform-origin: 90px 220px;
+}
+.care-awake[data-clean-tier="4"]:not([data-happy-tier="4"]) .care-idle {
+  animation: care-body-shake 10s ease-in-out infinite;
+}
+@keyframes care-scratch-paw {
+  0%,
+  65%,
+  100% {
+    opacity: 0;
+    rotate: 0deg;
+  }
+  70%,
+  90% {
+    opacity: 1;
+    rotate: -4deg;
+  }
+  75%,
+  85% {
+    opacity: 1;
+    rotate: 5deg;
+  }
+}
+@keyframes care-body-shake {
+  0%,
+  75%,
+  100% {
+    transform: translateY(2px) rotate(0deg);
+  }
+  80%,
+  88% {
+    transform: translateY(2px) rotate(-1.2deg);
+  }
+  84%,
+  92% {
+    transform: translateY(2px) rotate(1.2deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .care-awake .care-scratch-paw,
+  .care-awake[data-clean-tier="4"] .care-idle {
+    animation: none !important;
+  }
+  .care-scratch-paw {
+    opacity: 0;
+  }
+}

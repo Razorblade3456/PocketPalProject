@@ -35,6 +35,11 @@ import {
   deleteAttempt,
   taskCounts,
   goalFor,
+  taskDue,
+  policyFor,
+  rewardLimitFor,
+  reminderFor,
+  categories,
   rewardKey,
   equipOutfit,
   type Outfit,
@@ -64,6 +69,15 @@ import {
   type Task,
 } from "./model";
 import { Pet, PetChoices, LifeGuide, stages, pets } from "./Pets";
+import {
+  TodayThree,
+  TaskMeta,
+  TinySteps,
+  TaskQuickActions,
+  TaskAdvancedFields,
+  RewardSettings,
+  TaskRewardNote,
+} from "./HabitTools";
 import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
 import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
 import { LocalClock } from "./LocalClock";
@@ -135,10 +149,14 @@ export default function App() {
       (s.settings.theme === "auto" &&
         (new Date(now).getHours() < 7 || new Date(now).getHours() >= 19));
   const rhythm = petRhythm(now);
-  const todayTasks = s.tasks.filter((t) => due(t, now));
+  const todayTasks = s.tasks.filter((t) => taskDue(s, t, now));
   const earned = s.completions.filter((c) => c.date === today);
   const dailyTarget = todayTasks.reduce((sum, t) => sum + goalFor(t), 0);
-  const done = earned.length;
+  const done = todayTasks.reduce(
+    (sum, t) =>
+      sum + Math.min(goalFor(t), taskCounts(s, t.id, today).completed),
+    0,
+  );
   const percent = dailyTarget
     ? Math.round(
         (todayTasks.reduce(
@@ -166,9 +184,21 @@ export default function App() {
       setS((v) => decay(v));
     };
     const i = setInterval(tick, 30000);
+    let lastDay = dateKey(),
+      offset = new Date().getTimezoneOffset();
+    const calendarWatch = setInterval(() => {
+      const nextDay = dateKey(),
+        nextOffset = new Date().getTimezoneOffset();
+      if (nextDay !== lastDay || nextOffset !== offset) {
+        lastDay = nextDay;
+        offset = nextOffset;
+        tick();
+      }
+    }, 1000);
     window.addEventListener("focus", tick);
     return () => {
       clearInterval(i);
+      clearInterval(calendarWatch);
       window.removeEventListener("focus", tick);
     };
   }, []);
@@ -179,11 +209,12 @@ export default function App() {
     todayTasks
       .filter(
         (t) =>
-          t.time <= time &&
+          t.reminderEnabled !== false &&
+          reminderFor(s, t, today) <= time &&
           taskCounts(s, t.id, today).completed < (goalFor(t) || 1),
       )
       .forEach((t) => {
-        const key = t.id + today;
+        const key = t.id + today + reminderFor(s, t, today);
         if (reminded.current.has(key)) return;
         reminded.current.add(key);
         setMessage(`A gentle nudge: ${t.name}`);
@@ -239,19 +270,25 @@ export default function App() {
   const reward = (
     t: Task,
     status: "completed" | "missed",
-    date = today,
+    date = dateKey(),
     source?: RewardSource,
   ) => {
     const at = Date.now(),
       lock = "task:" + t.id;
-    if (at - (actionLocks.current.get(lock) || 0) < 350) return;
+    if (at - (actionLocks.current.get(lock) || 0) < 120) return;
     actionLocks.current.set(lock, at);
+    setNow(at);
     const id = crypto.randomUUID(),
       next = recordAttempt(s, t.id, date, status, at, id);
     const entry = next.outcomes.find((o) => o.id === id);
     if (!entry) return;
     setS((p) => recordAttempt(p, t.id, date, status, at, id));
-    if (status === "completed" && date === today && !panel)
+    if (
+      status === "completed" &&
+      entry.rewardCoins > 0 &&
+      date === today &&
+      !panel
+    )
       setFlights((prev) => [
         ...prev,
         {
@@ -271,17 +308,21 @@ export default function App() {
     );
     setReaction(
       status === "completed"
-        ? "+5 coins · another little win!"
+        ? entry.rewardCoins
+          ? `+${entry.rewardCoins} coins · another little win!`
+          : "Another little win · tracked!"
         : "−" + difference + " " + labels[entry.category],
     );
     tone(s.settings.sound, status === "completed" ? 1 : -3);
     setMessage(
       status === "completed"
         ? next.debt
-          ? "+5 coins earned · " +
+          ? `+${entry.rewardCoins} coins earned · ` +
             next.debt +
             " still reserved from future wins."
-          : "+5 coins · Every little moment counts."
+          : entry.rewardCoins
+            ? `+${entry.rewardCoins} coins · Every little moment counts.`
+            : "Completion tracked · today’s reward cap is reached. Every moment still counts."
         : difference
           ? "−" +
             difference +
@@ -507,13 +548,19 @@ export default function App() {
             </div>
             <div className="today-summary">
               <LocalClock />
-            <span className="streak">
-              <Flame size={20} />
-              <b>{streak(s)}</b> day streak
-              <span>Every day is a fresh start</span>
-            </span>
+              <span className="streak">
+                <Flame size={20} />
+                <b>{streak(s)}</b> day streak
+                <span>Every day is a fresh start</span>
+              </span>
             </div>
           </div>
+          <TodayThree
+            s={s}
+            today={today}
+            setS={setS}
+            onComplete={(t) => reward(t, "completed")}
+          />
           <div className="game-layout">
             <section className="task-panel">
               <div className="section-heading">
@@ -525,8 +572,9 @@ export default function App() {
                 </span>
               </div>
               <p className="section-note">
-                Finish tasks → +5 coins. Use supplies for care.
+                Little wins earn coins. Use supplies for care.
               </p>
+
               <div className="task-list">
                 {todayTasks.length === 0 ? (
                   <div className="empty">
@@ -547,13 +595,14 @@ export default function App() {
                     return (
                       <motion.article
                         layout
-                        className={`task-card outcome-card ${status}`}
+                        className={`task-card outcome-card ${status} ${s.focusDays?.[today]?.includes(t.id) ? "focus-task" : ""}`}
                         key={t.id}
                       >
                         <div className="task-content">
                           <h3>{t.name}</h3>
+                          <TaskMeta s={s} task={t} today={today} setS={setS} />
                           <div>
-                            <time>
+                            <time hidden={t.reminderEnabled === false}>
                               {new Date(
                                 `2000-01-01T${t.time}`,
                               ).toLocaleTimeString([], {
@@ -561,7 +610,6 @@ export default function App() {
                                 minute: "2-digit",
                               })}
                             </time>
-
                           </div>
                           {t.description && (
                             <span className="task-description">
@@ -571,16 +619,32 @@ export default function App() {
                         </div>
                         <OutcomeControls
                           counts={counts}
+                          missPenalty={t.careLinked === false ? 0 : 8}
                           goal={goalFor(t)}
+                          rewardCoins={
+                            counts.completed < rewardLimitFor(s, t)
+                              ? policyFor(s).coins
+                              : 0
+                          }
                           canUndo={!!counts.latest}
                           onUndo={() => {
                             if (counts.latest) removeEntry(counts.latest.id);
                           }}
                           name={t.name}
                           onChange={(status, source) =>
-                            reward(t, status, today, source)
+                            reward(t, status, dateKey(), source)
                           }
                         />
+                        <div className="habit-card-tools">
+                          <TaskRewardNote s={s} task={t} today={today} />
+                          <TinySteps s={s} task={t} today={today} setS={setS} />
+                          <TaskQuickActions
+                            s={s}
+                            task={t}
+                            today={today}
+                            setS={setS}
+                          />
+                        </div>
                         <button
                           className="edit-button"
                           aria-label={`Edit ${t.name}`}
@@ -749,11 +813,8 @@ export default function App() {
                 />
               </button>
               <div className="jar-progress">
-                <strong>
-                  {done}
-                  <span> / {dailyTarget || "∞"}</span>
-                </strong>
-                <p>little things, big feelings</p>
+                <strong>{earned.length}</strong>
+                <p>rewarded little wins</p>
                 <div className="progress-track">
                   <span style={{ width: percent + "%" }} />
                 </div>
@@ -767,7 +828,10 @@ export default function App() {
                 <ChevronRight size={16} />
               </button>
               <div className="jar-legend">
-<span><Coins size={13} /> Every little win earns 5 coins</span>
+                <span>
+                  <Coins size={13} /> Rewarded little wins earn{" "}
+                  {policyFor(s).coins} coins
+                </span>
               </div>
               <Supplies
                 s={s}
@@ -837,7 +901,9 @@ export default function App() {
         )}
         <dialog
           className={
-            (panel === "shop" || panel === "wardrobe" || panel === "health") ? "boutique-dialog" : ""
+            panel === "shop" || panel === "wardrobe" || panel === "health"
+              ? "boutique-dialog"
+              : ""
           }
           ref={dialog}
           onCancel={(e) => {
@@ -1018,6 +1084,7 @@ export default function App() {
                   restores care. Petting gives affection, without replacing your
                   habits.
                 </p>
+                <RewardSettings s={s} setS={setS} />
                 <div className="button-row">
                   <button
                     className="secondary"
@@ -1078,23 +1145,32 @@ export default function App() {
                 <span className="eyebrow">YOUR LITTLE ROUTINES</span>
                 <h2>All your little things</h2>
                 {s.tasks.map((t) => (
-                  <div className="reward-entry" key={t.id}>
-                    <span>
-                      {t.name}
-                      <small>
-                        {t.repeat} · {t.date} · {t.time}
-                      </small>
-                    </span>
-                    <button
-                      className="icon-button"
-                      aria-label={"Edit " + t.name}
-                      onClick={() => {
-                        setPanel(null);
-                        setEdit(t);
-                      }}
-                    >
-                      <Pencil size={16} />
-                    </button>
+                  <div className="managed-habit" key={t.id}>
+                    <div className="reward-entry">
+                      <span>
+                        {t.name}
+                        <small>
+                          {t.repeat} · {t.date} ·{" "}
+                          {t.reminderEnabled === false ? "no reminder" : t.time}
+                        </small>
+                      </span>
+                      <button
+                        className="icon-button"
+                        aria-label={"Edit " + t.name}
+                        onClick={() => {
+                          setPanel(null);
+                          setEdit(t);
+                        }}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    </div>
+                    <TaskQuickActions
+                      s={s}
+                      task={t}
+                      today={today}
+                      setS={setS}
+                    />
                   </div>
                 ))}
                 {!s.tasks.length && (
@@ -1124,7 +1200,12 @@ export default function App() {
                 onShop={() => setPanel("shop")}
               />
             ) : panel === "health" ? (
-              <LifeGuide kind={s.pet} actual={level} realCare={s.care} equipped={s.equipped} />
+              <LifeGuide
+                kind={s.pet}
+                actual={level}
+                realCare={s.care}
+                equipped={s.equipped}
+              />
             ) : panel === "history" ? (
               <>
                 <span className="eyebrow">A COLLECTION OF GOOD DAYS</span>
@@ -1202,7 +1283,9 @@ export default function App() {
                   earned.map((c) => {
                     return (
                       <div className="reward-entry" key={rewardKey(c)}>
-                        <span className="category-tag"><Coins size={18} /></span>
+                        <span className="category-tag">
+                          <Coins size={18} />
+                        </span>
                         <span>
                           {c.name}
                           <small>
@@ -1249,6 +1332,7 @@ function TaskEditor({
       days: [1, 2, 3, 4, 5],
       date: dateKey(),
       category: "happy",
+      careLinked: false,
       repetitions: "once",
       dailyGoal: 1,
     },
@@ -1259,7 +1343,13 @@ function TaskEditor({
       onSubmit={(e) => {
         e.preventDefault();
         if (t.repeat === "selected" && !t.days.length) return;
-        onSave({ ...t, name: t.name.trim() });
+        onSave({
+          ...t,
+          name: t.name.trim(),
+          steps: t.steps
+            ?.filter((step) => step.name.trim())
+            .map((step) => ({ ...step, name: step.name.trim() })),
+        });
       }}
     >
       <span className="eyebrow">SMALL STEPS, HAPPY HEARTS</span>
@@ -1308,9 +1398,26 @@ function TaskEditor({
             <option value="weekly">Every week</option>
             <option value="selected">Selected days</option>
             <option value="once">Just once</option>
+            <option value="interval">Every X days</option>
+            <option value="afterCompletion">
+              Every X days after completion
+            </option>
           </select>
         </label>
       </div>
+      {(t.repeat === "interval" || t.repeat === "afterCompletion") && (
+        <label>
+          Interval in calendar days
+          <input
+            type="number"
+            min={1}
+            max={365}
+            required
+            value={t.intervalDays || 1}
+            onChange={(e) => update({ intervalDays: Number(e.target.value) })}
+          />
+        </label>
+      )}
       <label>
         {t.repeat === "once" ? "Task date" : "Starting on"}
         <input
@@ -1375,7 +1482,11 @@ function TaskEditor({
         moments after reaching them. Unlimited tasks never receive automatic
         misses.
       </p>
-      <p className="fine">Every completed goal earns 5 coins. Spend them on care supplies and little treats for your pal.</p>
+      <TaskAdvancedFields task={t} update={update} />
+      <p className="fine">
+        Eligible completions earn coins. Beyond the reward limit, entries still
+        count in your history.
+      </p>
       <div className="button-row">
         <button
           className="primary"

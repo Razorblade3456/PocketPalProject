@@ -719,6 +719,8 @@ test("re-completing version-1 history never restores its old food, water or happ
   assert.deepEqual(reload(s).care, s.care);
 });
 function earn(s: State, count: number, n = now) {
+  // Explicitly fund purchase-focused tests under the configurable economy.
+  s = {...s,tasks:s.tasks.map(t=>t.id === "a" ? {...t,rewardCap:Math.min(count,100)} : t)};
   for (let i = 0; i < count; i++)
     s = recordAttempt(s, "a", dateKey(n), "completed", n, "earn-" + i);
   return s;
@@ -821,7 +823,7 @@ test("goals reached or exceeded have no extra automatic penalties", () => {
   s = earn(s, 5);
   s = decay(s, +localDate(shiftDate(dateKey(now), 1)));
   assert.equal(s.outcomes.length, 5);
-  assert.equal(s.coins, 25);
+  assert.equal(s.coins, 15);
 });
 test("a manually missed once-per-day goal is not penalized again at midnight", () => {
   let s = recordAttempt(setup(), "a", dateKey(now), "missed", now, "manual");
@@ -972,9 +974,10 @@ test("every outfit renders on all three species through all six health stages", 
 });
 test("hundreds of repeated entries retain unique ball IDs and round-trip without duplicate rewards", () => {
   const s = earn(setup(), 150);
-  assert.equal(s.coins, 750);
-  assert.equal(s.completions.length, 150);
-  assert.equal(new Set(s.completions.map(rewardKey)).size, 150);
+  assert.equal(s.coins, 500);
+  assert.equal(s.outcomes.filter(o=>o.status === "completed").length, 150);
+  assert.equal(s.completions.length, 100);
+  assert.equal(new Set(s.completions.map(rewardKey)).size, 100);
   assert.ok(validState(s));
   assert.deepEqual(reload(s), s);
 });

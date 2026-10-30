@@ -10,6 +10,8 @@ export function OutcomeControls({
   onChange,
   onUndo,
   canUndo,
+  rewardCoins = 5,
+  missPenalty = 8,
 }: {
   name: string;
   counts: { completed: number; missed: number };
@@ -17,6 +19,8 @@ export function OutcomeControls({
   onChange: (status: "completed" | "missed", source?: RewardSource) => void;
   onUndo: () => void;
   canUndo: boolean;
+  rewardCoins?: number;
+  missPenalty?: number;
 }) {
   const [locked, setLocked] = useState(false),
     until = useRef(0),
@@ -24,9 +28,9 @@ export function OutcomeControls({
   useEffect(() => () => clearTimeout(timer.current), []);
   const act = (status: "completed" | "missed", source?: RewardSource) => {
     if (Date.now() < until.current) return;
-    until.current = Date.now() + 350;
+    until.current = Date.now() + 120;
     setLocked(true);
-    timer.current = setTimeout(() => setLocked(false), 350);
+    timer.current = setTimeout(() => setLocked(false), 120);
     onChange(status, source);
   };
   return (
@@ -47,7 +51,11 @@ export function OutcomeControls({
             type="button"
             className="outcome-positive"
             aria-label={`Complete ${name}`}
-            title="Record another completion · +5 coins"
+            title={
+              rewardCoins
+                ? `Record another completion · +${rewardCoins} coins`
+                : "Track another completion · no additional coins today"
+            }
             disabled={locked}
             onClick={(e) => {
               const r = e.currentTarget.getBoundingClientRect();
@@ -63,7 +71,11 @@ export function OutcomeControls({
             type="button"
             className="outcome-negative"
             aria-label={`Miss ${name}`}
-            title="Record another missed attempt · up to −8 care"
+            title={
+              missPenalty
+                ? `Record another missed attempt · up to −${missPenalty} care`
+                : "Record a missed attempt · no care penalty"
+            }
             disabled={locked}
             onClick={() => act("missed")}
           >
@@ -125,6 +137,8 @@ export function OutcomeHistory({
       ...s.careEvents
         .filter((e) => e.kind === "buy" || e.kind === "use")
         .map((e) => dateKey(e.at)),
+      ...(s.habitEvents || []).map((e) => e.date),
+      ...(s.rewardLedger || []).map((e) => dateKey(e.at)),
       dateKey(),
     ]),
   ]
@@ -187,7 +201,11 @@ export function OutcomeHistory({
                 <option value="completed">
                   Completed · +{o.rewardCoins} coins
                 </option>
-                <option value="missed">Missed · up to −{o.penalty} care</option>
+                <option value="missed">
+                  {o.penalty
+                    ? `Missed · up to −${o.penalty} care`
+                    : "Missed · no care penalty"}
+                </option>
                 <option value="pending">Pending · no task effect</option>
               </select>
             </label>
@@ -203,6 +221,48 @@ export function OutcomeHistory({
         </article>
       ))}
       {!rows.length && <p>No task entries on this day yet.</p>}
+      <details className="transaction-journal">
+        <summary>Habit planning & tiny-step history</summary>
+        {(s.habitEvents || [])
+          .filter((e) => e.date === selected)
+          .map((e) => (
+            <div key={e.id}>
+              <span>
+                {e.taskName ||
+                  s.tasks.find((t) => t.id === e.taskId)?.name ||
+                  "Archived task"}{" "}
+                · {e.kind}
+                {e.kind === "step"
+                  ? ": " +
+                    (e.stepName ||
+                      s.tasks
+                        .find((t) => t.id === e.taskId)
+                        ?.steps?.find((step) => step.id === e.stepId)?.name ||
+                      "step") +
+                    (e.done ? " ✓" : " · undone")
+                  : ""}
+              </span>
+              <small>{e.reason || e.until || e.time || ""}</small>
+            </div>
+          ))}
+      </details>
+      <details className="transaction-journal">
+        <summary>Reward ledger · append-only adjustments</summary>
+        {(s.rewardLedger || [])
+          .filter((e) => dateKey(e.at) === selected)
+          .map((e) => (
+            <div key={e.id}>
+              <span>
+                {s.outcomes.find((o) => o.id === e.entryId)?.name ||
+                  "Task reward"}
+              </span>
+              <small>
+                {e.amount > 0 ? "+" : ""}
+                {e.amount} coins
+              </small>
+            </div>
+          ))}
+      </details>
       <details className="transaction-journal">
         <summary>Coins & care transactions ({tx.length})</summary>
         {tx.map((e) =>
