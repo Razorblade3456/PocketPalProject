@@ -82,6 +82,7 @@ import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
 import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
 import { LocalClock } from "./LocalClock";
 import { PetNeeds } from "./PetNeeds";
+import { MiniMochi } from "./MiniMochi";
 import { Supplies } from "./Supplies";
 import { Boutique, Wardrobe } from "./Boutique";
 import { Inventory, type IncomingFood } from "./Inventory";
@@ -775,6 +776,7 @@ export default function App() {
                       : stages[level]}
                 </span>
               </div>
+              <MiniMochi s={s} level={level} sleep={rhythm.sleeping && level < 3} calm={rhythm.calm} />
               <PetNeeds
                 s={s}
                 onUse={careFor}
