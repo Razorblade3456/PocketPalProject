@@ -9,7 +9,7 @@
     "test": "tsx --test src/model.test.ts src/careVisuals.test.ts src/habits.test.ts",
     "preview": "vite preview --host 127.0.0.1",
     "desktop:build": "tsc -b && vite build --config vite.desktop.config.ts",
-    "desktop": "npm run desktop:build && electron desktop/main.cjs"
+    "desktop": "npm run desktop:build && node desktop/launch.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

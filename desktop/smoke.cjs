@@ -14,7 +14,7 @@ app.whenReady().then(async () => {
     const pet = BrowserWindow.getAllWindows()[0];
     await until(() => pet.webContents.executeJavaScript('!!document.querySelector(".pet-art")'));
     assert.equal(pet.isAlwaysOnTop(), true);
-    assert.deepEqual(pet.getSize(), [80,80]);
+    assert.deepEqual(pet.getSize(), [100,100]);
     assert.equal(pet.getBackgroundColor(), '#00000000');
     for (const kind of ['mochi','pippin','crumb']) {
       await pet.webContents.executeJavaScript(`window.desktopPet.select('${kind}')`);
@@ -32,7 +32,8 @@ app.whenReady().then(async () => {
     const saved = JSON.parse(fs.readFileSync(path.join(dir,'desktop-pet.json')));
     assert.equal(saved.kind,'crumb');
     assert.equal(Number.isFinite(saved.x) && Number.isFinite(saved.y),true);
-    console.log('PASS: transparent 80×80 window, always-on-top, three pets, no invented stats, popup dismissal, drag IPC and persisted position.');
-    app.quit();
+    assert.equal(await pet.webContents.executeJavaScript('!!document.querySelector(".desktop-close")'),true);
+    console.log('PASS: transparent 100×100 window, always-on-top, three pets, no invented stats, popup dismissal, drag IPC, persisted position and close button.');
+    await pet.webContents.executeJavaScript('document.querySelector(".desktop-close").click()');
   } catch(error) { console.error(error); app.exit(1); }
 });

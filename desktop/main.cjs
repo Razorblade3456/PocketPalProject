@@ -2,20 +2,21 @@ const { app, BrowserWindow, ipcMain, Menu, shell, screen, dialog } = require('el
 const fs = require('node:fs');
 const path = require('node:path');
 let pet, popup, settings = {}, settingsPath;
+const PET_SIZE = 100;
 const page = path.join(__dirname, '../dist-desktop/companion.html');
 function save() {
   try { fs.writeFileSync(settingsPath, JSON.stringify(settings)); } catch (error) { console.error('Could not save companion position:', error.message); }
 }
 function position(x, y) {
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
-  return { x: Math.round(Math.max(area.x, Math.min(x, area.x + area.width - 80))), y: Math.round(Math.max(area.y, Math.min(y, area.y + area.height - 80))) };
+  return { x: Math.round(Math.max(area.x, Math.min(x, area.x + area.width - PET_SIZE))), y: Math.round(Math.max(area.y, Math.min(y, area.y + area.height - PET_SIZE))) };
 }
 function closePopup() { if (popup && !popup.isDestroyed()) popup.close(); popup = null; }
 function showPopup() {
   if (popup) { closePopup(); return; }
   const bounds = pet.getBounds();
   const area = screen.getDisplayMatching(bounds).workArea;
-  popup = new BrowserWindow({ width: 250, height: 330, x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - 250)), y: bounds.y >= area.y + 330 ? bounds.y - 330 : Math.min(bounds.y + 80, area.y + area.height - 330), frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  popup = new BrowserWindow({ width: 250, height: 330, x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - 250)), y: bounds.y >= area.y + 330 ? bounds.y - 330 : Math.min(bounds.y + PET_SIZE, area.y + area.height - 330), frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   popup.setAlwaysOnTop(true, 'screen-saver');
   popup.loadFile(page, { query: { popup: '1' } });
   popup.on('blur', closePopup);
@@ -26,20 +27,29 @@ function showPopup() {
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
 app.on('second-instance', () => { pet?.show(); });
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   settingsPath = path.join(app.getPath('userData'), 'desktop-pet.json');
   try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
   const area = screen.getPrimaryDisplay().workArea;
   const initial = position(Number.isFinite(settings.x) ? settings.x : area.x + area.width - 120, Number.isFinite(settings.y) ? settings.y : area.y + area.height - 120);
-  pet = new BrowserWindow({ ...initial, width: 80, height: 80, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  pet = new BrowserWindow({ ...initial, width: PET_SIZE, height: PET_SIZE, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   pet.setAlwaysOnTop(true, 'screen-saver');
   pet.webContents.setFrameRate(30);
   pet.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   pet.webContents.on('will-navigate', event => event.preventDefault());
-  pet.loadFile(page);
+  pet.webContents.on('render-process-gone', (_event, details) => {
+    console.error('Desktop pet renderer stopped:', details);
+    dialog.showErrorBox('PocketPal Desktop Pet', `The pet renderer stopped: ${details.reason} (${details.exitCode}). See desktop-launch.log.`);
+    app.exit(1);
+  });
+  await pet.loadFile(page);
   pet.on('moved', () => { Object.assign(settings, pet.getPosition().reduce((p, v, i) => ({ ...p, [i ? 'y' : 'x']: v }), {})); });
   pet.on('close', save);
   screen.on('display-removed', () => { const p = position(...pet.getPosition()); pet.setPosition(p.x, p.y); });
+}).catch(error => {
+  console.error('Desktop pet startup failed:', error);
+  dialog.showErrorBox('PocketPal Desktop Pet could not start', error.stack || error.message);
+  app.exit(1);
 });
 const trusted = event => [pet, popup].some(w => w && !w.isDestroyed() && w.webContents === event.sender);
 ipcMain.handle('pet:settings', event => trusted(event) ? settings : {});
@@ -64,6 +74,7 @@ ipcMain.handle('pet:snapshot', (event, value) => {
   settings.snapshot = value; save(); pet.webContents.send('pet:changed');
 });
 ipcMain.on('pet:popup', event => { if (trusted(event)) showPopup(); });
+ipcMain.on('pet:close', event => { if (trusted(event)) app.quit(); });
 let drag;
 ipcMain.on('pet:drag', (event, action) => {
   if (event.sender !== pet?.webContents) return;

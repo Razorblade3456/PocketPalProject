@@ -10,7 +10,7 @@ declare global {
   interface Window { desktopPet: {
     settings(): Promise<DesktopSettings>; select(kind: PetKind): Promise<void>;
     importBackup(): Promise<string | {error: string} | null>; snapshot(value: string): Promise<void>;
-    popup(): void; menu(): void; drag(action: 'start' | 'move' | 'end'): void;
+    popup(): void; menu(): void; close(): void; drag(action: 'start' | 'move' | 'end'): void;
     onChange(callback: () => void): () => void;
   } }
 }
@@ -48,12 +48,15 @@ function DesktopPet() {
   </main>;
   const level = saved ? stage(saved) : 0;
   return <div className="desktop-pet" onContextMenu={e => { e.preventDefault(); window.desktopPet.menu(); }}
-    onKeyDown={e => { if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.desktopPet.popup(); } }}
+    onKeyDown={e => { if(e.target instanceof Element && e.target.closest('.desktop-close')) return; if(e.key === 'Enter' || e.key === ' ') { e.preventDefault(); window.desktopPet.popup(); } }}
     onPointerDown={e => { if(e.button !== 0) return; e.currentTarget.setPointerCapture(e.pointerId); pointer.current = {x:e.screenX,y:e.screenY,dragging:false}; window.desktopPet.drag('start'); }}
     onPointerMove={e => { const p = pointer.current; if (!p) return; if (Math.hypot(e.screenX-p.x,e.screenY-p.y)>4) p.dragging=true; if(p.dragging) window.desktopPet.drag('move'); }}
     onPointerUp={() => { const p=pointer.current; pointer.current=null; window.desktopPet.drag('end'); if(p && !p.dragging) window.desktopPet.popup(); }}
     onPointerCancel={() => { pointer.current=null; window.desktopPet.drag('end'); }}>
     <Pet kind={kind} level={level} care={saved?.care} equipped={saved?.equipped} sleep={rhythm.sleeping && level<3} calm={rhythm.calm} onPet={() => { /* Pointer handler distinguishes clicks from drags. */ }} />
+    <button type="button" className="desktop-close" aria-label="Close desktop pet" title="Close pet"
+      onPointerDown={e => e.stopPropagation()} onPointerUp={e => e.stopPropagation()}
+      onClick={e => { e.stopPropagation(); window.desktopPet.close(); }}>×</button>
   </div>;
 }
 createRoot(document.getElementById('root')!).render(<DesktopPet />);

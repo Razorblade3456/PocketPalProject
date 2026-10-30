@@ -1,4 +1,5 @@
 node_modules/
 dist/
 dist-desktop/
+desktop-launch.log
 *.tsbuildinfo
