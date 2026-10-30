@@ -40,26 +40,6 @@ export function HungerAppearance({
   const y = anatomy[kind].tummy;
   return (
     <g className={`hunger-appearance hunger-${tier}`} data-hunger-layer={tier}>
-      <g className={tier === 4 ? "food-reaching-paw" : "tummy-rubbing-paw"}>
-        <path
-          d={
-            tier === 4
-              ? `M100 ${y - 13}Q67 ${y} 49 ${y + 29}`
-              : `M97 ${y - 18}Q110 ${y + 9} 142 ${y + 1}`
-          }
-          fill="none"
-          stroke="var(--pet-dark)"
-          strokeWidth={kind === "pippin" ? 13 : 18}
-          strokeLinecap="round"
-        />
-        <ellipse
-          cx={tier === 4 ? 49 : 142}
-          cy={tier === 4 ? y + 29 : y + 1}
-          rx="10"
-          ry="8"
-          fill="var(--pet)"
-        />
-      </g>
       {tier === 4 && (
         <g
           className="tummy-rumble"
@@ -113,24 +93,6 @@ export function HydrationAppearance({
           )}
         </g>
       )}
-      {tier >= 3 && !sleeping && (
-        <g
-          className="water-reaching-paw"
-          stroke="var(--pet-dark)"
-          strokeWidth="13"
-          fill="none"
-          strokeLinecap="round"
-        >
-          <path d={`M223 ${a.tummy - 7}q28 7 43 24`} />
-          <circle
-            cx="266"
-            cy={a.tummy + 17}
-            r="7"
-            fill="var(--pet)"
-            strokeWidth="2"
-          />
-        </g>
-      )}
     </g>
   );
 }
@@ -176,25 +138,6 @@ export function CleanlinessOverlay({
       className={`cleanliness-overlay dirt-${tier}`}
       data-cleanliness-layer={tier}
     >
-      {tier === 1 && (
-        <g
-          className="care-scratch-paw"
-          fill="none"
-          stroke="var(--pet-dark)"
-          strokeWidth="12"
-          strokeLinecap="round"
-        >
-          <path
-            d={
-              kind === "crumb"
-                ? "M91 213q-28-19-5-36"
-                : kind === "pippin"
-                  ? "M98 225q-24-20-3-37"
-                  : "M82 207q-23-22-3-42"
-            }
-          />
-        </g>
-      )}
       <g className="mud-marks" fill="#826d50" opacity={0.32 + tier * 0.08}>
         {marks.slice(0, count).map(([x, y, rx, ry], i) => (
           <g key={i} transform={`rotate(${i % 2 ? 18 : -15} ${x} ${y})`}>
@@ -431,12 +374,21 @@ export function HappinessExpression({
             strokeWidth={thirst >= 3 ? 3.5 : 2}
             strokeLinecap="round"
           >
-            <path
-              d={`M142 ${mouthY + 9}q18 9 36 0`}
-              strokeDasharray={thirst === 1 ? "3 5" : "5 3"}
-            />
+            {kind !== "mochi" && (
+              <path
+                d={`M142 ${mouthY + 9}q18 9 36 0`}
+                strokeDasharray={thirst === 1 ? "3 5" : "5 3"}
+              />
+            )}
             {thirst >= 3 && (
-              <path d={`M148 ${mouthY + 5}l-2 8m14-6 1 8m10-11 3 8`} />
+              <path
+                transform={
+                  kind === "mochi" && (anticipating || mood === 0 || mood === 4)
+                    ? "translate(0 20)"
+                    : undefined
+                }
+                d={`M148 ${mouthY + 5}l-2 8m14-6 1 8m10-11 3 8`}
+              />
             )}
           </g>
         )}
@@ -451,29 +403,6 @@ export function HappinessExpression({
           />
         )}
       </g>
-      {mood === 4 && (
-        <g
-          className="face-cover-paws"
-          fill="var(--pet)"
-          stroke="var(--pet-dark)"
-          strokeWidth="2"
-        >
-          <ellipse
-            cx={a.left - 3}
-            cy={eyeY + 6}
-            rx="18"
-            ry="22"
-            transform={`rotate(-20 ${a.left} ${eyeY})`}
-          />
-          <ellipse
-            cx={a.right + 3}
-            cy={eyeY + 6}
-            rx="18"
-            ry="22"
-            transform={`rotate(20 ${a.right} ${eyeY})`}
-          />
-        </g>
-      )}
     </g>
   );
 }
@@ -551,6 +480,21 @@ export function CareBody({
     mood = active ? t.happy : 0,
     thirst = active ? t.water : 0;
   const weakness = Math.max(food, thirst, mood);
+  // Existing limbs have one owner; care overlays never create body parts.
+  const limbMotion =
+    !active || sleeping
+      ? "rest"
+      : food > 0
+        ? food === 4
+          ? "food"
+          : "tummy"
+        : mood === 4
+          ? "cover"
+          : thirst >= 3
+            ? "water"
+            : t.clean === 1
+              ? "scratch"
+              : "rest";
   const curled =
     active && kind === "crumb" && (sleeping || level === 1 || mood >= 2);
   return (
@@ -561,6 +505,7 @@ export function CareBody({
       data-clean-tier={active ? t.clean : 0}
       data-happy-tier={mood}
       data-care-energy={weakness}
+      data-limb-motion={limbMotion}
       style={{ filter: active ? `saturate(${1 - thirst * 0.065})` : undefined }}
     >
       <g

@@ -1,6 +1,12 @@
 import { useId, useState, useEffect, useRef, type Ref } from "react";
 import { motion } from "motion/react";
-import type { Care, Category, PetKind, Supply } from "./model";
+import {
+  SUPPLIES,
+  type Care,
+  type Category,
+  type PetKind,
+  type Supply,
+} from "./model";
 import { OutfitLayer, type Equipped } from "./Outfits";
 import type { IncomingFood } from "./Inventory";
 import { careTier, excellentCare } from "./careVisuals";
@@ -263,10 +269,7 @@ function Mochi({
             d="M83 258 Q55 280 70 304 Q91 320 112 292L121 265M207 264L211 296Q236 315 251 296Q258 280 233 257"
             fill="var(--pet-dark)"
           />
-          <path
-            d="M76 160Q35 158 40 208Q46 224 67 207L89 188M241 160Q282 155 281 199Q278 225 257 209L232 186"
-            fill="var(--pet)"
-          />
+
           <path
             d={
               level < 1 && (!care || careTier(care.happy) < 2)
@@ -321,6 +324,16 @@ function Mochi({
             </g>
           )}
           <SpookyWear kind="mochi" level={level} />
+          <g fill="var(--pet)">
+            <path
+              className="pet-arm arm-left"
+              d="M76 160Q35 158 40 208Q46 224 67 207L89 188"
+            />
+            <path
+              className="pet-arm arm-right"
+              d="M241 160Q282 155 281 199Q278 225 257 209L232 186"
+            />
+          </g>
         </g>
         <CareSurface kind="mochi" care={care} level={level} sleeping={sleep} />
         <OutfitLayer kind="mochi" equipped={equipped} />
@@ -557,7 +570,7 @@ function Pippin({
             }}
           >
             <path
-              className="wing-left"
+              className="wing-left pet-arm arm-left"
               d={
                 level >= 3
                   ? "M131 167Q56 94 27 150L40 169 28 181 45 193 32 216Q35 256 108 249L142 221Z"
@@ -568,7 +581,7 @@ function Pippin({
               strokeWidth="3"
             />
             <path
-              className="wing-right"
+              className="wing-right pet-arm arm-right"
               d={
                 level >= 3
                   ? "M189 167Q264 94 293 150L280 169 292 181 275 193 288 216Q285 256 212 249L178 221Z"
@@ -662,18 +675,6 @@ function Pippin({
             </g>
           )}
         </g>
-        {folded && (
-          <g
-            className="moth-wrap"
-            fill="var(--wing)"
-            stroke="var(--pet-dark)"
-            strokeWidth="2"
-          >
-            <path d="M91 191Q162 203 162 278Q83 271 91 191Z" />
-            <path d="M229 191Q158 203 158 278Q237 271 229 191Z" />
-            <path d="M107 215l31 40m75-40l-31 40" strokeDasharray="4 5" />
-          </g>
-        )}
         <CareSurface kind="pippin" care={care} level={level} sleeping={sleep} />
         <OutfitLayer kind="pippin" equipped={equipped} />
         <SpookyWear kind="pippin" level={level} />
@@ -770,12 +771,7 @@ function Crumb({
             <ellipse cx="117" cy="287" rx="23" ry="16" />
             <ellipse cx="202" cy="287" rx="23" ry="16" />
           </g>
-          <path
-            d="M106 181Q65 182 65 228Q79 242 98 218M215 181Q254 182 255 228Q242 242 223 218"
-            fill="var(--cap)"
-            stroke="var(--pet-dark)"
-            strokeWidth="3"
-          />
+
           <path
             d="M95 162Q89 134 115 117Q160 92 206 122Q233 142 225 184L228 239Q226 286 163 293Q93 290 92 244Z"
             fill="var(--pet)"
@@ -881,6 +877,16 @@ function Crumb({
             />
           )}
           <SpookyWear kind="crumb" level={level} />
+          <g fill="var(--cap)" stroke="var(--pet-dark)" strokeWidth="3">
+            <path
+              className="pet-arm arm-left"
+              d="M106 181Q65 182 65 228Q79 242 98 218"
+            />
+            <path
+              className="pet-arm arm-right"
+              d="M215 181Q254 182 255 228Q242 242 223 218"
+            />
+          </g>
         </g>
         <CareSurface kind="crumb" care={care} level={level} sleeping={sleep} />
         <OutfitLayer kind="crumb" equipped={equipped} />
@@ -996,11 +1002,25 @@ export function Pet({
       });
   }, [incoming, level, preview]);
   const sad = reaction.startsWith("−");
+  const careAction =
+    level === 5
+      ? null
+      : feeding
+        ? SUPPLIES[feeding].category
+        : reaction.startsWith("♥")
+          ? "happy"
+          : null;
   const art = {
     care: level === 5 ? undefined : care,
-    recovering,
+    recovering: [
+      ...new Set([
+        ...recovering,
+        ...(feeding ? [SUPPLIES[feeding].category] : []),
+      ]),
+    ],
     equipped,
-    anticipating: excited,
+    anticipating:
+      excited && !!incoming && SUPPLIES[incoming.item].category === "food",
     level,
     sleep: level !== 5 && sleep && !excited && !feeding,
     sad,
@@ -1016,7 +1036,7 @@ export function Pet({
       aria-label={
         preview ? `${pets[kind].name}: ${stages[level]}` : "Pet your companion"
       }
-      className={`pet-button species-${kind} stage-${level} ${sleep ? "sleeping" : ""} ${calm ? "calm" : ""} ${excited ? "food-approach" : ""} ${feeding ? "is-eating" : ""} ${reaction.includes("favorite") ? "favorite-reaction" : ""} ${sad ? "hurt" : ""} ${preview ? "pet-preview" : ""}`}
+      className={`pet-button species-${kind} stage-${level} ${sleep ? "sleeping" : ""} ${calm ? "calm" : ""} ${excited ? "food-approach" : ""} ${careAction === "food" ? "is-eating" : careAction === "water" ? "is-drinking" : careAction === "clean" ? "is-cleaning" : careAction === "happy" ? "is-playing" : ""} ${reaction.includes("favorite") ? "favorite-reaction" : ""} ${sad ? "hurt" : ""} ${preview ? "pet-preview" : ""}`}
       onPointerMove={(e) => {
         if (preview || level === 5) return;
         const r = e.currentTarget.getBoundingClientRect();
@@ -1031,11 +1051,15 @@ export function Pet({
         animated
           ? sad
             ? { x: [0, -6, 5, -3, 0], y: [0, 5, 0], rotate: [0, -4, 3, 0] }
-            : kind === "pippin"
-              ? { y: [0, -30, -24, 0], rotate: [0, -3, 3, 0] }
-              : kind === "crumb"
-                ? { y: [0, -8, 0, -8, 0], rotate: [0, -12, 12, -8, 0] }
-                : { y: [0, -24, 0, -12, 0], rotate: [0, -6, 6, 0] }
+            : careAction === "clean"
+              ? { y: [0, 2, 0], rotate: [0, -2, 2, 0] }
+              : careAction === "water"
+                ? { y: [0, 2, 0], rotate: [0, 1, 0] }
+                : kind === "pippin"
+                  ? { y: [0, -30, -24, 0], rotate: [0, -3, 3, 0] }
+                  : kind === "crumb"
+                    ? { y: [0, -8, 0, -8, 0], rotate: [0, -12, 12, -8, 0] }
+                    : { y: [0, -24, 0, -12, 0], rotate: [0, -6, 6, 0] }
           : { x: 0, y: 0, rotate: 0 }
       }
       transition={{ duration: sad ? 0.55 : 0.85 }}

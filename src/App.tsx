@@ -386,7 +386,10 @@ export default function App() {
       Math.round((next.care.happy - s.care.happy) * 10) / 10,
     );
     setS((p) => headPat(p));
-    setReaction(gain ? "♥ +" + gain + " happiness" : "♥ happy as can be!");
+    setFeeding(null);
+    setReaction(
+      `♥ ${s.pet === "pippin" ? "Hehe!" : s.pet === "crumb" ? "Again!" : "YIPPEE!"} ${gain ? `+${gain} happiness` : "Happy as can be!"}`,
+    );
     tone(s.settings.sound, 2);
   };
   useEffect(() => {
@@ -430,7 +433,25 @@ export default function App() {
     setFeeding(item);
     setFeedToken((t) => t + 1);
     setReaction(
-      (favorite ? "A favorite! " : "Yum! ") +
+      (v.category === "clean"
+        ? s.pet === "pippin"
+          ? "Ooh, bubbles! "
+          : s.pet === "crumb"
+            ? "All clean! "
+            : "Squeaky clean! "
+        : v.category === "water"
+          ? favorite
+            ? "My favorite sip! "
+            : s.pet === "crumb"
+              ? "Glug glug! "
+              : "Ahhh, refreshing! "
+          : favorite
+            ? "My favorite! "
+            : s.pet === "pippin"
+              ? "So tasty! "
+              : s.pet === "crumb"
+                ? "More please! "
+                : "YUM! ") +
         "+" +
         gain +
         " " +
@@ -438,8 +459,12 @@ export default function App() {
     );
     tone(s.settings.sound, 1);
     setMessage(
-      v.name +
-        " enjoyed · +" +
+      (v.category === "clean"
+        ? "Bath finished"
+        : v.category === "water"
+          ? "Drink finished"
+          : v.name + " enjoyed") +
+        " · +" +
         gain +
         " " +
         labels[v.category] +
@@ -536,7 +561,7 @@ export default function App() {
           <div className="intro">
             <div>
               <span className="eyebrow">
-                YOUR OWN LITTLE CORNER OF THE WORLD
+                SMALL WINS. STRANGE LITTLE FRIENDS.
               </span>
               <h1>
                 A little care, <em>every day.</em>
@@ -679,7 +704,7 @@ export default function App() {
               <div className="room-top">
                 <span className="room-label">
                   <span />
-                  {night ? "MOONLIT MOMENTS" : "HOME, SWEET LITTLE HOME"}
+                  {night ? "AFTER HOURS" : "YOUR LITTLE HIDEOUT"}
                 </span>
                 <span className="room-spark">✧</span>
               </div>
@@ -696,7 +721,7 @@ export default function App() {
                 </div>
                 <div className="wall-art">
                   <Heart size={22} />
-                  <span>stay soft</span>
+                  <span>SOFT / LOUD</span>
                 </div>
                 <div className="plant">
                   <span>♣</span>
@@ -752,6 +777,7 @@ export default function App() {
               </div>
               <PetNeeds
                 s={s}
+                onUse={careFor}
                 onPat={pat}
                 onSupplies={() =>
                   document.getElementById("supplies")?.scrollIntoView({

@@ -1,5 +1,5 @@
 import { Apple, Droplets, Sparkles, Heart, ShoppingBag } from "lucide-react";
-import { stage, type State } from "./model";
+import { stage, type State, type Supply } from "./model";
 const needs = [
   { key: "food", name: "Food", hint: "Use food from your shelf", icon: Apple },
   {
@@ -25,10 +25,12 @@ export function PetNeeds({
   s,
   onPat,
   onSupplies,
+  onUse,
 }: {
   s: State;
   onPat: () => void;
   onSupplies: () => void;
+  onUse: (item: Supply) => boolean;
 }) {
   const health = Math.round(
       Object.values(s.care).reduce((sum, value) => sum + value, 0) / 4,
@@ -39,6 +41,35 @@ export function PetNeeds({
       className={`pet-needs health-stage-${level}`}
       aria-label="Pet health and needs"
     >
+      <div className="quick-care" role="group" aria-label="Quick pet care">
+        {(
+          [
+            { item: "food", label: "Feed", icon: Apple },
+            { item: "water", label: "Water", icon: Droplets },
+            { item: "soap", label: "Clean", icon: Sparkles },
+          ] as const
+        ).map(({ item, label, icon: Icon }) => (
+          <button
+            key={item}
+            type="button"
+            className={item}
+            disabled={s.inventory[item] < 1 || level === 5}
+            aria-label={`${label} pet, ${s.inventory[item]} available`}
+            title={
+              level === 5
+                ? "Revive your pal first"
+                : s.inventory[item]
+                  ? `Use one ${item} from inventory`
+                  : "Get supplies below to refill"
+            }
+            onClick={() => onUse(item)}
+          >
+            <Icon size={14} />
+            <span>{label}</span>
+            <small>×{s.inventory[item]}</small>
+          </button>
+        ))}
+      </div>
       <div className="overall-health-label">
         <span>
           <Heart size={15} />

@@ -1320,7 +1320,7 @@ export const demoTasks = (n = Date.now()): Task[] =>
   [
     ["Drink a glass of water", "08:00", "water"],
     ["A little morning stretch", "08:30", "food"],
-    ["Make your space cozy", "09:00", "clean"],
+    ["Tidy Up My Room", "09:00", "clean"],
     ["Read a few pages", "19:00", "happy"],
   ].map(([name, time, category]) => ({
     id: crypto.randomUUID(),
@@ -1328,8 +1328,18 @@ export const demoTasks = (n = Date.now()): Task[] =>
     time,
     category: category as Category,
     description: "A small moment just for you.",
-    repeat: "daily",
-    days: [],
+    repeat: name === "Tidy Up My Room" ? "selected" : "daily",
+    days: name === "Tidy Up My Room" ? [6] : [],
+    ...(name === "Drink a glass of water"
+      ? { repetitions: "goal" as const, dailyGoal: 6 }
+      : {}),
+    ...(name === "Tidy Up My Room"
+      ? {
+          steps: ["Put clothes away", "Clear desk", "Take out trash"].map(
+            (name) => ({ id: crypto.randomUUID(), name }),
+          ),
+        }
+      : {}),
     date: dateKey(n),
     createdAt: n,
     createdDate: dateKey(n),

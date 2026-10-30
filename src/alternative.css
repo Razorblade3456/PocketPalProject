@@ -1,0 +1,929 @@
+/* PocketPal: original late-2000s plush / patched-denim identity. Layout and pet art stay intact. */
+:root {
+  color: #e6dfd2;
+  background: #19191f;
+  color-scheme: dark;
+}
+.app {
+  --paper: #302b33;
+  --ink: #e6dfd2;
+  --muted: #b6aabc;
+  --line: #554657;
+  --panel: #302b33;
+  --panel-soft: #3b303d;
+  --accent: #a4bc63;
+  --lavender: #a28ab8;
+  --surface-edge: #a28ab83c;
+  --soft-shadow: 0 7px 22px #08070d38, 0 1px 0 #b3a3bd10;
+  background-color: #262228;
+  color: var(--ink);
+  color-scheme: dark;
+  background-image:
+    linear-gradient(120deg, #602c4217, transparent 46%, #34254425),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 160 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='.07' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+.app.night {
+  --paper: #25212d;
+  --panel: #25212d;
+  --panel-soft: #342544;
+  --line: #493b56;
+  --ink: #e6dfd2;
+  --muted: #b7a9c2;
+  background-color: #19191f;
+}
+.app header {
+  position: relative;
+  border-color: var(--line);
+}
+.app header::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 66px;
+  height: 4px;
+  background: repeating-conic-gradient(#a28ab87a 0 25%, transparent 0 50%) 0/8px
+    8px;
+}
+.app .brand {
+  font-family: "Trebuchet MS", sans-serif;
+  font-weight: 800;
+  letter-spacing: -1.1px;
+}
+.app .brand-mark {
+  background: #342544;
+  color: var(--accent);
+  border: 1px solid #a28ab86b;
+  border-radius: 9px;
+  box-shadow:
+    inset 0 0 0 3px #211d2a,
+    0 3px 0 #0f0d17;
+}
+.app .brand-dot {
+  color: var(--lavender);
+}
+.app :is(h2, h3) {
+  color: var(--ink);
+}
+.app h1 {
+  font-family: Impact, "Arial Narrow", sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  font-size: clamp(34px, 3.1vw, 46px);
+}
+.app h1 em {
+  color: var(--accent);
+  font-family: Georgia, serif;
+  text-transform: lowercase;
+  letter-spacing: -1px;
+}
+.app .eyebrow {
+  color: #b4a1c3;
+  letter-spacing: 2px;
+}
+.app .intro p {
+  color: var(--muted);
+}
+.app
+  :is(
+    .section-note,
+    .task-description,
+    .task-content time,
+    .manage-tasks,
+    .jar-progress > span,
+    .jar-legend,
+    .care-title p,
+    .pet-care-explainer,
+    .pet-need p,
+    .inventory-help,
+    .pantry-empty,
+    .boutique-note,
+    .item-effect,
+    .coins-needed,
+    .task-reward-note,
+    .focus-invite,
+    .task-meta > span,
+    .care-slider small,
+    .simulator-pet > small,
+    .care-condition-gallery > button > span
+  ) {
+  color: var(--muted);
+}
+.app .game-nav {
+  background: #15131c99;
+  border-color: var(--line);
+  border-radius: 13px;
+  box-shadow: 0 3px 0 #100d1699;
+}
+.app .game-nav button {
+  border-radius: 8px;
+  color: #c1b5ca;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+.app .game-nav button[aria-pressed="true"] {
+  background: #3a4030;
+  color: #d4e6a9;
+  border: 1px solid #a4bc636b;
+  box-shadow: inset 0 0 0 2px #252b20;
+}
+.app .game-nav button:hover {
+  background: #42334e;
+  color: #e6dfd2;
+}
+.app :is(.wallet, .boutique-wallet) {
+  background: #303327;
+  color: #d0dfa7;
+  border-color: #a4bc6340;
+  border-radius: 10px;
+}
+.app .icon-button {
+  color: #b7a6c5;
+}
+.app .icon-button:hover {
+  background: #a28ab81c;
+  color: #e6dfd2;
+}
+.app .local-clock {
+  background: linear-gradient(135deg, #39313d, #2b252f);
+  border-color: var(--line);
+  border-radius: 13px;
+  box-shadow: var(--soft-shadow);
+}
+.app.night .local-clock {
+  background: linear-gradient(135deg, #342544, #24202e);
+}
+.app .clock-icon {
+  background: #a4bc6317;
+  color: #c0d492;
+  border: 1px solid #a4bc6344;
+  box-shadow: inset 0 0 0 3px #211e29;
+}
+.app .clock-caption,
+.app .clock-date {
+  color: #b7a8c4;
+}
+.app .local-clock time {
+  color: #e6dfd2;
+}
+.app .streak,
+.app .streak svg {
+  color: #bea78c;
+}
+.app .streak > span {
+  color: var(--muted);
+}
+.app .section-heading h2 {
+  font-family: "Trebuchet MS", sans-serif;
+  font-weight: 700;
+  font-size: 20px;
+}
+.app .section-heading h2 span {
+  color: var(--lavender);
+}
+.app .count {
+  background: #373c2c;
+  border: 1px solid #a4bc6330;
+  color: #c5d5a2;
+  border-radius: 7px;
+}
+.app .task-card.outcome-card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--soft-shadow);
+}
+.app .task-card.outcome-card::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px dashed #a28ab82b;
+  border-radius: 8px;
+  pointer-events: none;
+}
+.app .task-card.completed {
+  background: #30372b;
+  border-color: #a4bc6355;
+}
+.app .task-card.missed {
+  background: #3d2935;
+  border-color: #98607a66;
+}
+.app .task-card.outcome-card:hover {
+  border-color: #a28ab8a0;
+  box-shadow: 0 7px 24px #08070d50;
+}
+.app .outcome-card.completed .task-content h3 {
+  color: #d7e0bf;
+}
+.app .outcome-card.missed .task-content h3 {
+  color: #d6a9ba;
+}
+.app :is(.success-count, .task-goal, .task-goal span) {
+  color: #c0cf9b;
+}
+.app .miss-count {
+  color: #c696ab;
+}
+.app .outcome-buttons button {
+  border-radius: 7px;
+  border: 1px solid #a4bc633d;
+  background: #3b4730;
+  color: #d6e6b0;
+  box-shadow: inset 0 0 0 2px #1d241a55;
+}
+.app .outcome-buttons .outcome-negative {
+  background: #602c42;
+  border-color: #b67a9460;
+  color: #e4bacb;
+}
+.app .outcome-buttons .outcome-undo {
+  background: transparent;
+  border-color: transparent;
+  color: #b5a6c2;
+  box-shadow: none;
+}
+.app .task-goal > div,
+.app .progress-track,
+.app .focus-track {
+  background: #16171d;
+}
+.app
+  :is(
+    .task-goal > div > span,
+    .progress-track > span,
+    .focus-track > span,
+    .overall-health-track > span
+  ) {
+  background: var(--accent);
+}
+.app .add-task {
+  border: 1px dashed #a28ab880;
+  background: #34254444;
+  color: #ccbdd8;
+  border-radius: 10px;
+}
+.app .add-task:hover {
+  background: #342544;
+}
+.app .today-three {
+  background: linear-gradient(125deg, #383c2b, #2d2936);
+  border: 1px solid #a4bc6360;
+  border-radius: 12px;
+  box-shadow: var(--soft-shadow);
+}
+.app .focus-heading > span {
+  font:
+    700 17px "Trebuchet MS",
+    sans-serif;
+  color: #d8e3be;
+}
+.app .focus-heading small,
+.app .focus-row small {
+  color: #b5bca5;
+}
+.app .focus-row {
+  border-color: #a4bc632d;
+}
+.app .focus-complete {
+  background: #272e23;
+  color: #b9ce8b;
+  border-color: #a4bc6366;
+  border-radius: 7px;
+}
+.app .focus-row.done .focus-complete {
+  background: #a4bc63;
+  color: #24291d;
+}
+.app .focus-star.chosen {
+  background: #a4bc6324;
+  color: #c5d791;
+}
+.app .paper-note {
+  position: relative;
+  color: #baadc4;
+}
+.app .paper-note b {
+  color: #c5d59b;
+}
+.app .paper-note::before {
+  content: "";
+  display: block;
+  width: 25px;
+  height: 8px;
+  border: 2px solid #9a8b9e;
+  border-radius: 8px;
+  transform: rotate(-12deg);
+  margin: 0 10px 0 0;
+}
+.app .paper-note > span {
+  color: var(--lavender);
+}
+.app .room-panel {
+  background: #342c37;
+  border-color: #73607888;
+  box-shadow:
+    0 5px 0 #110e18,
+    0 18px 44px #09070e33;
+  border-radius: 110px 110px 18px 18px;
+}
+.app.night .room-panel {
+  background: #2a2236;
+  border-color: #6a527e88;
+}
+.app .room-top {
+  position: relative;
+  background: transparent;
+}
+.app .room-top::after {
+  content: "";
+  position: absolute;
+  left: 27%;
+  right: 27%;
+  bottom: 3px;
+  height: 5px;
+  opacity: 0.45;
+  background: repeating-conic-gradient(#b0a0bc 0 25%, transparent 0 50%) 0/10px
+    10px;
+}
+.app .room-label,
+.app .room-spark {
+  color: #beaecb;
+}
+.app .room-label > span {
+  background: var(--accent);
+  box-shadow: 0 0 7px #a4bc6344;
+}
+.app .room {
+  background: linear-gradient(125deg, #45343c, #362b38 66%, #44313b);
+}
+.app.night .room {
+  background:
+    radial-gradient(ellipse at 24% 22%, #66578444, transparent 60%),
+    linear-gradient(120deg, #342544, #242030 70%);
+}
+.app .wall-lines {
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0,
+      transparent 35px,
+      #a28ab80e 36px,
+      #a28ab80e 37px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 3px,
+      #00000009 4px
+    );
+}
+.app .window {
+  border-color: #756877;
+  background: linear-gradient(#777789, #c6b6a155);
+  border-radius: 45px 45px 3px 3px;
+  box-shadow:
+    0 0 0 3px #1c1823,
+    0 0 24px #d0bca819;
+}
+.app.night .window {
+  border-color: #6b5c80;
+  background: linear-gradient(#181a31, #38314c);
+  box-shadow:
+    0 0 0 3px #191520,
+    0 0 30px #a28ab82b;
+}
+.app .window-cross {
+  background:
+    linear-gradient(
+      90deg,
+      transparent 46%,
+      #756877 46%,
+      #756877 54%,
+      transparent 54%
+    ),
+    linear-gradient(transparent 51%, #756877 51%, #756877 58%, transparent 58%);
+  filter: none;
+}
+.app .sky-orb {
+  background: #dbc8a8;
+  box-shadow: 0 0 22px #d9c4a333;
+}
+.app.night .sky-orb {
+  background: #ddd7ea;
+  box-shadow: 0 0 20px #c7b9e17a;
+}
+.app .stars {
+  color: #c5b4dc;
+}
+.app .wall-art {
+  background: #19191f;
+  border: 4px solid #7c637e;
+  color: #c4d88e;
+  box-shadow:
+    0 0 0 2px #14111b,
+    2px 4px 0 #120f1888;
+  transform: rotate(6deg);
+}
+.app .wall-art svg {
+  color: #a28ab8;
+}
+.app .wall-art span {
+  font:
+    700 7px "Trebuchet MS",
+    sans-serif;
+  letter-spacing: 0.6px;
+}
+.app .wall-art::after {
+  content: "LIVE / LOCAL";
+  font:
+    5px "Trebuchet MS",
+    sans-serif;
+  letter-spacing: 1px;
+  color: #ad9eb8;
+}
+.app .floor {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      #a28ab80b 0,
+      #a28ab80b 1px,
+      transparent 2px,
+      transparent 28px
+    ),
+    #49323e;
+  border-top-color: #261e2b;
+}
+.app.night .floor {
+  background-color: #302638;
+  border-top-color: #1a1523;
+}
+.app .rug {
+  background: repeating-conic-gradient(#211e28 0 25%, #938397 0 50%) 0/23px 23px;
+  filter: none;
+  opacity: 0.8;
+  box-shadow:
+    0 3px 0 #15121e,
+    inset 0 0 0 6px #55445f,
+    inset 0 0 0 8px #a28ab8;
+}
+.app .rug::after {
+  border-color: #d0bfd288;
+}
+.app .plant > span {
+  color: #839658;
+}
+.app .plant i {
+  background: #602c42;
+  border-top-color: #98647b;
+}
+.app .bed {
+  background: #342544;
+  border-color: #75617f;
+  color: #b6a6c2;
+}
+.app .food-bowl {
+  background: #604153;
+  border-color: #b49a9c;
+  color: #c2b09c;
+}
+.app .water-bowl {
+  background: #4b5660;
+  border-color: #a0b5b4;
+  color: #d7e1d6;
+}
+.app .toy {
+  color: #a4bc63;
+}
+.app :is(.pet-caption, .pet-needs) {
+  background: linear-gradient(135deg, #302934, #29252f);
+  border-color: var(--line);
+}
+.app.night :is(.pet-caption, .pet-needs) {
+  background: linear-gradient(135deg, #2a2236, #23202c);
+}
+.app .pet-caption h2 {
+  font-family: "Trebuchet MS", sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.app .pet-caption > span,
+.app .pet-caption h2 svg {
+  color: #b3a3c1;
+}
+.app .overall-health-label {
+  color: #e6dfd2;
+}
+.app .overall-health-label strong,
+.app .overall-health-label svg {
+  color: #c1d494;
+}
+.app .overall-health-track {
+  background: #17151e;
+}
+.app .pet-need {
+  background: #15131c45;
+  border-color: #a28ab82d;
+  border-radius: 10px;
+}
+.app .pet-need-track {
+  background: #a28ab826;
+}
+.app .pet-care-actions button {
+  background: #383e2d;
+  color: #d0dfa9;
+  border-color: #a4bc6344;
+  border-radius: 8px;
+}
+.app .pet-care-actions button:last-child {
+  background: #602c4266;
+  color: #dfb2c4;
+  border-color: #a1728744;
+}
+.app .quick-care button.food {
+  background: #46402e;
+  color: #dccbaa;
+  border-color: #b29a5c66;
+}
+.app .quick-care button.water {
+  background: #34414a;
+  color: #bbd2d5;
+  border-color: #789aa266;
+}
+.app .quick-care button.soap {
+  background: #42324e;
+  color: #d5c2e1;
+  border-color: #a28ab866;
+}
+.app .quick-care button {
+  border-radius: 8px;
+}
+.app :is(.room-footer, .life-guide-button) {
+  background: #211d2a;
+  color: #bdafca;
+  border-color: #6b557b55;
+}
+.app .pet-reaction {
+  background: #241d2e;
+  color: #d1e1a6;
+  border: 1px solid #a28ab877;
+  border-radius: 9px;
+  box-shadow: 0 4px 12px #08070d66;
+}
+.app .jar {
+  filter: drop-shadow(0 10px 10px #06050a60);
+}
+.app .jar-lid {
+  background: repeating-linear-gradient(
+    90deg,
+    #807987 0,
+    #807987 3px,
+    #a59aa8 3px,
+    #a59aa8 6px
+  );
+  border-color: #6a606f;
+  box-shadow: inset 0 3px 0 #c2b5c5;
+}
+.app .jar-neck {
+  background: #a28ab819;
+  border-color: #a4bc6366;
+}
+.app .jar-glass {
+  border-color: #9a9f8b;
+  background: linear-gradient(
+    100deg,
+    #e6dfd221,
+    #a28ab80a 30%,
+    #a28ab81c 70%,
+    #a4bc6312
+  );
+  box-shadow:
+    inset 5px 0 0 #e6dfd21a,
+    inset -5px -4px 0 #a4bc6310,
+    0 3px 0 #49454e;
+}
+.app .glass-shine {
+  background: #e6dfd266;
+}
+.app .jar-label {
+  color: #d5cbbb;
+  background: #4e424c;
+  border-color: #a28ab8;
+  font-family: "Trebuchet MS", sans-serif;
+  font-weight: bold;
+  font-style: normal;
+  transform: rotate(-7deg);
+}
+.app .jar-progress strong {
+  color: #c0d28e;
+}
+.app .jar-progress p {
+  color: #bdafca;
+}
+.app .history-button {
+  color: #b9abc8;
+  border-color: var(--line);
+}
+.app
+  :is(
+    .supplies,
+    .inventory-drawer,
+    .care-simulator,
+    .guide-preview,
+    .care-focus-preview,
+    .wardrobe-preview,
+    .history-outcome,
+    .boutique-card,
+    .wardrobe-grid article,
+    .pantry-item
+  ) {
+  background: var(--panel);
+  color: var(--ink);
+  border-color: var(--line);
+  box-shadow: var(--soft-shadow);
+}
+.app .supplies {
+  border-radius: 12px;
+}
+.app .supplies-heading h3 {
+  font-family: "Trebuchet MS", sans-serif;
+  font-weight: 700;
+}
+.app .supply-row {
+  border-color: #a28ab82d;
+}
+.app .supply-label > span,
+.app .supplies p {
+  color: var(--muted);
+}
+.app .supply-row .supply-icon {
+  background: #342544;
+}
+.app .supply-buy,
+.app .supply-use {
+  background: #3d4830;
+  color: #d0dfa9;
+  border: 1px solid #a4bc6340;
+  border-radius: 7px;
+}
+.app .supply-use {
+  background: #41344d;
+  color: #d3c0df;
+  border-color: #a28ab84d;
+}
+.app .shelf-links button {
+  background: #342544;
+  color: #ccbdd8;
+  border-color: #a28ab855;
+}
+.app .toast {
+  background: #302438;
+  color: #e6dfd2;
+  border: 1px solid #a28ab877;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px #08070d66;
+}
+.app dialog {
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid #a28ab866;
+  border-radius: 17px;
+  box-shadow: 0 24px 90px #08070d99;
+}
+.app dialog::backdrop {
+  background: #0f0c1688;
+  backdrop-filter: blur(7px);
+}
+.app .modal {
+  background: transparent;
+}
+.app .modal :is(p, .fine, label, legend) {
+  color: var(--muted);
+}
+.app
+  .modal
+  :is(input:not([type="checkbox"]):not([type="range"]), textarea, select),
+.app .task-quick-body input {
+  background: #1d1a25;
+  color: #e6dfd2;
+  border-color: #6e587b80;
+  border-radius: 8px;
+}
+.app :is(button, input, select, textarea, a):focus-visible {
+  outline: 2px solid #c3d790;
+  outline-offset: 3px;
+}
+.app :is(input[type="checkbox"], input[type="range"]) {
+  accent-color: #a4bc63;
+}
+.app
+  :is(
+    .primary,
+    .shop-buy,
+    .feed-button,
+    .wardrobe-grid button,
+    .pantry-wardrobe button,
+    .task-quick-body button,
+    .step-templates button
+  ) {
+  background: #3c472d;
+  color: #d4e5ac;
+  border: 1px solid #a4bc6360;
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 2px #1c251955;
+}
+.app :is(.primary, .shop-buy, .feed-button):not(:disabled):hover {
+  background: #4a5737;
+}
+.app
+  :is(
+    .secondary,
+    .shop-tools button,
+    .simulator-actions button,
+    .inventory-shop
+  ) {
+  background: #342544;
+  color: #d1bedf;
+  border: 1px solid #a28ab855;
+  border-radius: 8px;
+}
+.app .shop-buy:disabled {
+  background: #2c2931;
+  border-color: #70647640;
+  color: #a99dab;
+}
+.app :is(.boutique-tabs, .care-tabs, .inventory-tabs) {
+  background: #19161f;
+  border-color: var(--line);
+  border-radius: 10px;
+}
+.app :is(.boutique-tabs button, .care-tabs button, .inventory-tabs button) {
+  background: transparent;
+  color: #b9a9c8;
+  border-color: transparent;
+  border-radius: 7px;
+}
+.app
+  :is(
+    .boutique-tabs [aria-selected="true"],
+    .care-tabs [aria-selected="true"],
+    .inventory-tabs [aria-pressed="true"]
+  ) {
+  background: #493454;
+  color: #eadff0;
+  border: 1px solid #a28ab880;
+  box-shadow: inset 0 0 0 2px #281d31;
+}
+.app .boutique-card {
+  border-radius: 12px;
+}
+.app .boutique-art {
+  background: #383d2c;
+  border-radius: 9px;
+}
+.app .boutique-card:nth-child(3n + 2) .boutique-art {
+  background: #472936;
+}
+.app .boutique-card:nth-child(3n) .boutique-art {
+  background: #3e2e4c;
+}
+.app .owned-stamp,
+.app .preview-badge,
+.app .draggable-item > span {
+  background: #24291e;
+  color: #c4d59b;
+  border-color: #a4bc6344;
+}
+.app .wardrobe-grid article.worn {
+  background: #343e2c;
+  border-color: #a4bc6377;
+}
+.app .wardrobe-preview > span,
+.app .wardrobe-grid small {
+  color: #c1b1cd;
+}
+.app .care-focus-preview {
+  background: linear-gradient(135deg, #342544, #302934);
+}
+.app
+  :is(
+    .stage-gallery button,
+    .care-condition-gallery > button,
+    .modal .pet-choices label
+  ) {
+  background: #28222f;
+  color: #e6dfd2;
+  border-color: #a28ab844;
+  border-radius: 10px;
+}
+.app
+  :is(
+    .stage-gallery button.selected,
+    .care-condition-gallery > button.selected,
+    .modal .pet-choices label.chosen
+  ) {
+  background: #3c4330;
+  border-color: #a4bc63a0;
+  box-shadow: inset 0 0 0 2px #242b1e;
+}
+.app
+  :is(
+    .stage-gallery button > span,
+    .care-condition-gallery strong,
+    .care-slider output
+  ) {
+  color: #bdcf8e;
+}
+.app .modal .care-condition-gallery p,
+.app .modal .pet-choices small {
+  color: #c0b3ca;
+}
+.app .task-quick > summary,
+.app .tiny-steps > summary,
+.app .task-advanced > summary {
+  color: #c5b1d5;
+  border-color: #a28ab82b;
+}
+.app .task-quick-body {
+  background: #1d192780;
+}
+.app .task-quick-body label,
+.app .task-quick p,
+.app .tiny-steps p {
+  color: #b8abc2;
+}
+.app .task-advanced {
+  border-color: #a28ab850;
+}
+.app .history-outcome.completed {
+  border-color: #a4bc6355;
+  background: #303729;
+}
+.app .history-outcome.missed {
+  border-color: #a86d8555;
+  background: #402735;
+}
+.app .history-outcome > small,
+.app .transaction-journal small {
+  color: #b7a9c3;
+}
+.app .transaction-journal {
+  border-color: #a28ab844;
+}
+.app footer {
+  border-color: var(--line);
+  color: #b2a4bd;
+}
+/* Care actions retain the same timing and mechanics, but have distinct visual cues. */
+.app .pet-button.is-drinking .mouth {
+  animation: alternative-sip 0.6s ease-in-out 2;
+  transform-origin: 160px 185px;
+}
+@keyframes alternative-sip {
+  0%,
+  100% {
+    scale: 1 1;
+  }
+  50% {
+    scale: 0.85 0.9;
+  }
+}
+@media (max-width: 800px) {
+  .app h1 {
+    font-size: 34px;
+  }
+  .app .room-panel {
+    border-radius: 95px 95px 16px 16px;
+  }
+}
+@media (max-width: 460px) {
+  .app h1 {
+    font-size: 32px;
+    letter-spacing: 0;
+  }
+  .app .game-nav button {
+    font-size: 9px;
+  }
+  .app .room-panel {
+    border-radius: 85px 85px 14px 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app .pet-button.is-drinking .mouth {
+    animation: none;
+  }
+  .app dialog::backdrop {
+    backdrop-filter: none;
+  }
+}
+.app .shop-tools button {
+  padding: 7px 10px;
+  min-height: 34px;
+}
+@media (max-width: 560px) {
+  .app .shop-tools button {
+    min-height: 44px;
+    padding: 8px 7px;
+  }
+}

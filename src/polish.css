@@ -4,118 +4,541 @@
   --surface-edge: #71805b22;
   -webkit-font-smoothing: antialiased;
 }
-header { height: 88px; border-bottom-color: var(--surface-edge); }
-header nav { gap: 12px; }
-.brand { letter-spacing: -1.1px; }
-.brand-mark { border-radius: 14px; box-shadow: inset 0 0 0 3px #e1e7d0, 0 4px 9px #6a795411; }
-.wallet { border-radius: 100px; padding: 9px 13px; box-shadow: 0 2px 7px #5d674508; }
-.icon-button { border-radius: 50%; transition: background .2s, color .2s; }
-.game-nav { gap: 4px; padding: 5px; background: #ffffff6b; border: 1px solid var(--surface-edge); border-radius: 100px; width: fit-content; margin: 18px auto 0; box-shadow: 0 3px 12px #5d674505; }
-.game-nav button { border-radius: 100px; min-height: 36px; padding: 9px 18px; font-weight: 600; transition: background .2s, box-shadow .2s, color .2s; }
-.game-nav button[aria-pressed="true"] { box-shadow: 0 2px 6px #5968400c; }
-.intro { gap: 24px; padding: 34px 0 36px; }
-h1 { font-size: clamp(32px, 3.1vw, 45px); line-height: 1.14; margin: 12px 0 14px; }
-.intro p { line-height: 1.6; color: #7e856f; }
-.today-summary { display: flex; align-items: center; gap: 24px; flex-shrink: 0; }
-.local-clock { display: flex; gap: 12px; align-items: center; padding: 13px 20px 13px 14px; border: 1px solid var(--surface-edge); border-radius: 20px; background: linear-gradient(130deg,#fffdf4dc,#f2f2e4b0); box-shadow: var(--soft-shadow); }
-.clock-icon { width: 36px; height: 36px; display: grid; place-items: center; background: #e4e9d6; color: #7c8f64; border-radius: 50%; }
-.clock-caption { display: block; color: #8a9279; font-size: 8px; font-weight: 700; letter-spacing: 1.8px; margin-bottom: 4px; }
-.local-clock time { display: block; font: 26px/1.15 Georgia,serif; letter-spacing: -.7px; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.clock-date { display: block; margin-top: 5px; font-size: 10px; color: #8a917c; }
-.streak { width: 145px; gap: 6px; }
-.streak > span { text-align: left; padding-left: 1px; line-height: 1.5; }
-.section-heading { min-height: 29px; }
-.count { border-radius: 100px; font-variant-numeric: tabular-nums; padding: 6px 10px; }
-.section-note { line-height: 1.6; margin-bottom: 20px; }
-.task-list { gap: 13px; }
-.task-card.outcome-card { border-radius: 18px; padding: 17px 15px; border-color: var(--surface-edge); box-shadow: var(--soft-shadow); transition: border-color .2s, box-shadow .2s, background .2s; }
-.task-card.outcome-card:hover { border-color: #8c9d6c66; box-shadow: 0 7px 24px #414b3516; }
-.task-content h3 { line-height: 1.45; font-size: 12px; }
-.task-description { line-height: 1.5; }
-.task-counters { font-size: 9px; gap: 5px 9px; }
-.outcome-buttons button { border-radius: 12px; transition: filter .2s, background .2s; }
-.outcome-buttons button:not(:disabled):hover { filter: brightness(1.06); }
-.task-goal { line-height: 1.6; }
-.add-task { border-radius: 15px; border-color: #a5b18b88; background: #ffffff35; }
-.manage-tasks { padding: 12px 0; }
-.room-panel { border-color: #929b6d3d; box-shadow: 0 5px 0 #dedfcd, 0 18px 44px #5968440e; }
-.pet-needs { padding: 20px 22px 17px; border-top: 1px solid #a9b38f33; background: linear-gradient(145deg,#f8f7ed,#f1f1e2); }
-.overall-health-track { height: 8px; }
-.pet-need-grid { gap: 12px; margin: 17px 0; }
-.pet-need { padding: 11px; border: 1px solid #9fa88c22; border-radius: 13px; background: #fffdf76b; }
-.pet-need > div:first-child { font-size: 10px; }
-.pet-need p { font-size: 9px; }
-.pet-need-track { height: 5px; }
-.pet-care-actions button { border-radius: 13px; }
-.pet-care-explainer { font-size: 9px; }
-.room-footer { letter-spacing: .3px; }
-.supplies { border-radius: 19px; box-shadow: var(--soft-shadow); border-color: var(--surface-edge); }
-.supply-row { padding-top: 14px; padding-bottom: 14px; }
-.history-button { border-color: var(--surface-edge); }
-dialog { border-radius: 26px; border-color: #a4ad8c55; box-shadow: 0 30px 100px #18231840, 0 4px 18px #18231815; }
-dialog::backdrop { background: #18231f70; backdrop-filter: blur(8px); }
-.modal { padding: 34px; }
-.modal input,.modal select,.modal textarea { border-radius: 12px; }
-.boutique-tabs { padding: 5px; border-radius: 15px; background: #e9ecde88; }
-.boutique-tabs button { border-radius: 11px; }
-.boutique-card,.wardrobe-item { border-radius: 18px; box-shadow: 0 4px 15px #414b3506; overflow: hidden; }
-.boutique-art { border-radius: 13px; }
-.boutique-card h3 { line-height: 1.4; }
-.boutique-card button,.wardrobe-item button,.shop-tools button { border-radius: 11px; }
-.inventory-drawer { box-shadow: 0 16px 65px #18231825; border-color: #a4ad8c55; }
-.pantry-item { border-radius: 16px; }
-.feed-button { border-radius: 10px; }
-.night { --surface-edge: #d7e3c51b; --soft-shadow: 0 6px 22px #111b2520, 0 1px 2px #111b2510; }
-.night .game-nav { background: #ffffff05; border-color: var(--surface-edge); }
-.night .intro p { color: #b0b9a6; }
-.night .local-clock { background: linear-gradient(130deg,#35424d,#2c3845); border-color: #cbd9b525; }
-.night .clock-icon { background: #a7bb8620; color: #c0cda8; }
-.night .clock-caption,.night .clock-date { color: #b0bca3; }
-.night .local-clock time { color: #e4ead7; }
-.night .task-card.outcome-card { border-color: var(--surface-edge); }
-.night .task-card.outcome-card:hover { border-color: #b5c69455; }
-.night .room-panel { border-color: #a0b28a33; box-shadow: 0 5px 0 #222d39,0 18px 44px #0e172a20; }
-.night .pet-needs { background: linear-gradient(145deg,#333f4d,#2d3947); border-color: #b3c69c22; }
-.night .pet-need { background: #ffffff04; border-color: #cad9b519; }
-.night .pet-need p,.night .pet-care-explainer { color: #b0baa5; }
-.night .add-task { background: #ffffff03; }
-.night .boutique-tabs { background: #17243044; }
-.night dialog { border-color: #b6c49d33; }
+header {
+  height: 88px;
+  border-bottom-color: var(--surface-edge);
+}
+header nav {
+  gap: 12px;
+}
+.brand {
+  letter-spacing: -1.1px;
+}
+.brand-mark {
+  border-radius: 14px;
+  box-shadow:
+    inset 0 0 0 3px #e1e7d0,
+    0 4px 9px #6a795411;
+}
+.wallet {
+  border-radius: 100px;
+  padding: 9px 13px;
+  box-shadow: 0 2px 7px #5d674508;
+}
+.icon-button {
+  border-radius: 50%;
+  transition:
+    background 0.2s,
+    color 0.2s;
+}
+.game-nav {
+  gap: 4px;
+  padding: 5px;
+  background: #ffffff6b;
+  border: 1px solid var(--surface-edge);
+  border-radius: 100px;
+  width: fit-content;
+  margin: 18px auto 0;
+  box-shadow: 0 3px 12px #5d674505;
+}
+.game-nav button {
+  border-radius: 100px;
+  min-height: 36px;
+  padding: 9px 18px;
+  font-weight: 600;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    color 0.2s;
+}
+.game-nav button[aria-pressed="true"] {
+  box-shadow: 0 2px 6px #5968400c;
+}
+.intro {
+  gap: 24px;
+  padding: 34px 0 36px;
+}
+h1 {
+  font-size: clamp(32px, 3.1vw, 45px);
+  line-height: 1.14;
+  margin: 12px 0 14px;
+}
+.intro p {
+  line-height: 1.6;
+  color: #7e856f;
+}
+.today-summary {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-shrink: 0;
+}
+.local-clock {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 20px 13px 14px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 20px;
+  background: linear-gradient(130deg, #fffdf4dc, #f2f2e4b0);
+  box-shadow: var(--soft-shadow);
+}
+.clock-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  background: #e4e9d6;
+  color: #7c8f64;
+  border-radius: 50%;
+}
+.clock-caption {
+  display: block;
+  color: #8a9279;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.8px;
+  margin-bottom: 4px;
+}
+.local-clock time {
+  display: block;
+  font:
+    26px/1.15 Georgia,
+    serif;
+  letter-spacing: -0.7px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.clock-date {
+  display: block;
+  margin-top: 5px;
+  font-size: 10px;
+  color: #8a917c;
+}
+.streak {
+  width: 145px;
+  gap: 6px;
+}
+.streak > span {
+  text-align: left;
+  padding-left: 1px;
+  line-height: 1.5;
+}
+.section-heading {
+  min-height: 29px;
+}
+.count {
+  border-radius: 100px;
+  font-variant-numeric: tabular-nums;
+  padding: 6px 10px;
+}
+.section-note {
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+.task-list {
+  gap: 13px;
+}
+.task-card.outcome-card {
+  border-radius: 18px;
+  padding: 17px 15px;
+  border-color: var(--surface-edge);
+  box-shadow: var(--soft-shadow);
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s,
+    background 0.2s;
+}
+.task-card.outcome-card:hover {
+  border-color: #8c9d6c66;
+  box-shadow: 0 7px 24px #414b3516;
+}
+.task-content h3 {
+  line-height: 1.45;
+  font-size: 12px;
+}
+.task-description {
+  line-height: 1.5;
+}
+.task-counters {
+  font-size: 9px;
+  gap: 5px 9px;
+}
+.outcome-buttons button {
+  border-radius: 12px;
+  transition:
+    filter 0.2s,
+    background 0.2s;
+}
+.outcome-buttons button:not(:disabled):hover {
+  filter: brightness(1.06);
+}
+.task-goal {
+  line-height: 1.6;
+}
+.add-task {
+  border-radius: 15px;
+  border-color: #a5b18b88;
+  background: #ffffff35;
+}
+.manage-tasks {
+  padding: 12px 0;
+}
+.room-panel {
+  border-color: #929b6d3d;
+  box-shadow:
+    0 5px 0 #dedfcd,
+    0 18px 44px #5968440e;
+}
+.pet-needs {
+  padding: 20px 22px 17px;
+  border-top: 1px solid #a9b38f33;
+  background: linear-gradient(145deg, #f8f7ed, #f1f1e2);
+}
+.overall-health-track {
+  height: 8px;
+}
+.pet-need-grid {
+  gap: 12px;
+  margin: 17px 0;
+}
+.pet-need {
+  padding: 11px;
+  border: 1px solid #9fa88c22;
+  border-radius: 13px;
+  background: #fffdf76b;
+}
+.pet-need > div:first-child {
+  font-size: 10px;
+}
+.pet-need p {
+  font-size: 9px;
+}
+.pet-need-track {
+  height: 5px;
+}
+.pet-care-actions button {
+  border-radius: 13px;
+}
+.pet-care-explainer {
+  font-size: 9px;
+}
+.room-footer {
+  letter-spacing: 0.3px;
+}
+.supplies {
+  border-radius: 19px;
+  box-shadow: var(--soft-shadow);
+  border-color: var(--surface-edge);
+}
+.supply-row {
+  padding-top: 14px;
+  padding-bottom: 14px;
+}
+.history-button {
+  border-color: var(--surface-edge);
+}
+dialog {
+  border-radius: 26px;
+  border-color: #a4ad8c55;
+  box-shadow:
+    0 30px 100px #18231840,
+    0 4px 18px #18231815;
+}
+dialog::backdrop {
+  background: #18231f70;
+  backdrop-filter: blur(8px);
+}
+.modal {
+  padding: 34px;
+}
+.modal input,
+.modal select,
+.modal textarea {
+  border-radius: 12px;
+}
+.boutique-tabs {
+  padding: 5px;
+  border-radius: 15px;
+  background: #e9ecde88;
+}
+.boutique-tabs button {
+  border-radius: 11px;
+}
+.boutique-card,
+.wardrobe-item {
+  border-radius: 18px;
+  box-shadow: 0 4px 15px #414b3506;
+  overflow: hidden;
+}
+.boutique-art {
+  border-radius: 13px;
+}
+.boutique-card h3 {
+  line-height: 1.4;
+}
+.boutique-card button,
+.wardrobe-item button,
+.shop-tools button {
+  border-radius: 11px;
+}
+.inventory-drawer {
+  box-shadow: 0 16px 65px #18231825;
+  border-color: #a4ad8c55;
+}
+.pantry-item {
+  border-radius: 16px;
+}
+.feed-button {
+  border-radius: 10px;
+}
+.night {
+  --surface-edge: #d7e3c51b;
+  --soft-shadow: 0 6px 22px #111b2520, 0 1px 2px #111b2510;
+}
+.night .game-nav {
+  background: #ffffff05;
+  border-color: var(--surface-edge);
+}
+.night .intro p {
+  color: #b0b9a6;
+}
+.night .local-clock {
+  background: linear-gradient(130deg, #35424d, #2c3845);
+  border-color: #cbd9b525;
+}
+.night .clock-icon {
+  background: #a7bb8620;
+  color: #c0cda8;
+}
+.night .clock-caption,
+.night .clock-date {
+  color: #b0bca3;
+}
+.night .local-clock time {
+  color: #e4ead7;
+}
+.night .task-card.outcome-card {
+  border-color: var(--surface-edge);
+}
+.night .task-card.outcome-card:hover {
+  border-color: #b5c69455;
+}
+.night .room-panel {
+  border-color: #a0b28a33;
+  box-shadow:
+    0 5px 0 #222d39,
+    0 18px 44px #0e172a20;
+}
+.night .pet-needs {
+  background: linear-gradient(145deg, #333f4d, #2d3947);
+  border-color: #b3c69c22;
+}
+.night .pet-need {
+  background: #ffffff04;
+  border-color: #cad9b519;
+}
+.night .pet-need p,
+.night .pet-care-explainer {
+  color: #b0baa5;
+}
+.night .add-task {
+  background: #ffffff03;
+}
+.night .boutique-tabs {
+  background: #17243044;
+}
+.night dialog {
+  border-color: #b6c49d33;
+}
 @media (max-width: 1150px) {
-  .today-summary { gap: 14px; }
-  .streak { width: 112px; }
-  .local-clock { padding: 12px; gap: 9px; }
-  .local-clock time { font-size: 24px; }
+  .today-summary {
+    gap: 14px;
+  }
+  .streak {
+    width: 112px;
+  }
+  .local-clock {
+    padding: 12px;
+    gap: 9px;
+  }
+  .local-clock time {
+    font-size: 24px;
+  }
 }
 @media (max-width: 800px) {
-  header { height: 76px; }
-  .intro { align-items: start; padding: 28px 0; }
-  .intro h1 { font-size: 34px; }
-  .today-summary { flex-direction: column; align-items: stretch; gap: 12px; }
-  .today-summary .streak { width: 100%; margin: 0; padding: 0 8px; font-size: 10px; }
-  .streak > span { font-size: 8px; }
-  .local-clock { padding: 12px 14px; }
-  .clock-icon { width: 30px; height: 30px; }
-  .game-nav { margin-top: 14px; }
-  .modal { padding: 28px; }
+  header {
+    height: 76px;
+  }
+  .intro {
+    align-items: start;
+    padding: 28px 0;
+  }
+  .intro h1 {
+    font-size: 34px;
+  }
+  .today-summary {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .today-summary .streak {
+    width: 100%;
+    margin: 0;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+  .streak > span {
+    font-size: 8px;
+  }
+  .local-clock {
+    padding: 12px 14px;
+  }
+  .clock-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .game-nav {
+    margin-top: 14px;
+  }
+  .modal {
+    padding: 28px;
+  }
 }
 @media (max-width: 560px) {
-  .intro { display: block; }
-  .intro h1 { font-size: 34px; }
-  .today-summary { margin-top: 23px; flex-direction: row; align-items: center; justify-content: space-between; gap: 16px; }
-  .today-summary .streak { width: 122px; flex-wrap: wrap; gap: 5px; }
-  .today-summary .streak > span { width: 100%; margin: 0; font-size: 9px; }
-  .local-clock { flex: 1; max-width: 200px; }
-  .local-clock time { font-size: 25px; }
-  .game-nav { width: 100%; justify-content: space-between; }
-  .game-nav button { flex: 1; padding: 9px 6px; gap: 5px; font-size: 10px; }
-  .pet-needs { padding: 18px 15px; }
-  .pet-need { padding: 10px; }
-  .pet-need-grid { gap: 10px; }
-  .modal { padding: 25px 20px; }
-  dialog { border-radius: 21px; }
+  .intro {
+    display: block;
+  }
+  .intro h1 {
+    font-size: 34px;
+  }
+  .today-summary {
+    margin-top: 23px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .today-summary .streak {
+    width: 122px;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .today-summary .streak > span {
+    width: 100%;
+    margin: 0;
+    font-size: 9px;
+  }
+  .local-clock {
+    flex: 1;
+    max-width: 200px;
+  }
+  .local-clock time {
+    font-size: 25px;
+  }
+  .game-nav {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .game-nav button {
+    flex: 1;
+    padding: 9px 6px;
+    gap: 5px;
+    font-size: 10px;
+  }
+  .pet-needs {
+    padding: 18px 15px;
+  }
+  .pet-need {
+    padding: 10px;
+  }
+  .pet-need-grid {
+    gap: 10px;
+  }
+  .modal {
+    padding: 25px 20px;
+  }
+  dialog {
+    border-radius: 21px;
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .task-card.outcome-card,.game-nav button,.outcome-buttons button,.icon-button { transition: none; }
-  dialog::backdrop { backdrop-filter: none; }
+  .task-card.outcome-card,
+  .game-nav button,
+  .outcome-buttons button,
+  .icon-button {
+    transition: none;
+  }
+  dialog::backdrop {
+    backdrop-filter: none;
+  }
+}
+/* One-click care reuses inventory and sits directly below the pet caption. */
+.quick-care {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 15px;
+}
+.quick-care button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 35px;
+  padding: 7px 5px;
+  border: 1px solid #b5be9e55;
+  border-radius: 11px;
+  background: #eeeedc;
+  color: #8c795b;
+  font-size: 11px;
+  transition: filter 0.2s;
+}
+.quick-care button.water {
+  background: #e5efeb;
+  color: #759a9c;
+  border-color: #aac7c066;
+}
+.quick-care button.soap {
+  background: #ede9f2;
+  color: #9d8caf;
+  border-color: #c7b9d466;
+}
+.quick-care small {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+.quick-care button:not(:disabled):hover {
+  filter: brightness(0.97);
+}
+.quick-care button:disabled {
+  opacity: 0.45;
+}
+.night .quick-care button.food {
+  background: #514c3b;
+  border-color: #bcb18b33;
+  color: #dbc69d;
+}
+.night .quick-care button.water {
+  background: #3b5052;
+  border-color: #9bbdb633;
+  color: #b4d4d0;
+}
+.night .quick-care button.soap {
+  background: #494454;
+  border-color: #b9a2ce33;
+  color: #d0bfdf;
+}
+@media (max-width: 560px) {
+  .quick-care {
+    gap: 7px;
+    margin-bottom: 13px;
+  }
+  .quick-care button {
+    min-height: 42px;
+    font-size: 10px;
+    gap: 5px;
+  }
 }
