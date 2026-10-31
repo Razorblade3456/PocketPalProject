@@ -1,3 +1,4 @@
+import { MochiEyes, MochiMouth } from "./MochiFace";
 import { useId, useState, useEffect, useRef, type Ref } from "react";
 import { motion } from "motion/react";
 import {
@@ -288,7 +289,7 @@ function Mochi({
             className="mochi-outline"
             d={
               level < 1 && (!care || careTier(care.happy) < 2)
-                ? "M84 80Q56 50 73 28Q91 29 111 65Q146 51 190 65Q219 26 239 35Q253 53 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+                ? "M84 80Q35 48 64 32Q86 19 111 65Q146 51 190 65Q210 42 232 48Q250 66 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
                 : level < 3
                   ? "M84 80Q47 56 57 94Q74 113 99 84Q146 51 190 65Q244 65 262 105Q249 118 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
                   : "M84 80Q35 100 56 127Q80 131 99 84Q146 51 190 65Q266 89 263 135Q240 147 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
@@ -319,7 +320,7 @@ function Mochi({
             fill="none"
           />
           <path
-            d="M203 111l28 13-13 31-28-13z"
+            d="M214 229l22 8-9 25-22-9z"
             fill={level > 1 ? "#959b83" : "#c8cda3"}
             stroke="#77866c"
             strokeDasharray="4 3"
@@ -358,30 +359,12 @@ function Mochi({
             className="face"
             data-active-face="base"
           >
-            {level === 5 ? (
-              <g stroke="#454c42" strokeWidth="6">
-                <path d="M102 128l20 22m0-22l-20 22m96-22l20 22m0-22l-20 22" />
-              </g>
-            ) : sleep || sad ? (
-              <g
-                stroke="#414b3d"
-                strokeWidth="6"
-                strokeLinecap="round"
-                fill="none"
-              >
-                <path d="M104 143q11 9 22-1M194 142q11 9 22-1" />
-              </g>
-            ) : (
-              <g className="eyes" fill="#354334">
-                <ellipse cx="115" cy="138" rx="10" ry={level > 2 ? 7 : 13} />
-                <ellipse cx="205" cy={level > 2 ? 145 : 138} rx="10" ry="13" />
-                <circle cx="118" cy="134" r="3" fill="#fff7df" />
-                <circle cx="208" cy="134" r="3" fill="#fff7df" />
-              </g>
-            )}
+            <g className={sleep || level === 5 ? undefined : "eyes"}>
+              <MochiEyes level={level} mood={sad ? 2 : 0} sleep={sleep} />
+            </g>
             <ellipse
               cx="94"
-              cy="166"
+              cy="174"
               rx="15"
               ry="8"
               fill="#e5a69b"
@@ -395,29 +378,19 @@ function Mochi({
               fill="#e5a69b"
               opacity=".75"
             />
-            {sleep || sad ? (
-              <path
-                d="M152 170q8 8 16 0"
-                stroke="#485440"
-                strokeWidth="4"
-                fill="none"
+            <g className="mouth">
+              <MochiMouth
+                variant={
+                  level === 5
+                    ? "dead"
+                    : sleep
+                      ? "sleep"
+                      : sad || level >= 2
+                        ? "frown"
+                        : "open"
+                }
               />
-            ) : (
-              <g className="mouth">
-                <path
-                  d={
-                    anticipating
-                      ? "M130 159Q160 147 190 159L190 190Q160 216 130 190Z"
-                      : level > 1
-                        ? "M131 178Q160 158 188 178L186 193Q157 202 133 192Z"
-                        : "M130 163Q160 170 190 163L187 187Q161 213 134 187Z"
-                  }
-                  fill="#514840"
-                />
-                <path d="M138 166l7 12 8-10m14 0l8 10 7-12" fill="#fff9df" />
-                <ellipse cx="160" cy="192" rx="15" ry="6" fill="#d79089" />
-              </g>
-            )}
+            </g>
           </g>
         )}
         <CareFace

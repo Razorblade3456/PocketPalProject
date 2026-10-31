@@ -203,11 +203,7 @@ body.mini-mochi-window {
   animation: mini-smoke 2.4s ease-out both;
 }
 .mini-stats {
-  position: absolute;
-  bottom: 1px;
-  left: 3px;
-  right: 3px;
-  z-index: 5;
+  position: static;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
@@ -506,18 +502,18 @@ body.mini-mochi-window {
   0%,
   100% {
     d: path(
-      "M84 80Q56 50 73 28Q91 29 111 65Q146 51 190 65Q219 26 239 35Q253 53 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+      "M84 80Q35 48 64 32Q86 19 111 65Q146 51 190 65Q210 42 232 48Q250 66 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
     );
   }
   25%,
   65% {
     d: path(
-      "M84 80Q50 54 66 34Q88 30 111 65Q146 51 190 65Q224 22 244 31Q258 50 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+      "M84 80Q32 54 60 38Q82 24 111 65Q146 51 190 65Q215 38 237 44Q255 62 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
     );
   }
   45% {
     d: path(
-      "M84 80Q61 46 78 24Q94 31 111 65Q146 51 190 65Q214 32 234 40Q248 58 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+      "M84 80Q40 44 69 28Q91 22 111 65Q146 51 190 65Q205 46 227 52Q245 70 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
     );
   }
 }
@@ -539,4 +535,35 @@ body.mini-mochi-window {
     animation: none !important;
     transition: none !important;
   }
+}
+
+.mini-pet-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: min(130px, 100vw);
+  height: 100%;
+  max-height: 192px;
+  min-height: 0;
+}
+.mini-pet-stack .mini-mochi-pet-area {
+  width: 100%;
+  flex: 0 1 130px;
+  min-height: 0;
+}
+.mini-pet-info {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 3px;
+}
+.mini-pet-info .mini-stats {
+  box-sizing: border-box;
+  width: 100%;
 }

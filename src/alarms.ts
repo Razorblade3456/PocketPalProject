@@ -3,6 +3,7 @@ import {
   localDate,
   shiftDate,
   taskDue,
+  taskReminderMode,
   reminderFor,
   pausedOn,
   taskFinishedToday,
@@ -15,6 +16,7 @@ export type AlarmRecord = {
   date: string;
   schedule: string;
   scheduledAt: number;
+  startedAt?: number;
   dueAt: number;
   status: "pending" | "ringing" | "stopped";
 };
@@ -58,8 +60,8 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
     .filter((a) => {
       const t = tasks.get(a.taskId);
       if (
-        !t?.importantAlarm ||
-        t.reminderEnabled === false ||
+        !t ||
+        taskReminderMode(t) !== "alarm" ||
         a.schedule !== signature(s, t, a.date) ||
         pausedOn(s, t.id, a.date)
       )
@@ -80,6 +82,15 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
       );
     })
     .map((a) => {
+      const task = tasks.get(a.taskId)!;
+      if (
+        a.startedAt === undefined &&
+        a.dueAt === a.scheduledAt &&
+        task.relativeAlarmAt === a.scheduledAt &&
+        task.alarmEnabledAt !== undefined &&
+        task.alarmEnabledAt < a.dueAt
+      )
+        a = { ...a, startedAt: task.alarmEnabledAt };
       if (
         a.status !== "pending" ||
         a.dueAt !== a.scheduledAt ||
@@ -94,7 +105,7 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
     });
   const ids = new Set(records.map((a) => a.id));
   for (const t of s.tasks) {
-    if (!t.importantAlarm || t.reminderEnabled === false) continue;
+    if (taskReminderMode(t) !== "alarm") continue;
     if (t.relativeAlarmAt) {
       const date =
         t.repeat === "once"
@@ -121,6 +132,7 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
           taskId: t.id,
           date,
           schedule: signature(s, t, date),
+          startedAt: t.alarmEnabledAt ?? t.createdAt ?? n,
           scheduledAt: t.relativeAlarmAt,
           dueAt: t.relativeAlarmAt,
           status: t.relativeAlarmAt <= n ? "ringing" : "pending",
@@ -147,6 +159,7 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
         date,
         schedule: signature(s, t, date),
         scheduledAt,
+        startedAt: n,
         dueAt: scheduledAt,
         status: scheduledAt <= n ? "ringing" : "pending",
       });
@@ -179,7 +192,12 @@ export function dismissAlarm(
       a.id !== id
         ? a
         : minutes
-          ? { ...a, status: "pending", dueAt: n + minutes * 60000 }
+          ? {
+              ...a,
+              status: "pending",
+              startedAt: n,
+              dueAt: n + minutes * 60000,
+            }
           : { ...a, status: "stopped" },
     ),
   };
@@ -230,4 +248,32 @@ export function formatCountdown(dueAt: number, now: number) {
         ":" +
         pad(seconds % 60)
     : pad(Math.floor(seconds / 60)) + ":" + pad(seconds % 60);
+}
+
+/** Real elapsed time, never an animation loop. Unknown legacy start times stay unknown. */
+export function countdownProgress(alarm: AlarmRecord, now: number) {
+  if (alarm.startedAt === undefined || alarm.dueAt <= alarm.startedAt)
+    return null;
+  const remaining = Math.max(
+    0,
+    Math.min(1, (alarm.dueAt - now) / (alarm.dueAt - alarm.startedAt)),
+  );
+  const stops = [
+    { at: 0, rgb: [202, 103, 116] },
+    { at: 0.15, rgb: [217, 141, 89] },
+    { at: 0.5, rgb: [209, 177, 95] },
+    { at: 1, rgb: [168, 196, 107] },
+  ];
+  const upper = stops.findIndex((stop) => stop.at >= remaining);
+  const right = stops[Math.max(0, upper)],
+    left = stops[Math.max(0, upper - 1)];
+  const blend =
+    right.at === left.at ? 0 : (remaining - left.at) / (right.at - left.at);
+  const color =
+    "rgb(" +
+    left.rgb
+      .map((value, i) => Math.round(value + (right.rgb[i] - value) * blend))
+      .join(", ") +
+    ")";
+  return { percent: remaining * 100, color };
 }

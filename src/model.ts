@@ -1464,6 +1464,8 @@ export function validHabitData(s: State) {
           typeof a.schedule !== "string" ||
           !Number.isFinite(a.scheduledAt) ||
           !Number.isFinite(a.dueAt) ||
+          (a.startedAt !== undefined &&
+            (!Number.isFinite(a.startedAt) || a.startedAt < 0)) ||
           !["pending", "ringing", "stopped"].includes(a.status),
       ) ||
       new Set(s.alarms.map((a) => a.id)).size !== s.alarms.length)
@@ -1572,7 +1574,6 @@ export function validHabitData(s: State) {
         (t.rewardCap === undefined || bounded(t.rewardCap, 0, 100)) &&
         (t.steps === undefined ||
           (Array.isArray(t.steps) &&
-            t.steps.length <= 30 &&
             t.steps.every(
               (step) =>
                 step &&
@@ -1697,3 +1698,11 @@ export function setStep(
       : recordAttempt(s, taskId, date, "completed", n, parentId);
   return s;
 }
+
+/** One notification path per task; saved Important Alarm selection takes priority. */
+export const taskReminderMode = (task: Task): "alarm" | "reminder" | "off" =>
+  task.importantAlarm
+    ? "alarm"
+    : task.reminderEnabled === false
+      ? "off"
+      : "reminder";

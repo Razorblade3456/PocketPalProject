@@ -7,6 +7,8 @@ import {
   Play,
   Clock3,
   ListChecks,
+  Plus,
+  X,
 } from "lucide-react";
 import {
   addHabitEvent,
@@ -26,7 +28,6 @@ import {
   toggleFocus,
   type State,
   type Task,
-  type Category,
 } from "./model";
 type Setter = Dispatch<SetStateAction<State>>;
 export function TodayThree({
@@ -173,9 +174,8 @@ export function TinySteps({
     <details className="tiny-steps">
       <summary>
         <ListChecks size={12} />
-        Tiny steps{" "}
         <span>
-          {count}/{task.steps.length}
+          {count}/{task.steps.length} steps
         </span>
       </summary>
       <div>
@@ -197,10 +197,7 @@ export function TinySteps({
           </label>
         ))}
       </div>
-      <p>
-        Finishing the steps contributes one parent completion. Steps never earn
-        separate coins.
-      </p>
+      <p>All steps count toward one task completion.</p>
     </details>
   );
 }
@@ -355,19 +352,11 @@ export function TaskAdvancedFields({
   task: Task;
   update: (patch: Partial<Task>) => void;
 }) {
-  const templates: Record<string, string[]> = {
-    "Clean room": ["Put clothes away", "Clear desk", "Take out trash"],
-    "Gentle morning": [
-      "Drink some water",
-      "Stretch for a minute",
-      "Choose one priority",
-    ],
-    "Study session": [
-      "Open the material",
-      "Read one small section",
-      "Write a short note",
-    ],
-  };
+  const [stepsOpen, setStepsOpen] = useState(false);
+  const addStep = () =>
+    update({
+      steps: [...(task.steps || []), { id: crypto.randomUUID(), name: "" }],
+    });
   return (
     <div className="task-advanced">
       <div className="field-row">
@@ -402,38 +391,16 @@ export function TaskAdvancedFields({
           </select>
         </label>
       </div>
-      <label className="habit-check">
-        <input
-          type="checkbox"
-          checked={task.importantAlarm || task.reminderEnabled !== false}
-          disabled={!!task.importantAlarm}
-          onChange={(e) => update({ reminderEnabled: e.target.checked })}
-        />
-        Use reminder time
-      </label>
-      <label>
-        Care category (optional)
-        <select
-          value={task.careLinked === false ? "none" : task.category}
-          onChange={(e) =>
-            update(
-              e.target.value === "none"
-                ? { careLinked: false }
-                : { careLinked: true, category: e.target.value as Category },
-            )
-          }
-        >
-          <option value="none">None · coins only</option>
-          <option value="food">Food</option>
-          <option value="water">Water</option>
-          <option value="clean">Cleanliness</option>
-          <option value="happy">Happiness</option>
-        </select>
-      </label>
-      <p className="fine">
-        Eligible completions earn coins, never direct care. An optional category
-        chooses the need affected by a missed attempt.
-      </p>
+      {!task.importantAlarm && (
+        <label className="habit-check">
+          <input
+            type="checkbox"
+            checked={task.reminderEnabled !== false}
+            onChange={(e) => update({ reminderEnabled: e.target.checked })}
+          />
+          Normal reminder
+        </label>
+      )}
       {task.repetitions !== "goal" && (
         <label>
           Daily rewarded completions
@@ -452,45 +419,63 @@ export function TaskAdvancedFields({
           />
         </label>
       )}
-      <h3 className="tiny-editor-title">Break into steps</h3>
-      <label>
-        Tiny steps · one per line
-        <textarea
-          maxLength={3600}
-          value={(task.steps || []).map((step) => step.name).join("\n")}
-          placeholder="Put clothes away\nClear desk\nTake out trash"
-          onChange={(e) =>
-            update({
-              steps: e.target.value
-                .split("\n")
-                .slice(0, 30)
-                .map((name, i) => ({
-                  id: task.steps?.[i]?.id || crypto.randomUUID(),
-                  name: name.slice(0, 120),
-                })),
-            })
-          }
-        />
-      </label>
-      <div className="step-templates">
-        {Object.entries(templates).map(([name, steps]) => (
-          <button
-            type="button"
-            key={name}
-            onClick={() =>
-              update({
-                steps: steps.map((name) => ({ id: crypto.randomUUID(), name })),
-              })
-            }
-          >
-            {name} template
+      <div className="step-row-editor">
+        <button
+          type="button"
+          className="break-steps-toggle"
+          aria-expanded={stepsOpen}
+          aria-controls="step-rows"
+          onClick={() => {
+            if (!stepsOpen && !task.steps?.length) addStep();
+            setStepsOpen((v) => !v);
+          }}
+        >
+          <Plus size={14} /> Break into Steps
+          {task.steps?.filter((step) => step.name.trim()).length
+            ? " (" + task.steps.filter((step) => step.name.trim()).length + ")"
+            : ""}
+        </button>
+        <div id="step-rows" hidden={!stepsOpen}>
+          {(task.steps || []).map((step, index) => (
+            <div className="step-edit-row" key={step.id}>
+              <span className="step-box" aria-hidden="true">
+                □
+              </span>
+              <input
+                aria-label={"Step " + (index + 1)}
+                type="text"
+                maxLength={120}
+                placeholder="Step name"
+                value={step.name}
+                onChange={(e) =>
+                  update({
+                    steps: task.steps!.map((row) =>
+                      row.id === step.id
+                        ? { ...row, name: e.target.value }
+                        : row,
+                    ),
+                  })
+                }
+              />
+              <button
+                type="button"
+                className="remove-step"
+                aria-label={"Remove step " + (index + 1)}
+                onClick={() =>
+                  update({
+                    steps: task.steps!.filter((row) => row.id !== step.id),
+                  })
+                }
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+          <button type="button" className="add-step" onClick={addStep}>
+            <Plus size={14} /> Add Step
           </button>
-        ))}
+        </div>
       </div>
-      <p className="fine">
-        All steps together contribute one parent completion, without multiplying
-        rewards.
-      </p>
     </div>
   );
 }

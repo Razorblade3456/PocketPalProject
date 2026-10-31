@@ -164,3 +164,106 @@
     padding: 24px 0;
   }
 }
+.app .task-panel > .add-task {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  min-height: 40px;
+  margin: 6px 0 14px;
+  padding: 8px 14px;
+  border-radius: 10px;
+}
+.app .task-alarm-mode {
+  margin: 8px 0;
+  padding: 7px 10px;
+  border-radius: 9px;
+  background: #31283a;
+  color: #d3bfdf;
+  font-size: 11px;
+}
+.app .step-row-editor {
+  margin-top: 12px;
+}
+.app .break-steps-toggle,
+.app .add-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 7px 10px;
+  border: 1px solid #756080;
+  border-radius: 9px;
+  background: #31283a;
+  color: #f0e9e4;
+  font-size: 12px;
+}
+.app #step-rows[hidden] {
+  display: none;
+}
+.app #step-rows {
+  margin-top: 8px;
+}
+.app .step-edit-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: 6px;
+  margin: 7px 0;
+}
+.app .step-edit-row input {
+  min-width: 0;
+  margin: 0;
+  padding: 9px 10px;
+}
+.app .step-box {
+  color: #b59ac7;
+  font-size: 22px;
+  text-align: center;
+}
+.app .remove-step {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 9px;
+  color: #d4b1bf;
+  background: #31283a;
+  border: 1px solid #756080;
+}
+@media (max-width: 800px) {
+  .app .task-panel > .add-task,
+  .app .break-steps-toggle,
+  .app .add-step {
+    min-height: 44px;
+  }
+  .app .step-edit-row {
+    grid-template-columns: 18px minmax(0, 1fr) 44px;
+  }
+  .app .remove-step {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .app .step-edit-row input {
+    min-height: 44px;
+  }
+}
+.app .task-editor .task-advanced .habit-check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  margin: 10px 0;
+}
+.app .task-editor .habit-check input[type="checkbox"] {
+  flex: none;
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  margin: 0;
+}

@@ -43,6 +43,7 @@ import {
   taskCounts,
   goalFor,
   taskDue,
+  taskReminderMode,
   policyFor,
   rewardLimitFor,
   reminderFor,
@@ -240,8 +241,7 @@ export default function App() {
     todayTasks
       .filter(
         (t) =>
-          t.reminderEnabled !== false &&
-          !t.importantAlarm &&
+          taskReminderMode(t) === "reminder" &&
           reminderFor(s, t, today) <= time &&
           taskCounts(s, t.id, today).completed < (goalFor(t) || 1),
       )
@@ -733,6 +733,10 @@ export default function App() {
                 </span>
               </div>
 
+              <button className="add-task" onClick={() => setEdit(null)}>
+                <Plus size={18} /> Add Task
+              </button>
+
               <h3 className="active-task-heading">
                 In Progress <span>{activeTasks.length}</span>
               </h3>
@@ -762,9 +766,6 @@ export default function App() {
                   </div>
                 </details>
               )}
-              <button className="add-task" onClick={() => setEdit(null)}>
-                <Plus size={18} /> Add Task
-              </button>
               <button
                 className="manage-tasks"
                 onClick={() => setPanel("tasks")}
@@ -1504,8 +1505,13 @@ function TaskEditor({
           }}
         />
       </label>
+      {t.importantAlarm && (
+        <p className="task-alarm-mode">
+          🔔 Important Alarm · normal reminder off
+        </p>
+      )}
       <div className="button-row">
-        <label>
+        <label hidden={!!t.importantAlarm}>
           Reminder
           <input
             required
@@ -1724,10 +1730,6 @@ function TaskEditor({
           automatic misses.
         </p>
         <TaskAdvancedFields task={t} update={update} />
-        <p className="fine">
-          Eligible completions earn coins. Beyond the reward limit, entries
-          still count in your history.
-        </p>
       </section>
       <div className="button-row">
         <button

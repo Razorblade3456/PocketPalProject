@@ -1,3 +1,4 @@
+import { MochiEyes, MochiMouth } from "./MochiFace";
 import { AnimatePresence, motion } from "motion/react";
 import type { Care, Category, PetKind } from "./model";
 import { careTiers, type CareTier } from "./careVisuals";
@@ -17,8 +18,8 @@ const anatomy = {
     eye: 138,
     left: 115,
     right: 205,
-    mouth: 178,
-    cheek: 166,
+    mouth: 184,
+    cheek: 174,
     tummy: 222,
   },
   pippin: {
@@ -263,84 +264,96 @@ export function HappinessExpression({
       transform={`translate(${look.x},${look.y + (mood >= 2 ? 4 : 0)})`}
     >
       <g className="care-eyes">
-        {[a.left, a.right].map((x, i) => (
-          <g key={x}>
-            {mood === 4 && !feisty ? (
-              <path
-                d={`M${x - 10} ${eyeY}q10-12 20 0`}
-                fill="none"
-                stroke="#4c4a40"
-                strokeWidth="4.5"
-                strokeLinecap="round"
-              />
-            ) : (
-              <>
-                <ellipse
-                  cx={x}
-                  cy={eyeY}
-                  rx={kind === "pippin" ? 13 : 10}
-                  ry={
-                    feisty && mood > 0 ? 8 : mood === 2 || level >= 3 ? 10 : 15
-                  }
-                  fill={kind === "crumb" ? "#4d3b32" : "#414638"}
+        {kind === "mochi" ? (
+          <MochiEyes
+            level={level}
+            mood={mood}
+            pleading={care.food <= 50 && !action}
+          />
+        ) : (
+          [a.left, a.right].map((x, i) => (
+            <g key={x}>
+              {mood === 4 && !feisty ? (
+                <path
+                  d={`M${x - 10} ${eyeY}q10-12 20 0`}
+                  fill="none"
+                  stroke="#4c4a40"
+                  strokeWidth="4.5"
+                  strokeLinecap="round"
                 />
-                <ellipse
-                  cx={x + 3}
-                  cy={eyeY - 5}
-                  rx="3.5"
-                  ry="4"
-                  fill="#fff8e4"
-                />
-                {mood === 0 && (
-                  <circle
-                    cx={x - 3}
-                    cy={eyeY + 6}
-                    r="2"
+              ) : (
+                <>
+                  <ellipse
+                    cx={x}
+                    cy={eyeY}
+                    rx={kind === "pippin" ? 13 : 10}
+                    ry={
+                      feisty && mood > 0
+                        ? 8
+                        : mood === 2 || level >= 3
+                          ? 10
+                          : 15
+                    }
+                    fill={kind === "crumb" ? "#4d3b32" : "#414638"}
+                  />
+                  <ellipse
+                    cx={x + 3}
+                    cy={eyeY - 5}
+                    rx="3.5"
+                    ry="4"
                     fill="#fff8e4"
-                    opacity=".7"
                   />
-                )}
-                {face.tears && (
+                  {mood === 0 && (
+                    <circle
+                      cx={x - 3}
+                      cy={eyeY + 6}
+                      r="2"
+                      fill="#fff8e4"
+                      opacity=".7"
+                    />
+                  )}
+                  {face.tears && (
+                    <path
+                      d={`M${x - 10} ${eyeY + 8}q10-4 20 0q-1 9-10 8t-10-8`}
+                      fill="#a8d6de"
+                      stroke="#d3eef0"
+                      strokeWidth="1"
+                    />
+                  )}
+                </>
+              )}
+              {mood > 0 && (
+                <path
+                  d={
+                    feisty
+                      ? `M${x - 12} ${eyeY - 17 + (i ? mood * 2 : -mood * 2)}l24 ${i ? -mood * 4 : mood * 4}`
+                      : `M${x - 11} ${eyeY - 21}q10 ${i === 0 ? -mood * 2 : mood * 2} 21 ${i === 0 ? -mood * 2 : mood * 2}`
+                  }
+                  fill="none"
+                  stroke="var(--pet-dark)"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                />
+              )}
+              {mood === 4 && !feisty && (
+                <g
+                  className={`rolling-tears tear-${i}`}
+                  fill="#a7d8e0"
+                  stroke="#dbf2ef"
+                  strokeWidth="1"
+                >
                   <path
-                    d={`M${x - 10} ${eyeY + 8}q10-4 20 0q-1 9-10 8t-10-8`}
-                    fill="#a8d6de"
-                    stroke="#d3eef0"
-                    strokeWidth="1"
+                    d={`M${x - 5} ${eyeY + 5}q-4 14 0 29q5 8 10 0q4-15 0-29z`}
                   />
-                )}
-              </>
-            )}
-            {mood > 0 && (
-              <path
-                d={
-                  feisty
-                    ? `M${x - 12} ${eyeY - 17 + (i ? mood * 2 : -mood * 2)}l24 ${i ? -mood * 4 : mood * 4}`
-                    : `M${x - 11} ${eyeY - 21}q10 ${i === 0 ? -mood * 2 : mood * 2} 21 ${i === 0 ? -mood * 2 : mood * 2}`
-                }
-                fill="none"
-                stroke="var(--pet-dark)"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-              />
-            )}
-            {mood === 4 && !feisty && (
-              <g
-                className={`rolling-tears tear-${i}`}
-                fill="#a7d8e0"
-                stroke="#dbf2ef"
-                strokeWidth="1"
-              >
-                <path
-                  d={`M${x - 5} ${eyeY + 5}q-4 14 0 29q5 8 10 0q4-15 0-29z`}
-                />
-                <path
-                  className="tear-drop"
-                  d={`M${x} ${eyeY + 28}q-10 13 0 15q10-2 0-15`}
-                />
-              </g>
-            )}
-          </g>
-        ))}
+                  <path
+                    className="tear-drop"
+                    d={`M${x} ${eyeY + 28}q-10 13 0 15q10-2 0-15`}
+                  />
+                </g>
+              )}
+            </g>
+          ))
+        )}
       </g>
       <ellipse
         cx={a.left - 18}
@@ -365,7 +378,9 @@ export function HappinessExpression({
         data-mouth-variant={face.mouth}
         className={`mouth care-mouth ${action ? "" : thirst === 4 ? "panting-mouth" : face.tears ? "trembling-lip" : ""}`}
       >
-        {face.mouth === "sip" ? (
+        {kind === "mochi" ? (
+          <MochiMouth variant={face.mouth} />
+        ) : face.mouth === "sip" ? (
           <ellipse cx="160" cy={mouthY + 7} rx="7" ry="9" fill="#57463f" />
         ) : face.open ? (
           <>
@@ -386,13 +401,6 @@ export function HappinessExpression({
               ry="5"
               fill="#d59a95"
             />
-            {kind === "mochi" &&
-              face.mouth === "open" && (
-                <path
-                  d={`M146 ${mouthY - 2}l5 10 7-8m8 0 5 8 6-10`}
-                  fill="#fff5dd"
-                />
-              )}
           </>
         ) : (
           <path

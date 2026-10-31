@@ -389,3 +389,42 @@ test("care rendering is a pure view and stat improvements immediately clear bad 
     assert.ok(good.includes('data-happiness-layer="0"'));
   }
 });
+
+test("redesigned Mochi keeps one face, two eyes, one mouth and two original arms across care states", () => {
+  for (let level = 0; level <= 5; level++)
+    for (const sleep of [false, true])
+      for (const value of [-1, 100, 75, 50, 25, 10])
+        for (const feeding of [
+          null,
+          "food",
+          "water",
+          "soap",
+          "toyBall",
+        ] as const) {
+          const html = renderToStaticMarkup(
+            createElement(Pet, {
+              kind: "mochi",
+              level,
+              sleep,
+              care:
+                value === -1
+                  ? undefined
+                  : { food: value, water: value, clean: value, happy: value },
+              feeding,
+              equipped: { head: "beanie", neck: "scarf", body: "pajamas" },
+            }),
+          );
+          assert.equal((html.match(/data-active-face=/g) || []).length, 1);
+          assert.equal((html.match(/data-mochi-eye=/g) || []).length, 2);
+          assert.equal((html.match(/class="mouth(?: |")/g) || []).length, 1);
+          assert.equal((html.match(/class="pet-arm /g) || []).length, 2);
+          assert.ok(html.includes('viewBox="0 0 320 340"'));
+          assert.ok(html.includes('data-outfit="beanie"'));
+        }
+  for (const kind of ["pippin", "crumb", "rattle"] as const) {
+    const html = renderToStaticMarkup(
+      createElement(Pet, { kind, level: 0, care: excellentCare }),
+    );
+    assert.ok(!html.includes("data-mochi-eye="));
+  }
+});

@@ -87,66 +87,91 @@ export function MiniPet({
       media.removeEventListener("change", refresh);
     };
   }, [host, s.pet, s.settings.motion, choices, blocked, slow]);
+  const alarm = nearestAlarm(alarms);
+  const fitWindow = (showStats: boolean) => {
+    if (!host.document.body.classList.contains("mini-mochi-window")) return;
+    const height = 140 + (alarm ? 28 : 0) + (showStats ? 24 : 0);
+    try {
+      if (Math.abs(host.innerHeight - height) > 1)
+        host.resizeBy(0, height - host.innerHeight);
+    } catch {
+      /* Browsers may restrict resizing; flex layout keeps the pet unobstructed. */
+    }
+  };
+  useEffect(() => {
+    fitWindow(stats);
+  }, [host, !!alarm, stats]);
   const active = !paused && !blocked && !sleep && level !== 5 ? idle : null;
   return (
-    <div
-      className="mini-mochi-pet-area mini-idle"
-      data-mini-idle={active || "rest"}
-      data-mini-paused={paused}
-      data-mini-slow={slow}
-    >
-      <Pet
-        kind={s.pet}
-        care={s.care}
-        equipped={s.equipped}
-        level={level}
-        sleep={sleep}
-        calm={calm}
-        feeding={feeding}
-        reaction={reaction}
-        onPet={() => setStats((v) => !v)}
-      />
-      {active === "smoke" && (
-        <svg className="mini-smoke" viewBox="0 0 320 340" aria-hidden="true">
-          <ellipse
-            cx="166"
-            cy="185"
-            rx="10"
-            ry="4"
-            fill="none"
-            stroke="#ad83c5"
-            strokeWidth="3"
+    <div className="mini-pet-stack">
+      <div
+        className="mini-mochi-pet-area mini-idle"
+        data-mini-idle={active || "rest"}
+        data-mini-paused={paused}
+        data-mini-slow={slow}
+      >
+        <Pet
+          kind={s.pet}
+          care={s.care}
+          equipped={s.equipped}
+          level={level}
+          sleep={sleep}
+          calm={calm}
+          feeding={feeding}
+          reaction={reaction}
+          onPet={() => {
+            fitWindow(!stats);
+            setStats((v) => !v);
+          }}
+        />
+        {active === "smoke" && (
+          <svg className="mini-smoke" viewBox="0 0 320 340" aria-hidden="true">
+            <ellipse
+              cx="166"
+              cy="185"
+              rx="10"
+              ry="4"
+              fill="none"
+              stroke="#ad83c5"
+              strokeWidth="3"
+            />
+          </svg>
+        )}
+      </div>
+      {(alarm || stats) && (
+        <div className="mini-pet-info">
+          <AlarmCountdown
+            compact
+            alarm={alarm}
+            name={s.tasks.find((t) => t.id === alarm?.taskId)?.name}
           />
-        </svg>
-      )}
-      <AlarmCountdown
-        compact
-        alarm={nearestAlarm(alarms)}
-        name={s.tasks.find((t) => t.id === nearestAlarm(alarms)?.taskId)?.name}
-      />
-      {stats && (
-        <div className="mini-stats" aria-label="Pet care stats">
-          {indicators.map(({ key, label, Icon, color }) => (
-            <div
-              className="mini-stat"
-              key={key}
-              title={`${label}: ${Math.round(s.care[key])}%`}
-            >
-              <Icon size={10} aria-hidden="true" style={{ color }} />
-              <progress
-                aria-label={label}
-                max={100}
-                value={s.care[key]}
-                style={
-                  {
-                    accentColor: color,
-                    "--mini-stat-color": color,
-                  } as import("react").CSSProperties
-                }
-              />
-              <span className="mini-stat-value">{Math.round(s.care[key])}</span>
+          {stats && (
+            <div className="mini-stats" aria-label="Pet care stats">
+              {indicators.map(({ key, label, Icon, color }) => (
+                <div
+                  className="mini-stat"
+                  key={key}
+                  title={`${label}: ${Math.round(s.care[key])}%`}
+                >
+                  <Icon size={10} aria-hidden="true" style={{ color }} />
+                  <progress
+                    aria-label={label}
+                    max={100}
+                    value={s.care[key]}
+                    style={
+                      {
+                        accentColor: color,
+                        "--mini-stat-color": color,
+                      } as import("react").CSSProperties
+                    }
+                  />
+                  <span className="mini-stat-value">
+                    {Math.round(s.care[key])}
+                  </span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
     </div>

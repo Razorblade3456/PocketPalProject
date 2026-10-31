@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   initial,
+  taskReminderMode,
   dateKey,
   shiftDate,
   localDate,
@@ -21,6 +22,7 @@ import {
   setAlarmDeadline,
   nearestAlarm,
   formatCountdown,
+  countdownProgress,
 } from "./alarms";
 const noon = +new Date(2026, 9, 30, 12),
   minute = 60000;
@@ -353,7 +355,12 @@ test("relative deadlines across midnight remain absolute and cancel on delete, s
   );
   const skipped = addHabitEvent(
     s,
-    { taskId: s.tasks[0].id, date: dateKey(beforeMidnight), kind: "skip", reason: "Rest" },
+    {
+      taskId: s.tasks[0].id,
+      date: dateKey(beforeMidnight),
+      kind: "skip",
+      reason: "Rest",
+    },
     beforeMidnight,
   );
   assert.equal(reconcileAlarms(skipped, beforeMidnight).alarms!.length, 0);
@@ -433,5 +440,95 @@ test("a relative deadline after midnight still belongs to the task occurrence be
   assert.equal(
     nearestAlarm(reconcileAlarms(completed, at + minute).alarms),
     undefined,
+  );
+});
+
+test("each saved reminder/alarm flag combination selects exactly one notification path", () => {
+  for (const importantAlarm of [false, true])
+    for (const reminderEnabled of [false, true, undefined]) {
+      const s = setup({ importantAlarm, reminderEnabled });
+      const mode = taskReminderMode(s.tasks[0]);
+      assert.equal(
+        mode,
+        importantAlarm
+          ? "alarm"
+          : reminderEnabled === false
+            ? "off"
+            : "reminder",
+      );
+      const alarms = alarmQueue(reconcileAlarms(s, evening));
+      assert.equal(alarms.length, importantAlarm ? 1 : 0);
+      assert.ok(!(mode === "reminder" && alarms.length));
+      const restored = parseState(JSON.parse(JSON.stringify(s)), noon)!;
+      assert.equal(restored.tasks[0].reminderEnabled, reminderEnabled);
+      assert.equal(taskReminderMode(restored.tasks[0]), mode);
+    }
+});
+
+test("visual countdown uses persisted real start and deadline with a continuous color progression", () => {
+  let s = setup();
+  s.tasks[0] = setAlarmDeadline(s.tasks[0], "relative", 20, false, noon);
+  s = reconcileAlarms(s, noon);
+  const alarm = s.alarms![0];
+  assert.equal(alarm.startedAt, noon);
+  assert.deepEqual(countdownProgress(alarm, noon), {
+    percent: 100,
+    color: "rgb(168, 196, 107)",
+  });
+  assert.deepEqual(countdownProgress(alarm, noon + 10 * minute), {
+    percent: 50,
+    color: "rgb(209, 177, 95)",
+  });
+  assert.deepEqual(countdownProgress(alarm, noon + 17 * minute), {
+    percent: 15,
+    color: "rgb(217, 141, 89)",
+  });
+  assert.deepEqual(countdownProgress(alarm, noon + 20 * minute), {
+    percent: 0,
+    color: "rgb(202, 103, 116)",
+  });
+  assert.equal(countdownProgress(alarm, noon - minute)!.percent, 100);
+  assert.equal(countdownProgress(alarm, noon + 30 * minute)!.percent, 0);
+  s = parseState(JSON.parse(JSON.stringify(s)), noon + 10 * minute)!;
+  assert.equal(
+    countdownProgress(s.alarms![0], noon + 10 * minute)!.percent,
+    50,
+  );
+});
+test("snoozing saves a new start so the visual bar resets and survives refresh", () => {
+  let s = reconcileAlarms(setup(), evening);
+  const id = s.alarms![0].id;
+  s = dismissAlarm(s, id, 10, evening + 1234);
+  const alarm = s.alarms![0];
+  assert.equal(alarm.startedAt, evening + 1234);
+  assert.equal(alarm.dueAt, evening + 1234 + 10 * minute);
+  assert.equal(countdownProgress(alarm, evening + 1234)!.percent, 100);
+  s = parseState(JSON.parse(JSON.stringify(s)), evening + 1234 + 5 * minute)!;
+  assert.equal(
+    countdownProgress(s.alarms![0], evening + 1234 + 5 * minute)!.percent,
+    50,
+  );
+  assert.equal(alarmQueue(reconcileAlarms(s, alarm.dueAt)).length, 1);
+});
+test("legacy relative alarms recover known starts without resetting dates; unknown old snoozes are not fabricated", () => {
+  let s = setup();
+  s.tasks[0] = setAlarmDeadline(s.tasks[0], "relative", 20, false, noon);
+  s = reconcileAlarms(s, noon);
+  delete s.alarms![0].startedAt;
+  const restored = reconcileAlarms(s, noon + 10 * minute);
+  assert.equal(restored.alarms![0].id, s.alarms![0].id);
+  assert.equal(restored.alarms![0].dueAt, s.alarms![0].dueAt);
+  assert.equal(
+    countdownProgress(restored.alarms![0], noon + 10 * minute)!.percent,
+    50,
+  );
+  s = dismissAlarm(restored, restored.alarms![0].id, 5, noon + 20 * minute);
+  delete s.alarms![0].startedAt;
+  assert.equal(
+    countdownProgress(
+      reconcileAlarms(s, noon + 21 * minute).alarms![0],
+      noon + 21 * minute,
+    ),
+    null,
   );
 });

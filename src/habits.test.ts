@@ -418,3 +418,46 @@ test("deleting a focused task frees today’s focus slot while keeping older foc
   assert.deepEqual(s.focusDays?.[day], []);
   assert.deepEqual(s.focusDays?.[shiftDate(day, -1)], ["a"]);
 });
+
+test("step row edits preserve IDs, checked history, older penalties and more than 30 steps", () => {
+  let s = make({
+    careLinked: true,
+    category: "water",
+    steps: [
+      { id: "keep", name: "Read chapter" },
+      { id: "remove", name: "Old step" },
+    ],
+  });
+  s = setStep(s, "a", "keep", true, day, n, "checked");
+  const events = [...(s.habitEvents || [])];
+  s = saveTask(
+    s,
+    {
+      ...s.tasks[0],
+      steps: [
+        { id: "keep", name: "Read chapter four" },
+        ...Array.from({ length: 35 }, (_, i) => ({
+          id: `new-${i}`,
+          name: `Step ${i + 1}`,
+        })),
+      ],
+    },
+    n,
+  );
+  s = roundtrip(s);
+  assert.equal(s.tasks[0].steps!.length, 36);
+  assert.ok(stepIsDone(s, "a", "keep", day));
+  assert.deepEqual(s.habitEvents, events);
+  assert.equal(s.tasks[0].careLinked, true);
+  assert.equal(s.tasks[0].category, "water");
+  assert.equal(s.coins, 0);
+  for (const step of s.tasks[0].steps!)
+    s = setStep(s, "a", step.id, true, day, n, "done-" + step.id);
+  assert.equal(s.coins, 5);
+  assert.equal(taskCounts(s, "a", day).completed, 1);
+  s = setStep(s, "a", "keep", false, day, n, "undo-check");
+  s = setStep(s, "a", "keep", true, day, n, "redo-check");
+  assert.equal(s.coins, 5);
+  assert.equal(s.outcomes.length, 1);
+  roundtrip(s);
+});

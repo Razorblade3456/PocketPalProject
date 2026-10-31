@@ -1,5 +1,5 @@
 import "./countdown.css";
-import type { AlarmRecord } from "./alarms";
+import { nearestAlarm, type AlarmRecord } from "./alarms";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Monitor } from "lucide-react";
@@ -68,7 +68,7 @@ export function MiniMochi({
       // Call directly from this click to preserve browser user activation.
       const win = await pip.requestWindow({
         width: 140,
-        height: 140,
+        height: nearestAlarm(alarms) ? 168 : 140,
         disallowReturnToOpener: true,
       });
       if (!mounted.current) {
