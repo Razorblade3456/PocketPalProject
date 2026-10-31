@@ -1,0 +1,166 @@
+/* Small finishing pass; pet artwork and desktop geometry retain their own styles. */
+:root {
+  background: #17151e;
+}
+.app,
+.app.night {
+  --paper: #25202d;
+  --panel: #25202d;
+  --panel-soft: #31283a;
+  --ink: #f0e9e4;
+  --muted: #b9aabd;
+  --accent: #a8c46b;
+  --lavender: #b59ac7;
+  --line: #62516d;
+  background-color: #17151e;
+}
+.app header .wallet {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 7px 12px;
+  border: 1px solid #d6ae6566;
+  background: #2b252b;
+  color: #f0e9e4;
+  border-radius: 12px;
+  box-shadow: inset 0 1px 0 #d6ae6510;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.app header .wallet svg {
+  color: #d6ae65;
+  width: 19px;
+  height: 19px;
+  flex: none;
+}
+.app header .wallet b {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+.app header .wallet > span {
+  color: #d6ae65;
+  font-size: 10px;
+}
+.app header .wallet small {
+  color: #c9b9ce;
+  font-size: 9px;
+}
+.app .modal form > label,
+.app .modal form > section > label {
+  margin-top: 11px;
+  margin-bottom: 11px;
+  gap: 6px;
+}
+.app .modal input:not([type="checkbox"]):not([type="range"]),
+.app .modal textarea,
+.app .modal select {
+  border-width: 1px;
+  border-color: #62516d;
+  background: #201b28;
+  color: #f0e9e4;
+}
+.app .modal :is(input, select, textarea):focus-visible {
+  outline: 2px solid #b59ac7;
+  outline-offset: 2px;
+}
+.app .modal h2 {
+  margin-bottom: 18px;
+}
+.app .modal h3 {
+  margin: 12px 0;
+}
+.app .task-editor .button-row {
+  gap: 12px;
+  align-items: flex-end;
+}
+.app .task-editor .button-row > label {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+.app .relative-alarm-settings {
+  margin: 8px 0 12px;
+}
+.app .alarm-duration-label {
+  display: block;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 7px;
+}
+.app .alarm-presets {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+}
+.app .alarm-presets button {
+  width: 100%;
+  min-height: 40px;
+  padding: 5px 7px;
+  border: 1px solid #756080;
+  border-radius: 9px;
+  background: #31283a;
+  color: #f0e9e4;
+  font-size: 12px;
+}
+.app .alarm-presets button[aria-pressed="true"] {
+  background: #644977;
+  border-color: #b59ac7;
+}
+.app .outcome-card {
+  border-width: 1px;
+}
+.app .section-heading {
+  align-items: center;
+}
+.app .modal .fine {
+  color: var(--muted);
+  line-height: 1.45;
+}
+@media (max-width: 800px) {
+  .app header .wallet {
+    min-height: 44px;
+    padding: 6px 9px;
+    gap: 5px;
+  }
+  .app header .wallet > span {
+    display: none;
+  }
+  .app header .wallet b {
+    font-size: 16px;
+  }
+  .app header .wallet small {
+    max-width: 44px;
+    line-height: 1.15;
+  }
+  .app .alarm-presets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .app .alarm-presets button {
+    min-height: 44px;
+  }
+  .app .modal h2 {
+    margin-bottom: 14px;
+  }
+}
+@media (max-width: 380px) {
+  .app .brand {
+    font-size: 21px;
+    letter-spacing: -1px;
+  }
+  .app header nav {
+    gap: 4px;
+  }
+}
+.app .task-editor #task-advanced > label > textarea {
+  height: 64px;
+  min-height: 64px;
+  resize: vertical;
+}
+@media (min-width: 801px) {
+  .app .intro {
+    padding: 24px 0;
+  }
+}

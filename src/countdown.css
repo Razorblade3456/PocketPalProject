@@ -1,0 +1,90 @@
+.alarm-countdown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 3px 7px;
+  border: 1px solid #79608066;
+  border-radius: 20px;
+  background: #302538;
+  color: #d3bfdf;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.task-schedule {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 3px;
+}
+.alarm-modes,
+.alarm-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 8px 0;
+}
+.alarm-modes button,
+.alarm-presets button {
+  min-height: 36px;
+  padding: 5px 10px;
+  font-size: 12px;
+  border-radius: 9px;
+  background: #302538;
+  border: 1px solid #685377;
+  color: #ddd0e6;
+}
+.alarm-modes button[aria-pressed="true"],
+.alarm-presets button[aria-pressed="true"] {
+  background: #493357;
+  border-color: #b497cb;
+}
+.relative-alarm-settings {
+  margin: 8px 0 14px;
+}
+.mini-countdown {
+  position: absolute;
+  bottom: 1px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 6;
+  max-width: calc(100% - 4px);
+  padding: 2px 5px;
+  font-size: 9px;
+  line-height: 1.25;
+  background: #201b29e8;
+  pointer-events: auto;
+}
+.mini-mochi-pet-area:has(.mini-countdown) .mini-stats {
+  bottom: 20px;
+}
+.intro .streak {
+  align-self: center;
+}
+@media (max-width: 800px) {
+  .alarm-modes button,
+  .alarm-presets button {
+    min-height: 44px;
+  }
+  .alarm-countdown {
+    max-width: 100%;
+  }
+}
+.task-editor label[hidden] {
+  display: none !important;
+}
+.alarm-modes {
+  display: inline-flex;
+  gap: 0;
+  padding: 3px;
+  border: 1px solid #685377;
+  border-radius: 12px;
+  background: #201b29;
+}
+.alarm-modes button {
+  border: 0;
+  background: transparent;
+}

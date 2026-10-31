@@ -159,3 +159,16 @@ Manual checks:
 4. Skip, restore, snooze, reschedule, and pause a routine. Refresh and check the persisted plan, focus, history, inventory, and pet needs on desktop and phone.
 
 Automated checks cover reward caps and transaction replay, correction cycles, purchases/debt, all recurrence modes, DST, creation boundaries, automatic shortfalls, pauses/skips/restoration, focus persistence, tiny-step reward deduplication, older-save migration, and all existing care/appearance checks.
+
+## PWA beta: deploy and install
+
+Build with `npm run build` and publish the **dist** folder to your existing Netlify site (build command: `npm run build`, publish directory: `dist`). HTTPS is required. No backend or extra PWA package is needed: the existing service worker now precaches the complete production app shell with a build-specific cache.
+
+- **iPhone:** open the Netlify URL in Safari → Share → Add to Home Screen → Add.
+- **Android:** open the HTTPS site in Chrome, then Settings → Install PocketPal. If the native prompt is unavailable, use Chrome’s Install app menu. Installation availability depends on browser criteria.
+- **Offline:** visit the deployed site online once and let it finish loading. Close it, enable airplane mode, and reopen from its icon. Previously cached app screens and local progress should load. First-ever loading needs a connection.
+- **Saved progress:** create a task, record progress, close/reopen and refresh. Confirm task goals, steps, alarms, inventory and coins persist. Export a backup in Settings before clearing storage or switching devices.
+- **Updates:** deploy a changed build, then return to the app while online. An Update available banner should appear. Later leaves the current app running; Refresh installs the waiting version. An open task editor warns before discarding edits. Verify progress survives. Old tabs may need closing after the first migration from the previous auto-updating worker.
+- **Editor:** add a task using name, reminder and repeat. Open the gear to edit optional settings, collapse it, save, reopen and confirm hidden values remain. Test repeatable goals and important alarms as before.
+
+Progress is local to this browser/site/device. It does not sync between devices, browsers, deployment URLs, or necessarily Safari and a separately installed iOS app. Clearing site data or uninstalling may remove progress. Private browsing and storage eviction can affect persistence. Use exported backups. Cached app screens work offline; no online services or native background notification service are implied. Important alarm sound requires the app open and browser permission/user interaction, and cannot reliably ring with the app closed or device asleep. Physical iPhone/Android installation and notification behavior must be tested on those devices.

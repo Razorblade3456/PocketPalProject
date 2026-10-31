@@ -32,6 +32,7 @@ export type Care = Record<Category, number>;
 export type Task = {
   importantAlarm?: boolean;
   alarmEnabledAt?: number;
+  relativeAlarmAt?: number;
   alarmOverrideQuiet?: boolean;
   id: string;
   name: string;
@@ -1553,6 +1554,8 @@ export function validHabitData(s: State) {
       (t) =>
         (t.importantAlarm === undefined ||
           typeof t.importantAlarm === "boolean") &&
+        (t.relativeAlarmAt === undefined ||
+          (Number.isSafeInteger(t.relativeAlarmAt) && t.relativeAlarmAt > 0)) &&
         (t.alarmEnabledAt === undefined ||
           (Number.isFinite(t.alarmEnabledAt) && t.alarmEnabledAt >= 0)) &&
         (t.alarmOverrideQuiet === undefined ||

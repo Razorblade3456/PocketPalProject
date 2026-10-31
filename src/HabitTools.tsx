@@ -369,8 +369,7 @@ export function TaskAdvancedFields({
     ],
   };
   return (
-    <details className="task-advanced">
-      <summary>More options · priority, rewards & tiny steps</summary>
+    <div className="task-advanced">
       <div className="field-row">
         <label>
           Duration (minutes)
@@ -492,7 +491,7 @@ export function TaskAdvancedFields({
         All steps together contribute one parent completion, without multiplying
         rewards.
       </p>
-    </details>
+    </div>
   );
 }
 export function RewardSettings({ s, setS }: { s: State; setS: Setter }) {

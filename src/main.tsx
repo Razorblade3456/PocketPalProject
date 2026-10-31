@@ -1,3 +1,5 @@
+import { PwaUpdate } from "./Pwa";
+import "./pwa.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
@@ -8,6 +10,7 @@ import "./careVisuals.css";
 import "./habits.css";
 import "./alternative.css";
 import "./mobile.css";
+import "./finalPolish.css";
 class SaveBoundary extends React.Component<
   React.PropsWithChildren,
   { error: boolean; message: string }
@@ -95,13 +98,7 @@ root.render(
   <React.StrictMode>
     <SaveBoundary>
       <App />
+      <PwaUpdate />
     </SaveBoundary>
   </React.StrictMode>,
 );
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    void navigator.serviceWorker
-      .register(`${import.meta.env.BASE_URL}sw.js`)
-      .catch(() => {});
-  });
-}

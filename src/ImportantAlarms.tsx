@@ -315,5 +315,5 @@ export function useImportantAlarms(
         <small>Stopping does not complete your task.</small>
       </section>
     ) : null;
-  return { settings, popup };
+  return { settings, popup, records: ready.alarms || [] };
 }

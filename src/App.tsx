@@ -1,3 +1,5 @@
+import { AlarmCountdown } from "./AlarmCountdown";
+import { PwaSettings } from "./Pwa";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import {
@@ -88,7 +90,7 @@ import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
 import { LocalClock } from "./LocalClock";
 import { PetNeeds } from "./PetNeeds";
 import { useImportantAlarms } from "./ImportantAlarms";
-import { quietNow } from "./alarms";
+import { quietNow, nearestAlarm, setAlarmDeadline } from "./alarms";
 import { MiniMochi } from "./MiniMochi";
 import { Supplies } from "./Supplies";
 import { Boutique, Wardrobe } from "./Boutique";
@@ -532,13 +534,19 @@ export default function App() {
         <div className="task-content">
           <h3>{t.name}</h3>
           <TaskMeta s={s} task={t} today={today} setS={setS} />
-          <div>
+          <div className="task-schedule">
             <time hidden={t.reminderEnabled === false}>
-              {new Date(`2000-01-01T${t.time}`).toLocaleTimeString([], {
+              {new Date(
+                t.relativeAlarmAt || `2000-01-01T${t.time}`,
+              ).toLocaleTimeString([], {
                 hour: "numeric",
                 minute: "2-digit",
               })}
             </time>
+            <AlarmCountdown
+              alarm={nearestAlarm(importantAlarms.records, t.id)}
+              name={t.name}
+            />
           </div>
           {t.description &&
             t.description !== "A small moment just for you." && (
@@ -696,18 +704,15 @@ export default function App() {
         <main>
           <div className="intro">
             <div>
-              <span className="eyebrow">HABITS. CARE. REPEAT.</span>
               <h1>
                 Make progress, <em>your way.</em>
               </h1>
-              <p>Track your habits. Care for {s.name || "your pal"}.</p>
             </div>
             <div className="today-summary">
               <LocalClock />
               <span className="streak">
                 <Flame size={20} />
                 <b>{streak(s)}</b> day streak
-                <span>Every day is a fresh start</span>
               </span>
             </div>
           </div>
@@ -727,9 +732,6 @@ export default function App() {
                   {done}/{dailyTarget || "∞"}
                 </span>
               </div>
-              <p className="section-note">
-                Complete tasks to earn coins for care supplies.
-              </p>
 
               <h3 className="active-task-heading">
                 In Progress <span>{activeTasks.length}</span>
@@ -854,6 +856,9 @@ export default function App() {
                 </span>
               </div>
               <MiniMochi
+                alarms={importantAlarms.records}
+                feeding={feeding}
+                reaction={reaction}
                 s={s}
                 level={level}
                 sleep={rhythm.sleeping && level < 3}
@@ -1104,7 +1109,10 @@ export default function App() {
             ) : panel === "settings" ? (
               <>
                 <span className="eyebrow">PREFERENCES</span>
-                <h2>Settings</h2>
+                <h2>
+                  Settings <small className="beta-label">Beta</small>
+                </h2>
+                <PwaSettings />
                 <label>
                   Pet name
                   <input
@@ -1443,14 +1451,26 @@ function TaskEditor({
       dailyGoal: 1,
     },
   );
+  const [alarmMinutes, setAlarmMinutes] = useState(20);
+  const [relativeChanged, setRelativeChanged] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
   const update = (p: Partial<Task>) => setT((v) => ({ ...v, ...p }));
   return (
     <form
+      className="task-editor"
       onSubmit={(e) => {
         e.preventDefault();
         if (t.repeat === "selected" && !t.days.length) return;
         onSave({
-          ...t,
+          ...setAlarmDeadline(
+            t,
+            task?.importantAlarm && !task.relativeAlarmAt && !relativeChanged
+              ? "time"
+              : "relative",
+            alarmMinutes,
+            relativeChanged,
+          ),
           name: t.name.trim(),
           steps: t.steps
             ?.filter((step) => step.name.trim())
@@ -1460,6 +1480,16 @@ function TaskEditor({
     >
       <span className="eyebrow">TASK DETAILS</span>
       <h2>{task ? "Edit Task" : "Add Task"}</h2>
+      <button
+        type="button"
+        className="advanced-toggle"
+        aria-label="Advanced Settings"
+        aria-expanded={advanced}
+        aria-controls="task-advanced"
+        onClick={() => setAdvanced((v) => !v)}
+      >
+        <Settings size={18} />
+      </button>
       <label>
         What will you do?
         <input
@@ -1474,42 +1504,9 @@ function TaskEditor({
           }}
         />
       </label>
-      <label>
-        Notes (optional)
-        <textarea
-          maxLength={300}
-          value={t.description}
-          onChange={(e) => update({ description: e.target.value })}
-        />
-      </label>
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={!!t.importantAlarm}
-          onChange={(e) =>
-            update({
-              importantAlarm: e.target.checked,
-              ...(e.target.checked
-                ? { reminderEnabled: true, alarmEnabledAt: Date.now() }
-                : {}),
-            })
-          }
-        />
-        Important Alarm 🔔
-      </label>
-      {t.importantAlarm && (
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={!!t.alarmOverrideQuiet}
-            onChange={(e) => update({ alarmOverrideQuiet: e.target.checked })}
-          />
-          Allow this alarm’s sound and notification during quiet hours
-        </label>
-      )}
       <div className="button-row">
         <label>
-          {t.importantAlarm ? "Alarm time" : "Reminder"}
+          Reminder
           <input
             required
             type="time"
@@ -1549,15 +1546,6 @@ function TaskEditor({
           />
         </label>
       )}
-      <label>
-        {t.repeat === "once" ? "Task date" : "Starting on"}
-        <input
-          required
-          type="date"
-          value={t.date}
-          onChange={(e) => update({ date: e.target.value })}
-        />
-      </label>
       {t.repeat === "selected" && (
         <fieldset>
           <legend>Choose at least one day</legend>
@@ -1581,46 +1569,166 @@ function TaskEditor({
           </div>
         </fieldset>
       )}
-      <label>
-        Daily entries
-        <select
-          value={t.repetitions || "once"}
-          onChange={(e) =>
-            update({
-              repetitions: e.target.value as Task["repetitions"],
-              ...(e.target.value === "multiple" ? { dailyGoal: 3 } : {}),
-            })
-          }
-        >
-          <option value="once">Once per day</option>
-          <option value="multiple">Multiple times per day</option>
-          <option value="goal">Custom daily goal</option>
-          <option value="unlimited">Unlimited repetitions</option>
-        </select>
-      </label>
-      {(t.repetitions === "goal" || t.repetitions === "multiple") && (
+      <section id="task-advanced" hidden={!advanced}>
+        <h3>Advanced Settings</h3>
         <label>
-          Daily goal
-          <input
-            type="number"
-            min={t.repetitions === "multiple" ? 2 : 1}
-            max={100}
-            required
-            value={taskProgressGoal(t)}
-            onChange={(e) => update({ dailyGoal: Number(e.target.value) })}
+          Notes (optional)
+          <textarea
+            maxLength={300}
+            value={t.description}
+            onChange={(e) => update({ description: e.target.value })}
           />
         </label>
-      )}
-      <p className="fine">
-        Daily goals are gentle targets, never limits. You can keep adding
-        moments after reaching them. Unlimited tasks never receive automatic
-        misses.
-      </p>
-      <TaskAdvancedFields task={t} update={update} />
-      <p className="fine">
-        Eligible completions earn coins. Beyond the reward limit, entries still
-        count in your history.
-      </p>
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={!!t.importantAlarm}
+            onChange={(e) => {
+              if (e.target.checked) setRelativeChanged(true);
+              update({
+                importantAlarm: e.target.checked,
+                ...(e.target.checked
+                  ? { reminderEnabled: true, alarmEnabledAt: Date.now() }
+                  : {}),
+              });
+            }}
+          />
+          Important Alarm 🔔
+        </label>
+        {t.importantAlarm && (
+          <div className="relative-alarm-settings">
+            <span className="alarm-duration-label">Remind me in:</span>
+            {task?.importantAlarm &&
+              !task.relativeAlarmAt &&
+              !relativeChanged && (
+                <p className="fine">
+                  Existing scheduled alarm kept. Choose a duration to replace
+                  it.
+                </p>
+              )}
+            {t.relativeAlarmAt && !relativeChanged && (
+              <p className="fine">
+                Current alarm:{" "}
+                {new Date(t.relativeAlarmAt).toLocaleString([], {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })}
+                . Choose a duration to restart.
+              </p>
+            )}
+            <div
+              className="alarm-presets"
+              role="group"
+              aria-label="Alarm duration"
+            >
+              {[5, 10, 20, 30, 50].map((minutes) => (
+                <button
+                  key={minutes}
+                  type="button"
+                  aria-pressed={
+                    !customMinutes &&
+                    alarmMinutes === minutes &&
+                    (!task?.importantAlarm || relativeChanged)
+                  }
+                  onClick={() => {
+                    setAlarmMinutes(minutes);
+                    setRelativeChanged(true);
+                    setCustomMinutes(false);
+                  }}
+                >
+                  {minutes} min
+                </button>
+              ))}
+              <button
+                type="button"
+                aria-pressed={customMinutes}
+                onClick={() => {
+                  setCustomMinutes(true);
+                  setRelativeChanged(true);
+                }}
+              >
+                Custom
+              </button>
+            </div>
+            {customMinutes && (
+              <label>
+                Minutes from now
+                <input
+                  type="number"
+                  min={1}
+                  max={525600}
+                  required
+                  value={alarmMinutes}
+                  onChange={(e) => {
+                    setAlarmMinutes(Number(e.target.value));
+                    setRelativeChanged(true);
+                  }}
+                />
+              </label>
+            )}
+          </div>
+        )}
+        {t.importantAlarm && (
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={!!t.alarmOverrideQuiet}
+              onChange={(e) => update({ alarmOverrideQuiet: e.target.checked })}
+            />
+            Sound & notifications during quiet hours
+          </label>
+        )}
+        <label>
+          {t.repeat === "once" ? "Task date" : "Starting on"}
+          <input
+            required
+            type="date"
+            value={t.date}
+            onChange={(e) => update({ date: e.target.value })}
+          />
+        </label>
+        <label>
+          Daily entries
+          <select
+            value={t.repetitions || "once"}
+            onChange={(e) =>
+              update({
+                repetitions: e.target.value as Task["repetitions"],
+                ...(e.target.value === "multiple" ? { dailyGoal: 3 } : {}),
+              })
+            }
+          >
+            <option value="once">Once per day</option>
+            <option value="multiple">Multiple times per day</option>
+            <option value="goal">Custom daily goal</option>
+            <option value="unlimited">Unlimited repetitions</option>
+          </select>
+        </label>
+        {(t.repetitions === "goal" || t.repetitions === "multiple") && (
+          <label>
+            Daily goal
+            <input
+              type="number"
+              min={t.repetitions === "multiple" ? 2 : 1}
+              max={100}
+              required
+              value={taskProgressGoal(t)}
+              onChange={(e) => update({ dailyGoal: Number(e.target.value) })}
+            />
+          </label>
+        )}
+        <p className="fine">
+          Entries beyond your goal still count. Unlimited tasks have no
+          automatic misses.
+        </p>
+        <TaskAdvancedFields task={t} update={update} />
+        <p className="fine">
+          Eligible completions earn coins. Beyond the reward limit, entries
+          still count in your history.
+        </p>
+      </section>
       <div className="button-row">
         <button
           className="primary"

@@ -1,16 +1,542 @@
-.mini-mochi-control { display:flex; flex-direction:column; align-items:center; gap:5px; margin:7px 0; }
-.app .mini-mochi-button { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:28px; padding:5px 12px; border:1px solid #776087; border-radius:20px; background:#302538; color:#e6dfd2; font-size:10px; cursor:pointer; transition:box-shadow .18s, border-color .18s; }
-.app .mini-mochi-button:hover, .app .mini-mochi-button:focus-visible { border-color:#b497cb; box-shadow:0 0 12px #a28ab845; }
-.app .mini-mochi-button[aria-pressed="true"] { background:#493357; }
-.mini-mochi-control small { max-width:260px; text-align:center; font-size:10px; color:#c8b6d5; }
+.mini-mochi-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  margin: 7px 0;
+}
+.app .mini-mochi-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 5px 12px;
+  border: 1px solid #776087;
+  border-radius: 20px;
+  background: #302538;
+  color: #e6dfd2;
+  font-size: 10px;
+  cursor: pointer;
+  transition:
+    box-shadow 0.18s,
+    border-color 0.18s;
+}
+.app .mini-mochi-button:hover,
+.app .mini-mochi-button:focus-visible {
+  border-color: #b497cb;
+  box-shadow: 0 0 12px #a28ab845;
+}
+.app .mini-mochi-button[aria-pressed="true"] {
+  background: #493357;
+}
+.mini-mochi-control small {
+  max-width: 260px;
+  text-align: center;
+  font-size: 10px;
+  color: #c8b6d5;
+}
 /* Chromium's PiP canvas is opaque; a flat neutral canvas avoids any card/frame. */
-html:has(body.mini-mochi-window), body.mini-mochi-window { margin:0; padding:0; min-width:0; width:100%; height:100%; overflow:hidden; background:#19191f; color:#e6dfd2; }
-.mini-mochi-window > div { width:100%; height:100%; }
-.mini-mochi-content { display:grid; place-items:center; width:100%; height:100%; padding:0; border:0; background:transparent; }
-.mini-mochi-pet-area { position:relative; width:min(130px, 100vw, 100vh); aspect-ratio:1; background:transparent; }
-.mini-mochi-content .pet-button { position:relative; inset:auto; margin:0; width:100%; height:100%; max-width:100%; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; filter:none; cursor:default; }
-.mini-mochi-content .pet-button:focus-visible { outline:1px solid #a28ab8; }
-.mini-mochi-content .mini-mochi-close { position:absolute; top:2px; right:2px; display:grid; place-items:center; width:19px; height:19px; min-height:0; padding:0; border:1px solid #776087; border-radius:50%; background:#302538; color:#e6dfd2; box-shadow:none; opacity:0; pointer-events:none; cursor:pointer; }
-.mini-mochi-pet-area:hover .mini-mochi-close, .mini-mochi-pet-area:focus-within .mini-mochi-close { opacity:1; pointer-events:auto; }
-.mini-mochi-content .mini-mochi-close:hover, .mini-mochi-content .mini-mochi-close:focus-visible { background:#493357; outline:1px solid #b497cb; }
-@media(prefers-reduced-motion:reduce) { .mini-mochi-button { transition:none !important; } }
+html:has(body.mini-mochi-window),
+body.mini-mochi-window {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #19191f;
+  color: #e6dfd2;
+}
+.mini-mochi-window > div {
+  width: 100%;
+  height: 100%;
+}
+.mini-mochi-content {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.mini-mochi-pet-area {
+  position: relative;
+  width: min(130px, 100vw, 100vh);
+  aspect-ratio: 1;
+  background: transparent;
+}
+.mini-mochi-content .pet-button {
+  position: relative;
+  inset: auto;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  cursor: default;
+}
+.mini-mochi-content .pet-button:focus-visible {
+  outline: 1px solid #a28ab8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mini-mochi-button {
+    transition: none !important;
+  }
+}
+/* Mini-only choreography: one short action owns existing parts; health shape is untouched. */
+.mini-idle .pet-art {
+  animation: mini-breathe 5s ease-in-out infinite !important;
+}
+.mini-idle .pet-body,
+.mini-idle .care-idle,
+.mini-idle .pet-arm,
+.mini-idle .antennae,
+.mini-idle .crumb-ears,
+.mini-idle .moth-wings,
+.mini-idle .care-face {
+  animation: none !important;
+}
+.mini-idle .care-eyes {
+  animation: blink 7s infinite !important;
+  transform-origin: 160px 150px;
+}
+.mini-idle .pet-reaction {
+  display: none;
+}
+.mini-idle .pet-arm {
+  transition: transform 0.4s ease;
+}
+.mini-idle .care-idle {
+  --mini-duration: 2.4s;
+  transform-origin: 160px 280px;
+}
+.mini-idle[data-mini-slow="true"] {
+  --mini-duration: 3s;
+}
+.mini-idle[data-mini-slow="true"] .care-idle {
+  --mini-duration: 3s;
+}
+.mini-idle[data-mini-idle="bounce"] .care-idle,
+.mini-idle[data-mini-idle="hop"] .care-idle {
+  animation: mini-hop var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="float"] .care-idle {
+  animation: mini-float var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="stumble"] .care-idle {
+  animation: mini-stumble var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="sit"] .care-idle {
+  animation: mini-sit var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="laugh"] .care-idle {
+  animation: mini-laugh var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="look"] .care-eyes,
+.mini-idle[data-mini-idle="look"] .eyes {
+  animation: mini-look var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="sideeye"] .care-eyes {
+  animation: mini-sideeye var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="laugh"] .care-mouth {
+  transform-origin: 160px 180px;
+  animation: mini-grin var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="yawn"] .mouth {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mini-yawn var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="scratch"] .arm-left {
+  animation: mini-scratch var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="tummy"] .arm-left {
+  animation: existing-arm-tummy var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="cross"] .arm-left {
+  animation: mini-cross-left var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="cross"] .arm-right {
+  animation: mini-cross-right var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="tap"] [data-leg="right"] {
+  transform-origin: 190px 288px;
+  animation: mini-tap var(--mini-duration, 2.4s) ease-in-out;
+}
+.mini-idle[data-mini-idle="flap"] .wing-left {
+  animation: mini-flap-left var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="flap"] .wing-right {
+  animation: mini-flap-right var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="wrap"] .wing-left {
+  animation: mini-wrap-left var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="wrap"] .wing-right {
+  animation: mini-wrap-right var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="antennae"] .antennae {
+  transform-origin: 160px 130px;
+  animation: mini-antennae var(--mini-duration, 2.4s) ease-in-out !important;
+}
+.mini-idle[data-mini-idle="ears"] .mochi-outline {
+  animation: mini-ears 2.4s ease-in-out;
+}
+.mini-smoke {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.mini-smoke ellipse {
+  transform-origin: 166px 185px;
+  animation: mini-smoke 2.4s ease-out both;
+}
+.mini-stats {
+  position: absolute;
+  bottom: 1px;
+  left: 3px;
+  right: 3px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 5px 4px;
+  border-radius: 7px;
+  background: #201b29dd;
+  border: 1px solid #79608066;
+  pointer-events: none;
+}
+.mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.mini-stat svg {
+  flex: none;
+  width: 9px;
+  height: 9px;
+}
+.mini-stat progress {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  height: 4px;
+  border: 0;
+  border-radius: 3px;
+  background: #4a414f;
+}
+.mini-stat progress::-webkit-progress-bar {
+  background: #4a414f;
+  border-radius: 3px;
+}
+.mini-stat progress::-webkit-progress-value {
+  background: var(--mini-stat-color);
+  border-radius: 3px;
+}
+.mini-stat-value {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+@keyframes mini-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.008, 1.012);
+  }
+}
+@keyframes mini-hop {
+  0%,
+  20%,
+  65%,
+  100% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(-13px) rotate(-2deg);
+  }
+  55% {
+    transform: translateY(2px) scale(1.03, 0.97);
+  }
+}
+@keyframes mini-float {
+  0%,
+  100% {
+    transform: none;
+  }
+  35%,
+  60% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+}
+@keyframes mini-stumble {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translateX(5px) rotate(7deg);
+  }
+  40% {
+    transform: translateX(-3px) rotate(-5deg);
+  }
+  60% {
+    transform: rotate(2deg);
+  }
+}
+@keyframes mini-sit {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  75% {
+    transform: translateY(8px) scale(1.04, 0.9);
+  }
+}
+@keyframes mini-laugh {
+  0%,
+  20%,
+  75%,
+  100% {
+    transform: none;
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateY(-3px) rotate(-2deg);
+  }
+  40%,
+  60% {
+    transform: translateY(1px) rotate(2deg);
+  }
+}
+@keyframes mini-look {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  40% {
+    transform: translateX(-5px);
+  }
+  60%,
+  75% {
+    transform: translateX(5px);
+  }
+}
+@keyframes mini-sideeye {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  75% {
+    transform: translateX(5px) scaleY(0.82);
+  }
+}
+@keyframes mini-grin {
+  0%,
+  100% {
+    transform: none;
+  }
+  30%,
+  65% {
+    transform: scale(1.06, 0.9) rotate(-3deg);
+  }
+}
+@keyframes mini-yawn {
+  0%,
+  100% {
+    transform: none;
+  }
+  30%,
+  65% {
+    transform: scale(0.7, 1.5);
+  }
+}
+@keyframes mini-scratch {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  65% {
+    transform: translate(12px, -18px) rotate(125deg);
+  }
+  35%,
+  55% {
+    transform: translate(8px, -16px) rotate(115deg);
+  }
+  45% {
+    transform: translate(12px, -18px) rotate(125deg);
+  }
+}
+@keyframes mini-cross-left {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  75% {
+    transform: rotate(-65deg) translate(6px, -3px);
+  }
+}
+@keyframes mini-cross-right {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  75% {
+    transform: rotate(65deg) translate(-6px, -3px);
+  }
+}
+@keyframes mini-tap {
+  0%,
+  20%,
+  40%,
+  60%,
+  80%,
+  100% {
+    transform: none;
+  }
+  30%,
+  50%,
+  70% {
+    transform: rotate(-10deg) translateY(-2px);
+  }
+}
+@keyframes mini-flap-left {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  45%,
+  65% {
+    transform: rotate(13deg) scaleX(0.88);
+  }
+  35%,
+  55% {
+    transform: rotate(-8deg);
+  }
+}
+@keyframes mini-flap-right {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  45%,
+  65% {
+    transform: rotate(-13deg) scaleX(0.88);
+  }
+  35%,
+  55% {
+    transform: rotate(8deg);
+  }
+}
+@keyframes mini-wrap-left {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  75% {
+    transform: rotate(-18deg) scaleX(0.65);
+  }
+}
+@keyframes mini-wrap-right {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  75% {
+    transform: rotate(18deg) scaleX(0.65);
+  }
+}
+@keyframes mini-antennae {
+  0%,
+  100% {
+    transform: none;
+  }
+  25%,
+  55% {
+    transform: rotate(-5deg);
+  }
+  40%,
+  70% {
+    transform: rotate(5deg);
+  }
+}
+@keyframes mini-smoke {
+  0%,
+  15% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  25% {
+    opacity: 0.65;
+    transform: translate(5px, -3px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(40px, -38px) scale(2.5);
+  }
+}
+@keyframes mini-ears {
+  0%,
+  100% {
+    d: path(
+      "M84 80Q56 50 73 28Q91 29 111 65Q146 51 190 65Q219 26 239 35Q253 53 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+    );
+  }
+  25%,
+  65% {
+    d: path(
+      "M84 80Q50 54 66 34Q88 30 111 65Q146 51 190 65Q224 22 244 31Q258 50 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+    );
+  }
+  45% {
+    d: path(
+      "M84 80Q61 46 78 24Q94 31 111 65Q146 51 190 65Q214 32 234 40Q248 58 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"
+    );
+  }
+}
+.mini-idle .sleeping .care-eyes {
+  animation: none !important;
+}
+.mini-idle .stage-5 .pet-art,
+.mini-idle .stage-5 .pet-art * {
+  animation: none !important;
+}
+.mini-idle[data-mini-paused="true"] .pet-art,
+.mini-idle[data-mini-paused="true"] .pet-art * {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mini-idle *,
+  .mini-idle .pet-art * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -285,6 +285,7 @@ function Mochi({
           />
 
           <path
+            className="mochi-outline"
             d={
               level < 1 && (!care || careTier(care.happy) < 2)
                 ? "M84 80Q56 50 73 28Q91 29 111 65Q146 51 190 65Q219 26 239 35Q253 53 232 86Q258 114 253 194L245 249Q241 284 202 291L111 289Q72 283 68 247L65 148Q64 103 84 80"

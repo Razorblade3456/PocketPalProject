@@ -13,7 +13,15 @@ import {
   type State,
   type Task,
 } from "./model";
-import { reconcileAlarms, alarmQueue, dismissAlarm, quietNow } from "./alarms";
+import {
+  reconcileAlarms,
+  alarmQueue,
+  dismissAlarm,
+  quietNow,
+  setAlarmDeadline,
+  nearestAlarm,
+  formatCountdown,
+} from "./alarms";
 const noon = +new Date(2026, 9, 30, 12),
   minute = 60000;
 function setup(patch: Partial<Task> = {}): State {
@@ -232,4 +240,198 @@ test("alarm data validates without requiring a save migration", () => {
     null,
   );
   assert.ok(parseState(initial(noon), noon));
+});
+
+test("relative alarms save one fixed timestamp and survive unrelated edits and refresh", () => {
+  let s = setup();
+  const task = setAlarmDeadline(
+    s.tasks[0],
+    "relative",
+    20,
+    false,
+    noon + 12345,
+  );
+  assert.equal(task.relativeAlarmAt, noon + 12345 + 20 * minute);
+  s = saveTask(s, task, noon + 12345);
+  s = reconcileAlarms(s, noon + 12345);
+  assert.equal(s.alarms!.length, 1);
+  assert.equal(s.alarms![0].dueAt, task.relativeAlarmAt);
+  assert.equal(s.alarms![0].status, "pending");
+  const edited = setAlarmDeadline(
+    { ...task, name: "Updated name" },
+    "relative",
+    50,
+    false,
+    noon + minute,
+  );
+  assert.equal(edited.relativeAlarmAt, task.relativeAlarmAt);
+  s = saveTask(s, edited, noon + minute);
+  const restored = parseState(JSON.parse(JSON.stringify(s)), noon + minute)!;
+  assert.ok(restored);
+  const next = reconcileAlarms(restored, noon + minute);
+  assert.equal(next.alarms!.length, 1);
+  assert.equal(next.alarms![0].dueAt, task.relativeAlarmAt);
+  assert.equal(
+    reconcileAlarms(next, task.relativeAlarmAt! - 1).alarms![0].status,
+    "pending",
+  );
+  const ringing = reconcileAlarms(next, task.relativeAlarmAt!);
+  assert.equal(alarmQueue(ringing).length, 1);
+  assert.equal(
+    alarmQueue(reconcileAlarms(ringing, task.relativeAlarmAt! + minute)).length,
+    1,
+  );
+});
+test("relative snooze and stop reuse the same alarm without rearming or affecting history", () => {
+  let s = setup();
+  s.tasks[0] = setAlarmDeadline(s.tasks[0], "relative", 5, false, noon);
+  s = reconcileAlarms(s, noon + 5 * minute);
+  const id = s.alarms![0].id;
+  s = dismissAlarm(s, id, 10, noon + 5 * minute);
+  assert.equal(nearestAlarm(s.alarms)!.dueAt, noon + 15 * minute);
+  assert.equal(
+    reconcileAlarms(s, noon + 14 * minute).alarms![0].status,
+    "pending",
+  );
+  s = reconcileAlarms(s, noon + 15 * minute);
+  assert.equal(alarmQueue(s).length, 1);
+  s = dismissAlarm(s, id, 0, noon + 15 * minute);
+  assert.equal(
+    nearestAlarm(reconcileAlarms(s, noon + 16 * minute).alarms),
+    undefined,
+  );
+  assert.equal(s.outcomes.length, 0);
+  assert.equal(s.coins, 0);
+});
+test("relative alarms explicitly restart or switch back to wall-clock scheduling", () => {
+  const t = setAlarmDeadline(setup().tasks[0], "relative", 20, false, noon);
+  const restarted = setAlarmDeadline(t, "relative", 50, true, noon + minute);
+  assert.equal(restarted.relativeAlarmAt, noon + 51 * minute);
+  let s = setup();
+  s.tasks = [t];
+  s = reconcileAlarms(s, noon);
+  s = saveTask(s, restarted, noon + minute);
+  s = reconcileAlarms(s, noon + minute);
+  assert.equal(s.alarms!.length, 1);
+  assert.equal(s.alarms![0].dueAt, restarted.relativeAlarmAt);
+  const clock = setAlarmDeadline(
+    { ...restarted, time: "19:00" },
+    "time",
+    20,
+    false,
+    noon + minute,
+  );
+  assert.equal(clock.relativeAlarmAt, undefined);
+  s = saveTask(s, clock, noon + minute);
+  s = reconcileAlarms(s, noon + minute);
+  assert.equal(s.alarms!.length, 1);
+  assert.equal(s.alarms![0].dueAt, evening);
+  for (const invalid of [0, -5, 1.5, NaN, Infinity, 525601])
+    assert.throws(() => setAlarmDeadline(t, "relative", invalid, true, noon));
+});
+test("relative deadlines across midnight remain absolute and cancel on delete, skip or completion", () => {
+  const beforeMidnight = +new Date(2026, 9, 30, 23, 50, 23);
+  let s = setup();
+  s.tasks[0] = setAlarmDeadline(
+    { ...s.tasks[0], repeat: "selected", days: [1] },
+    "relative",
+    20,
+    false,
+    beforeMidnight,
+  );
+  s = reconcileAlarms(s, beforeMidnight);
+  const due = beforeMidnight + 20 * minute;
+  assert.equal(s.alarms!.length, 1);
+  assert.equal(s.alarms![0].dueAt, due);
+  assert.equal(reconcileAlarms(s, due - 1).alarms![0].dueAt, due);
+  assert.equal(
+    reconcileAlarms(
+      deleteTask(s, s.tasks[0].id, beforeMidnight),
+      beforeMidnight,
+    ).alarms!.length,
+    0,
+  );
+  const skipped = addHabitEvent(
+    s,
+    { taskId: s.tasks[0].id, date: dateKey(beforeMidnight), kind: "skip", reason: "Rest" },
+    beforeMidnight,
+  );
+  assert.equal(reconcileAlarms(skipped, beforeMidnight).alarms!.length, 0);
+  const regular = setup();
+  regular.tasks[0] = setAlarmDeadline(
+    regular.tasks[0],
+    "relative",
+    20,
+    false,
+    noon,
+  );
+  const completed = recordAttempt(
+    reconcileAlarms(regular, noon),
+    regular.tasks[0].id,
+    dateKey(noon),
+    "completed",
+    noon + minute,
+  );
+  assert.equal(
+    nearestAlarm(reconcileAlarms(completed, noon + minute).alarms),
+    undefined,
+  );
+});
+test("shared countdown formats absolute deadlines and chooses only an active nearest alarm", () => {
+  assert.equal(formatCountdown(noon + 20 * minute, noon + 18000), "19:42");
+  assert.equal(formatCountdown(noon + 1000, noon), "00:01");
+  assert.equal(formatCountdown(noon, noon + minute), "00:00");
+  assert.equal(formatCountdown(noon + 61 * minute, noon), "1:01:00");
+  const s = setup();
+  s.tasks[0] = setAlarmDeadline(s.tasks[0], "relative", 20, false, noon);
+  const a = reconcileAlarms(s, noon).alarms![0];
+  const b = {
+    ...a,
+    id: "later",
+    taskId: "later-task",
+    dueAt: noon + 50 * minute,
+  };
+  assert.equal(nearestAlarm([b, a])!.id, a.id);
+  assert.equal(nearestAlarm([{ ...a, status: "stopped" }, b])!.id, b.id);
+  assert.equal(nearestAlarm([a, b], "later-task")!.id, b.id);
+  assert.equal(nearestAlarm([a, b], "deleted"), undefined);
+});
+
+test("existing time-alarm signatures remain compatible with pre-countdown saves", () => {
+  const s = setup();
+  const before = reconcileAlarms(s, noon);
+  const t = s.tasks[0];
+  const legacy = JSON.stringify([
+    t.time,
+    t.repeat,
+    t.days,
+    t.date,
+    t.intervalDays,
+    t.alarmEnabledAt,
+    t.time,
+    [],
+  ]);
+  assert.equal(before.alarms![0].schedule, legacy);
+  const stopped = dismissAlarm(before, before.alarms![0].id, 0, noon);
+  assert.equal(alarmQueue(reconcileAlarms(stopped, evening)).length, 0);
+  assert.equal(reconcileAlarms(stopped, evening).alarms!.length, 1);
+});
+
+test("a relative deadline after midnight still belongs to the task occurrence being completed", () => {
+  const at = +new Date(2026, 9, 30, 23, 50, 23);
+  let s = setup({ repeat: "once", date: dateKey(at) });
+  s.tasks[0] = setAlarmDeadline(s.tasks[0], "relative", 20, false, at);
+  s = reconcileAlarms(s, at);
+  assert.equal(s.alarms![0].date, dateKey(at));
+  const completed = recordAttempt(
+    s,
+    s.tasks[0].id,
+    dateKey(at),
+    "completed",
+    at + minute,
+  );
+  assert.equal(
+    nearestAlarm(reconcileAlarms(completed, at + minute).alarms),
+    undefined,
+  );
 });
