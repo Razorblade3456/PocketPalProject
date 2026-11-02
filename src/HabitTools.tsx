@@ -125,17 +125,14 @@ export function TaskMeta({
   const full = (s.focusDays?.[today]?.length || 0) >= 3;
   return (
     <div className="task-meta">
-      <span>
-        {[
-          task.priority === "high"
-            ? "High priority"
-            : task.priority === "low"
-              ? "Easy pace"
-              : "",
-          task.durationMinutes ? `${task.durationMinutes} min` : "",
-        ]
-          .filter(Boolean)
-          .join(" · ")}
+      <span
+        className={`priority-indicator priority-${task.priority || "normal"}`}
+      >
+        {task.priority === "high"
+          ? "High priority"
+          : task.priority === "low"
+            ? "Low priority"
+            : "Normal priority"}
       </span>
       <button
         type="button"
@@ -360,24 +357,9 @@ export function TaskAdvancedFields({
   return (
     <div className="task-advanced">
       <div className="field-row">
-        <label>
-          Duration (minutes)
-          <input
-            type="number"
-            min={0}
-            max={1440}
-            value={task.durationMinutes ?? ""}
-            placeholder="Optional"
-            onChange={(e) =>
-              update({
-                durationMinutes: e.target.value
-                  ? Number(e.target.value)
-                  : undefined,
-              })
-            }
-          />
-        </label>
-        <label>
+        <label
+          className={`priority-select priority-${task.priority || "normal"}`}
+        >
           Priority
           <select
             value={task.priority || "normal"}
@@ -385,9 +367,9 @@ export function TaskAdvancedFields({
               update({ priority: e.target.value as Task["priority"] })
             }
           >
-            <option value="low">Low · easy pace</option>
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
+            <option value="low">Low — Whenever</option>
+            <option value="normal">Normal — Standard</option>
+            <option value="high">High — Important</option>
           </select>
         </label>
       </div>
@@ -399,24 +381,6 @@ export function TaskAdvancedFields({
             onChange={(e) => update({ reminderEnabled: e.target.checked })}
           />
           Normal reminder
-        </label>
-      )}
-      {task.repetitions !== "goal" && (
-        <label>
-          Daily rewarded completions
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={task.rewardCap ?? ""}
-            placeholder="Use economy default"
-            onChange={(e) =>
-              update({
-                rewardCap:
-                  e.target.value !== "" ? Number(e.target.value) : undefined,
-              })
-            }
-          />
         </label>
       )}
       <div className="step-row-editor">

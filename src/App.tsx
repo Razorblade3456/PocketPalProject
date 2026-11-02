@@ -1,8 +1,17 @@
+import { TaskCalendar } from "./TaskCalendar";
+import {
+  dailyCareBonus,
+  mergeDailyCareBonuses,
+  sortActiveTasks,
+} from "./model";
+import "./priorities.css";
+import { notifyTask } from "./notifications";
 import { AlarmCountdown } from "./AlarmCountdown";
 import { PwaSettings } from "./Pwa";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import {
+  CalendarDays,
   Plus,
   Sun,
   Moon,
@@ -123,6 +132,7 @@ function tone(enabled: boolean, kind = 0) {
 export default function App() {
   const [s, setS] = useState<State>(load);
   const [panel, setPanel] = useState<
+    | "calendar"
     | "settings"
     | "history"
     | "rewards"
@@ -141,6 +151,8 @@ export default function App() {
   const actionLocks = useRef(new Map<string, number>());
   const [edit, setEdit] = useState<Task | null | undefined>();
   const [message, setMessage] = useState("");
+  const openedAt = useRef(Date.now());
+  const externalSave = useRef<State | null>(null);
   const [reaction, setReaction] = useState("");
   const [flights, setFlights] = useState<JarFlight[]>([]);
   const [landed, setLanded] = useState<string>();
@@ -165,7 +177,9 @@ export default function App() {
   const finishedTasks = todayTasks.filter((t) =>
     taskFinishedToday(s, t, today),
   );
-  const activeTasks = todayTasks.filter((t) => !taskFinishedToday(s, t, today));
+  const activeTasks = sortActiveTasks(
+    todayTasks.filter((t) => !taskFinishedToday(s, t, today)),
+  );
   const earned = s.completions.filter((c) => c.date === today);
   const dailyTarget = todayTasks.reduce(
     (sum, t) => sum + taskProgressGoal(t),
@@ -191,13 +205,68 @@ export default function App() {
       ? 100
       : 0;
   useEffect(() => {
+    // A received save is already durable. Do not echo it back to other tabs.
+    if (externalSave.current === s) {
+      externalSave.current = null;
+      return;
+    }
     try {
-      localStorage.setItem("pocketpal-v1", JSON.stringify(s));
+      const raw = localStorage.getItem("pocketpal-v1");
+      const previous = raw ? parseState(JSON.parse(raw), s.updated) : null;
+      const merged = previous ? mergeDailyCareBonuses(s, previous) : s;
+      localStorage.setItem("pocketpal-v1", JSON.stringify(merged));
+      if (merged !== s) setS((p) => mergeDailyCareBonuses(p, merged));
       setStorageError(false);
     } catch {
       setStorageError(true);
     }
   }, [s]);
+  useEffect(() => {
+    const award = () => {
+      if (document.visibilityState === "visible")
+        setS((p) => dailyCareBonus(p));
+    };
+    award();
+    window.addEventListener("focus", award);
+    document.addEventListener("visibilitychange", award);
+    return () => {
+      window.removeEventListener("focus", award);
+      document.removeEventListener("visibilitychange", award);
+    };
+  }, [today]);
+  const announcedBonus = useRef("");
+  useEffect(() => {
+    const bonus = s.rewardLedger?.find(
+      (e) => e.source === "daily-care" && e.date === today,
+    );
+    // Only announce a newly awarded visit, not every refresh of an old receipt.
+    if (
+      bonus &&
+      bonus.at >= openedAt.current &&
+      announcedBonus.current !== today
+    ) {
+      announcedBonus.current = today;
+      setMessage("+6 Daily Care Bonus");
+    }
+  }, [s.rewardLedger, today]);
+  useEffect(() => {
+    const sync = (event: StorageEvent) => {
+      if (event.key !== "pocketpal-v1" || !event.newValue) return;
+      try {
+        const other = parseState(JSON.parse(event.newValue));
+        if (other)
+          setS((p) => {
+            if (JSON.stringify(p) === JSON.stringify(other)) return p;
+            externalSave.current = other;
+            return other;
+          });
+      } catch {
+        /* Preserve current save on malformed external data. */
+      }
+    };
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
   useEffect(() => {
     const tick = () => {
       setNow(Date.now());
@@ -250,8 +319,7 @@ export default function App() {
         if (reminded.current.has(key)) return;
         reminded.current.add(key);
         setMessage(`A gentle nudge: ${t.name}`);
-        if ("Notification" in window && Notification.permission === "granted")
-          new Notification("PocketPal Reminder", { body: t.name });
+        void notifyTask("PocketPal Reminder", t.name, "reminder:" + key);
       });
   }, [now, s.settings, s.name, today, s.tasks, s.outcomes]);
   useEffect(() => {
@@ -528,7 +596,7 @@ export default function App() {
     return (
       <motion.article
         layout
-        className={`task-card outcome-card ${status} ${s.focusDays?.[today]?.includes(t.id) ? "focus-task" : ""}`}
+        className={`task-card outcome-card priority-${t.priority || "normal"} ${status} ${s.focusDays?.[today]?.includes(t.id) ? "focus-task" : ""}`}
         key={t.id}
       >
         <div className="task-content">
@@ -726,7 +794,16 @@ export default function App() {
             <section className="task-panel" aria-label="Tasks" id="tasks">
               <div className="section-heading">
                 <h2>
-                  Today's Tasks <span>✦</span>
+                  Today's Tasks{" "}
+                  <button
+                    type="button"
+                    className="icon-button calendar-launch"
+                    aria-label="Open Task Calendar"
+                    title="Task Calendar"
+                    onClick={() => setPanel("calendar")}
+                  >
+                    <CalendarDays size={17} />
+                  </button>
                 </h2>
                 <span className="count">
                   {done}/{dailyTarget || "∞"}
@@ -816,7 +893,7 @@ export default function App() {
                 <Pet
                   level={level}
                   kind={s.pet}
-                  care={s.care}
+                  care={s.settings.petCare === false ? undefined : s.care}
                   petRef={petRef}
                   equipped={s.equipped}
                   incoming={incoming}
@@ -865,23 +942,25 @@ export default function App() {
                 sleep={rhythm.sleeping && level < 3}
                 calm={rhythm.calm}
               />
-              <PetNeeds
-                s={s}
-                onUse={careFor}
-                onBuyAndUse={(item) => careFor(item, true)}
-                onPat={pat}
-                onSupplies={() =>
-                  document.getElementById("supplies")?.scrollIntoView({
-                    behavior:
-                      s.settings.motion &&
-                      !window.matchMedia("(prefers-reduced-motion: reduce)")
-                        .matches
-                        ? "smooth"
-                        : "instant",
-                    block: "center",
-                  })
-                }
-              />
+              {s.settings.petCare !== false && (
+                <PetNeeds
+                  s={s}
+                  onUse={careFor}
+                  onBuyAndUse={(item) => careFor(item, true)}
+                  onPat={pat}
+                  onSupplies={() =>
+                    document.getElementById("supplies")?.scrollIntoView({
+                      behavior:
+                        s.settings.motion &&
+                        !window.matchMedia("(prefers-reduced-motion: reduce)")
+                          .matches
+                          ? "smooth"
+                          : "instant",
+                      block: "center",
+                    })
+                  }
+                />
+              )}
               {level === 5 && (
                 <div className="revive">
                   <p>Your pet needs revival.</p>
@@ -949,13 +1028,15 @@ export default function App() {
                   {policyFor(s).coins} coins
                 </span>
               </div>
-              <Supplies
-                s={s}
-                onBuy={purchase}
-                onUse={careFor}
-                onShop={openShop}
-                onInventory={openPantry}
-              />
+              {s.settings.petCare !== false && (
+                <Supplies
+                  s={s}
+                  onBuy={purchase}
+                  onUse={careFor}
+                  onShop={openShop}
+                  onInventory={openPantry}
+                />
+              )}
             </section>
           </div>
           <footer>
@@ -1128,45 +1209,41 @@ export default function App() {
                   value={s.pet}
                   onChange={(pet) => setS((p) => ({ ...p, pet }))}
                 />
-                {(["sound", "motion", "cozy", "reminders"] as const).map(
-                  (k) => (
-                    <label className="toggle" key={k}>
-                      <input
-                        type="checkbox"
-                        checked={s.settings[k]}
-                        onChange={(e) => {
-                          setting(k, e.target.checked);
-                          if (
-                            k === "reminders" &&
-                            e.target.checked &&
-                            "Notification" in window &&
-                            Notification.permission === "default"
-                          )
-                            void Notification.requestPermission().then((p) =>
-                              setMessage(
-                                p === "granted"
-                                  ? "Browser reminders enabled."
-                                  : "In-app reminders enabled.",
-                              ),
-                            );
-                        }}
-                      />
-                      {
-                        {
-                          sound: "Soft sound effects",
-                          motion: "Playful animations",
-                          cozy: "Cozy mode (your pal can always recover)",
-                          reminders: "Gentle reminders",
-                        }[k]
-                      }
-                    </label>
-                  ),
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={s.settings.motion}
+                    onChange={(e) => setting("motion", e.target.checked)}
+                  />
+                  Playful animations
+                </label>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={s.settings.sound}
+                    onChange={(e) => setting("sound", e.target.checked)}
+                  />
+                  Soft sound effects
+                </label>
+                {importantAlarms.settings}
+                <h3>Pet Care</h3>
+                <label className="toggle">
+                  <input
+                    type="checkbox"
+                    checked={s.settings.petCare !== false}
+                    onChange={(e) => {
+                      setting("petCare", e.target.checked);
+                      setInventoryOpen(false);
+                      setIncoming(null);
+                    }}
+                  />
+                  Pet Care System
+                </label>
+                {s.settings.petCare === false && (
+                  <p className="fine">
+                    Reminder-only mode · care is saved and paused.
+                  </p>
                 )}
-                <p className="fine">
-                  <Bell size={13} /> Reminders work while the app is open.
-                  Browser notifications require permission and may not arrive
-                  when the app is closed.
-                </p>
                 <label>
                   Day & night
                   <select
@@ -1183,27 +1260,38 @@ export default function App() {
                     <option value="night">Always moonlight</option>
                   </select>
                 </label>
-                <label>
-                  Care decay
-                  <select
-                    value={s.settings.speed}
-                    onChange={(e) => {
-                      setting("speed", Number(e.target.value));
-                    }}
-                  >
-                    <option value={0.5}>Extra gentle · about a week</option>
-                    <option value={1}>Gentle · about four days</option>
-                    <option value={2}>Lively · about two days</option>
-                  </select>
-                </label>
-                <p className="fine">
-                  Sleep follows your local clock: 9pm–6am. Theme changes only
-                  the room lighting. Time estimates start from full care after
-                  the first-day grace period. Tasks earn coins; using supplies
-                  restores care. Petting gives affection, without replacing your
-                  habits.
-                </p>
-                {importantAlarms.settings}
+                {s.settings.petCare !== false && (
+                  <>
+                    <label className="toggle">
+                      <input
+                        type="checkbox"
+                        checked={s.settings.cozy}
+                        onChange={(e) => setting("cozy", e.target.checked)}
+                      />
+                      Cozy mode (your pal can always recover)
+                    </label>
+                    <label>
+                      Care decay
+                      <select
+                        value={s.settings.speed}
+                        onChange={(e) => {
+                          setting("speed", Number(e.target.value));
+                        }}
+                      >
+                        <option value={0.5}>Extra gentle · about a week</option>
+                        <option value={1}>Gentle · about four days</option>
+                        <option value={2}>Lively · about two days</option>
+                      </select>
+                    </label>
+                    <p className="fine">
+                      Sleep follows your local clock: 9pm–6am. Theme changes
+                      only the room lighting. Time estimates start from full
+                      care after the first-day grace period. Tasks earn coins;
+                      using supplies restores care. Petting gives affection,
+                      without replacing your habits.
+                    </p>
+                  </>
+                )}
                 <RewardSettings s={s} setS={setS} />
                 <div className="button-row">
                   <button
@@ -1260,6 +1348,8 @@ export default function App() {
                   }}
                 />
               </>
+            ) : panel === "calendar" ? (
+              <TaskCalendar s={s} today={today} />
             ) : panel === "tasks" ? (
               <>
                 <span className="eyebrow">YOUR LITTLE ROUTINES</span>
@@ -1687,7 +1777,7 @@ function TaskEditor({
           </label>
         )}
         <label>
-          {t.repeat === "once" ? "Task date" : "Starting on"}
+          Start Date
           <input
             required
             type="date"

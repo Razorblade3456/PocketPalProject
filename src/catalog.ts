@@ -146,7 +146,7 @@ export const SUPPLIES: Record<
   food: {
     name: "Food",
     shopName: "Basic Pet Food",
-    price: 5,
+    price: 2,
     category: "food",
     boost: 15,
     morale: 4,
@@ -156,7 +156,7 @@ export const SUPPLIES: Record<
   water: {
     name: "Water",
     shopName: "Fresh Water",
-    price: 4,
+    price: 2,
     category: "water",
     boost: 15,
     morale: 4,
@@ -166,7 +166,7 @@ export const SUPPLIES: Record<
   soap: {
     name: "Soap",
     shopName: "Soft Cloud Soap",
-    price: 6,
+    price: 2,
     category: "clean",
     boost: 15,
     morale: 4,

@@ -67,14 +67,15 @@ function DesktopPet() {
             <small>
               Saved snapshot · {new Date(saved.updated).toLocaleString()}
             </small>
-            {categories.map((key) => (
-              <div className="desktop-stat" key={key}>
-                <label htmlFor={key}>
-                  {labels[key]} <b>{Math.round(saved.care[key])}%</b>
-                </label>
-                <progress id={key} max="100" value={saved.care[key]} />
-              </div>
-            ))}
+            {saved.settings.petCare !== false &&
+              categories.map((key) => (
+                <div className="desktop-stat" key={key}>
+                  <label htmlFor={key}>
+                    {labels[key]} <b>{Math.round(saved.care[key])}%</b>
+                  </label>
+                  <progress id={key} max="100" value={saved.care[key]} />
+                </div>
+              ))}
             <small>Not live. Load a fresh export to update.</small>
           </>
         ) : (
@@ -162,7 +163,7 @@ function DesktopPet() {
       <Pet
         kind={kind}
         level={level}
-        care={saved?.care}
+        care={saved?.settings.petCare === false ? undefined : saved?.care}
         equipped={saved?.equipped}
         sleep={rhythm.sleeping && level < 3}
         calm={rhythm.calm}

@@ -1,3 +1,4 @@
+import { notifyTask } from "./notifications";
 import {
   useEffect,
   useRef,
@@ -25,7 +26,7 @@ export function useImportantAlarms(
   const notified = useRef(new Set<string>());
   const at = Math.max(now, check),
     ready = reconcileAlarms(s, at),
-    queue = alarmQueue(ready),
+    queue = s.settings.alarmsEnabled === false ? [] : alarmQueue(ready),
     current = queue[0];
   const task = s.tasks.find((t) => t.id === current?.taskId);
   const quiet = quietNow(s.settings, at) && !task?.alarmOverrideQuiet;
@@ -59,21 +60,12 @@ export function useImportantAlarms(
       )
         continue;
       notified.current.add(key);
-      if (
-        s.settings.reminders &&
-        "Notification" in window &&
-        Notification.permission === "granted"
-      ) {
-        try {
-          new Notification("PocketPal · Important Alarm", {
-            body: t?.name || "Important task",
-            tag: key,
-            silent: true,
-          });
-        } catch {
-          /* In-app alarm always remains available. */
-        }
-      }
+      if (s.settings.reminders)
+        void notifyTask(
+          "PocketPal · Important Alarm",
+          t?.name || "Important task",
+          key,
+        );
     }
   }, [s, at]);
   useEffect(() => {
@@ -84,6 +76,7 @@ export function useImportantAlarms(
     }
     if (
       !enabled ||
+      (!testing && s.settings.alarmSound === false) ||
       (!testing && (!current || quiet)) ||
       !audio.current ||
       audio.current.state !== "running" ||
@@ -120,7 +113,15 @@ export function useImportantAlarms(
     pulse();
     loop.current = setInterval(pulse, 2400);
     return silence;
-  }, [enabled, testing, current?.id, current?.dueAt, quiet, volume]);
+  }, [
+    enabled,
+    testing,
+    current?.id,
+    current?.dueAt,
+    quiet,
+    volume,
+    s.settings.alarmSound,
+  ]);
   useEffect(
     () => () => {
       silence();
@@ -158,12 +159,92 @@ export function useImportantAlarms(
         dismissAlarm(reconcileAlarms(p, Date.now()), current.id, minutes),
       );
   };
+  const [permission, setPermission] = useState<string>(() =>
+    "Notification" in window ? Notification.permission : "unsupported",
+  );
+  useEffect(() => {
+    const refresh = () =>
+      setPermission(
+        "Notification" in window ? Notification.permission : "unsupported",
+      );
+    window.addEventListener("focus", refresh);
+    return () => window.removeEventListener("focus", refresh);
+  }, []);
   const settings = (
     <section className="alarm-settings" aria-label="Important alarm settings">
       <h3>
-        <Bell size={14} /> Important alarms
+        <Bell size={14} /> Notifications & Alarms
       </h3>
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={s.settings.reminders}
+          onChange={(e) =>
+            setS((p) => ({
+              ...p,
+              settings: { ...p.settings, reminders: e.target.checked },
+            }))
+          }
+        />
+        Reminder notifications
+      </label>
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={s.settings.alarmsEnabled !== false}
+          onChange={(e) =>
+            setS((p) => ({
+              ...p,
+              settings: { ...p.settings, alarmsEnabled: e.target.checked },
+            }))
+          }
+        />
+        Important alarms
+      </label>
+      <label className="toggle">
+        <input
+          type="checkbox"
+          checked={s.settings.alarmSound !== false}
+          onChange={(e) =>
+            setS((p) => ({
+              ...p,
+              settings: { ...p.settings, alarmSound: e.target.checked },
+            }))
+          }
+        />
+        Alarm sound
+      </label>
+      <p className="fine">
+        Notifications:{" "}
+        {permission === "unsupported"
+          ? "Unsupported"
+          : permission === "granted"
+            ? "Ready"
+            : "Permission Needed"}
+        {permission === "denied" ? " · allow in browser settings" : ""} · Sound:{" "}
+        {!("AudioContext" in window)
+          ? "Unsupported"
+          : enabled
+            ? "Ready"
+            : "Sound Blocked"}
+      </p>
       <div className="button-row">
+        <button
+          type="button"
+          className="secondary"
+          disabled={
+            permission === "unsupported" ||
+            permission === "denied" ||
+            permission === "granted"
+          }
+          onClick={() => {
+            void Notification.requestPermission()
+              .then(setPermission)
+              .catch(() => setPermission("denied"));
+          }}
+        >
+          Enable Notifications
+        </button>
         <button
           type="button"
           className="secondary"
@@ -246,8 +327,8 @@ export function useImportantAlarms(
       <p className="fine">
         Sound needs a click each time you open PocketPal. Alarms need this tab
         open; closed tabs, sleeping devices, and browser throttling can delay
-        them. Use the existing reminders toggle for browser notification
-        permission.
+        them. On iPhone, install on the Home Screen (iOS 16.4+) for notification
+        support. No closed-app background alarms or push service.
       </p>
     </section>
   );
@@ -315,5 +396,9 @@ export function useImportantAlarms(
         <small>Stopping does not complete your task.</small>
       </section>
     ) : null;
-  return { settings, popup, records: ready.alarms || [] };
+  return {
+    settings,
+    popup,
+    records: s.settings.alarmsEnabled === false ? [] : ready.alarms || [],
+  };
 }

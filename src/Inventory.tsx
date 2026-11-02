@@ -48,7 +48,9 @@ export function Inventory({
   onEquip: (item: Outfit) => void;
   onApproach: (food: IncomingFood | null) => void;
 }) {
-  const [tab, setTab] = useState<"food" | "wardrobe">("food");
+  const [tab, setTab] = useState<"food" | "wardrobe">(
+    s.settings.petCare === false ? "wardrobe" : "food",
+  );
   const [drag, setDrag] = useState<Drag | null>(null);
   const active = useRef<Drag | null>(null);
   const pointer = useRef<number | null>(null);
@@ -96,7 +98,11 @@ export function Inventory({
           </button>
         </div>
         <div className="inventory-tabs">
-          <button aria-pressed={tab === "food"} onClick={() => setTab("food")}>
+          <button
+            disabled={s.settings.petCare === false}
+            aria-pressed={tab === "food"}
+            onClick={() => setTab("food")}
+          >
             <PackageOpen size={13} />
             Consumables
           </button>
@@ -111,7 +117,7 @@ export function Inventory({
             Wardrobe
           </button>
         </div>
-        {tab === "food" ? (
+        {tab === "food" && s.settings.petCare !== false ? (
           <>
             <p className="inventory-help">
               Tap Feed / Use, or drag an item onto your pet.
@@ -227,9 +233,7 @@ export function Inventory({
                 </button>
               </article>
             ))}
-            {!s.ownedOutfits.length && (
-              <p>No outfits owned yet.</p>
-            )}
+            {!s.ownedOutfits.length && <p>No outfits owned yet.</p>}
           </div>
         )}
         <button className="inventory-shop" onClick={onShop}>

@@ -402,7 +402,7 @@ test("same-millisecond transactions preserve action order through revive and cor
   assert.equal(s.care.water, 100);
   s = setOutcome(s, "a", dateKey(now), "pending", now);
   assert.equal(s.care.water, 100);
-  assert.equal(s.debt, 4);
+  assert.equal(s.debt, 2);
   assert.deepEqual(reload(s).care, s.care);
 });
 test("missed-task floor is reversible without manufacturing care", () => {
@@ -443,7 +443,7 @@ test("coins reverse on undo and switches, with no duplicate earnings after refre
 test("purchasing stocks inventory without improving care", () => {
   const earned = complete(setup(), "a", now);
   const s = buySupply(earned, "water", now);
-  assert.equal(s.coins, 1);
+  assert.equal(s.coins, 3);
   assert.equal(s.inventory.water, 1);
   assert.deepEqual(s.care, earned.care);
   assert.equal(s.completions.length, 1);
@@ -487,37 +487,37 @@ test("undoing spent coins reserves a shortfall without erasing inventory or care
   let s = buySupply(complete(setup(), "a", now), "food", now);
   s = setOutcome(s, "a", dateKey(now), "pending", now);
   assert.equal(s.coins, 0);
-  assert.equal(s.debt, 5);
+  assert.equal(s.debt, 2);
   assert.equal(s.inventory.food, 1);
   s = useSupply(s, "food", now);
   assert.equal(s.care.food, 100);
   assert.equal(s.inventory.food, 0);
-  assert.equal(s.debt, 5);
+  assert.equal(s.debt, 2);
   s = complete(s, "a", now);
-  assert.equal(s.coins, 0);
+  assert.equal(s.coins, 3);
   assert.equal(s.debt, 0);
   assert.equal(s.inventory.food, 0);
-  assert.equal(buySupply(s, "food", now).inventory.food, 0);
+  assert.equal(buySupply(s, "food", now).inventory.food, 1);
 });
 test("repeated outcome toggles cannot duplicate supplies or erase spent-coin reservations", () => {
-  let s = buySupply(complete(setup(), "a", now), "food", now);
+  let s = buySupply(complete(setup(), "a", now), "food", now, "same-purchase");
   for (let i = 0; i < 20; i++) {
     s = setOutcome(s, "a", dateKey(now), "pending", now);
-    assert.equal(s.debt, 5);
+    assert.equal(s.debt, 2);
     s = complete(s, "a", now);
-    s = buySupply(s, "food", now);
+    s = buySupply(s, "food", now, "same-purchase");
   }
   assert.equal(s.inventory.food, 1);
-  assert.equal(s.coins, 0);
+  assert.equal(s.coins, 3);
   assert.equal(s.careEvents.filter((e) => e.kind === "buy").length, 1);
 });
 test("new earnings settle a reservation before new coins become spendable", () => {
   let s = buySupply(complete(setup(), "a", now), "water", now);
   s = setOutcome(s, "a", dateKey(now), "missed", now);
-  assert.equal(s.debt, 4);
+  assert.equal(s.debt, 2);
   s.tasks.push(task("b"));
   s = complete(s, "b", now);
-  assert.equal(s.coins, 1);
+  assert.equal(s.coins, 3);
   assert.equal(s.debt, 0);
   assert.equal(s.inventory.water, 1);
   assert.deepEqual(reload(s), s);
@@ -528,10 +528,10 @@ test("past-date correction reverses currency without moving its jar ball into to
   s = buySupply(s, "water", now);
   s = setOutcome(s, "a", dateKey(now), "pending", tomorrow);
   assert.equal(s.coins, 0);
-  assert.equal(s.debt, 4);
+  assert.equal(s.debt, 2);
   assert.equal(s.completions.length, 0);
   s = setOutcome(s, "a", dateKey(now), "completed", tomorrow);
-  assert.equal(s.coins, 1);
+  assert.equal(s.coins, 3);
   assert.equal(s.completions[0].date, dateKey(now));
   assert.deepEqual(reload(s, tomorrow).inventory, s.inventory);
 });
@@ -722,7 +722,12 @@ test("re-completing version-1 history never restores its old food, water or happ
 });
 function earn(s: State, count: number, n = now) {
   // Explicitly fund purchase-focused tests under the configurable economy.
-  s = {...s,tasks:s.tasks.map(t=>t.id === "a" ? {...t,rewardCap:Math.min(count,100)} : t)};
+  s = {
+    ...s,
+    tasks: s.tasks.map((t) =>
+      t.id === "a" ? { ...t, rewardCap: Math.min(count, 100) } : t,
+    ),
+  };
   for (let i = 0; i < count; i++)
     s = recordAttempt(s, "a", dateKey(n), "completed", n, "earn-" + i);
   return s;
@@ -735,8 +740,8 @@ test("approved basic care buys and consumes once, preserves prices/effects, and 
     assert.equal(next.inventory[item], 0);
     assert.equal(next.care[SUPPLIES[item].category], 100);
     assert.equal(next.care.happy, 94);
-    assert.equal(next.careEvents.filter(e => e.kind === "buy").length, 1);
-    assert.equal(next.careEvents.filter(e => e.kind === "use").length, 1);
+    assert.equal(next.careEvents.filter((e) => e.kind === "buy").length, 1);
+    assert.equal(next.careEvents.filter((e) => e.kind === "use").length, 1);
     assert.deepEqual(buyAndUseBasic(next, item, now, "approved"), next);
     assert.deepEqual(reload(next), next);
   }
@@ -747,27 +752,52 @@ test("approved quick care uses newly stocked inventory and never charges when fu
   const used = buyAndUseBasic(stocked, "food", now, "approved");
   assert.equal(used.coins, stocked.coins);
   assert.equal(used.inventory.food, 0);
-  assert.equal(used.careEvents.filter(e => e.kind === "buy").length, 1);
+  assert.equal(used.careEvents.filter((e) => e.kind === "buy").length, 1);
   const poor = setup();
-  assert.deepEqual(buyAndUseBasic(poor, "food", now, "too-poor"), decay(poor, now));
-  const dead = {...funded, settings:{...funded.settings, cozy:false}, baseline:{...funded.baseline, cozy:false, care:{food:0,water:0,clean:0,happy:0}}};
+  assert.deepEqual(
+    buyAndUseBasic(poor, "food", now, "too-poor"),
+    decay(poor, now),
+  );
+  const dead = {
+    ...funded,
+    settings: { ...funded.settings, cozy: false },
+    baseline: {
+      ...funded.baseline,
+      cozy: false,
+      care: { food: 0, water: 0, clean: 0, happy: 0 },
+    },
+  };
   assert.deepEqual(buyAndUseBasic(dead, "soap", now, "dead"), decay(dead, now));
 });
 test("finished-today grouping is derived from the daily target and reverses after undo/corrections", () => {
-  let s = setup(); s.tasks[0] = {...s.tasks[0], repetitions:"goal", dailyGoal:3};
-  for (let i=0;i<3;i++) {
+  let s = setup();
+  s.tasks[0] = { ...s.tasks[0], repetitions: "goal", dailyGoal: 3 };
+  for (let i = 0; i < 3; i++) {
     assert.equal(taskFinishedToday(s, s.tasks[0], dateKey(now)), false);
     s = recordAttempt(s, "a", dateKey(now), "completed", now, `finish-${i}`);
   }
   const snapshot = JSON.stringify(s);
   assert.equal(taskFinishedToday(s, s.tasks[0], dateKey(now)), true);
   assert.equal(JSON.stringify(s), snapshot);
-  assert.equal(taskFinishedToday(s, {...s.tasks[0], repetitions:"unlimited"}, dateKey(now)), false);
-  assert.equal(taskFinishedToday(s, s.tasks[0], shiftDate(dateKey(now),1)), false);
+  assert.equal(
+    taskFinishedToday(
+      s,
+      { ...s.tasks[0], repetitions: "unlimited" },
+      dateKey(now),
+    ),
+    false,
+  );
+  assert.equal(
+    taskFinishedToday(s, s.tasks[0], shiftDate(dateKey(now), 1)),
+    false,
+  );
   const undone = undoLatest(s, "a", dateKey(now), now);
   assert.equal(taskFinishedToday(undone, undone.tasks[0], dateKey(now)), false);
   const corrected = correctAttempt(s, "finish-2", "missed", now);
-  assert.equal(taskFinishedToday(corrected, corrected.tasks[0], dateKey(now)), false);
+  assert.equal(
+    taskFinishedToday(corrected, corrected.tasks[0], dateKey(now)),
+    false,
+  );
 });
 test("each intentional positive and negative press is a unique independent entry", () => {
   let s = setup();
@@ -967,12 +997,12 @@ test("undoing a funding occurrence preserves bought clothing and used food, and 
   s = equipOutfit(s, "beanie", now);
   s = deleteAttempt(s, "earn-0", now);
   assert.equal(s.coins, 0);
-  assert.equal(s.debt, 5);
+  assert.equal(s.debt, 2);
   assert.equal(s.care.food, 100);
   assert.equal(s.equipped.head, "beanie");
   assert.equal(s.ownedOutfits.length, 1);
   s = correctAttempt(s, "earn-1", "missed", now);
-  assert.equal(s.debt, 10);
+  assert.equal(s.debt, 7);
   assert.equal(s.inventory.food, 0);
   assert.ok(validState(s));
 });
@@ -989,7 +1019,7 @@ test("version-3 saves migrate single results, purchased essentials and head pats
   const migrated = parseState(raw, now)!;
   assert.ok(migrated);
   assert.equal(migrated.version, 4);
-  assert.equal(migrated.coins, 1);
+  assert.equal(migrated.coins, 3);
   assert.equal(migrated.inventory.water, 1);
   assert.equal(migrated.inventory.burger, 0);
   assert.deepEqual(migrated.care, s.care);
@@ -1019,9 +1049,53 @@ test("every outfit renders on all three species through all six health stages", 
 test("hundreds of repeated entries retain unique ball IDs and round-trip without duplicate rewards", () => {
   const s = earn(setup(), 150);
   assert.equal(s.coins, 500);
-  assert.equal(s.outcomes.filter(o=>o.status === "completed").length, 150);
+  assert.equal(s.outcomes.filter((o) => o.status === "completed").length, 150);
   assert.equal(s.completions.length, 100);
   assert.equal(new Set(s.completions.map(rewardKey)).size, 100);
   assert.ok(validState(s));
   assert.deepEqual(reload(s), s);
+});
+
+test("reminder-only mode freezes care across refresh and resumes without catch-up", () => {
+  let s = initial(now);
+  s = decay(s, now + 30 * hour);
+  const at = now + 30 * hour;
+  s = changeSettings(s, { petCare: false }, at);
+  const care = { ...s.care };
+  s = decay(s, at + 300 * hour);
+  assert.deepEqual(s.care, care);
+  assert.equal(stage(s), 0);
+  assert.deepEqual(headPat(s, at + 300 * hour).care, care);
+  const loaded = parseState(JSON.parse(JSON.stringify(s)), at + 300 * hour)!;
+  assert.ok(loaded);
+  assert.deepEqual(loaded.care, care);
+  const resumed = changeSettings(loaded, { petCare: true }, at + 300 * hour);
+  assert.deepEqual(resumed.care, care);
+  assert.ok(decay(resumed, at + 301 * hour).care.food < care.food);
+  assert.equal(resumed.outcomes.length, loaded.outcomes.length);
+});
+test("new notification defaults do not replace existing saved settings", () => {
+  const fresh = initial(now);
+  assert.equal(fresh.settings.reminders, true);
+  assert.equal(fresh.settings.alarmSound, true);
+  assert.equal(fresh.settings.alarmsEnabled, true);
+  const old = initial(now);
+  old.settings.reminders = false;
+  delete old.settings.alarmSound;
+  delete old.settings.alarmsEnabled;
+  const loaded = parseState(JSON.parse(JSON.stringify(old)), now)!;
+  assert.ok(loaded);
+  assert.equal(loaded.settings.reminders, false);
+  assert.equal(loaded.settings.alarmSound, undefined);
+});
+test("care-linked missed attempts during reminder-only mode never reduce care or return on resume", () => {
+  let s = initial(now);
+  s.tasks = [task("pause-care", { careLinked: true })];
+  s = changeSettings(s, { petCare: false }, now);
+  const care = { ...s.care };
+  s = recordAttempt(s, "pause-care", dateKey(now), "missed", now + hour);
+  assert.deepEqual(s.care, care);
+  s = changeSettings(s, { petCare: true }, now + 2 * hour);
+  assert.deepEqual(s.care, care);
+  assert.equal(s.outcomes.length, 1);
 });

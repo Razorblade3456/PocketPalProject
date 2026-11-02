@@ -1,0 +1,364 @@
+TAP version 13
+# Subtest: important alarms use local task time, queue once, and do not mutate task/currency history
+ok 1 - important alarms use local task time, queue once, and do not mutate task/currency history
+  ---
+  duration_ms: 5.1514
+  type: 'test'
+  ...
+# Subtest: stopped alarms persist across refresh without completing tasks or duplicating
+ok 2 - stopped alarms persist across refresh without completing tasks or duplicating
+  ---
+  duration_ms: 4.3174
+  type: 'test'
+  ...
+# Subtest: 5, 10 and 30 minute snoozes stop ringing, persist and ring again exactly once
+ok 3 - 5, 10 and 30 minute snoozes stop ringing, persist and ring again exactly once
+  ---
+  duration_ms: 5.8253
+  type: 'test'
+  ...
+# Subtest: snooze across midnight keeps its original occurrence and new day's schedule
+ok 4 - snooze across midnight keeps its original occurrence and new day's schedule
+  ---
+  duration_ms: 0.3724
+  type: 'test'
+  ...
+# Subtest: closed-session catch-up discovers overdue alarms and preserves a deterministic queue
+ok 5 - closed-session catch-up discovers overdue alarms and preserves a deterministic queue
+  ---
+  duration_ms: 0.4985
+  type: 'test'
+  ...
+# Subtest: task deletion, edits, skip, pause and occurrence reschedule cancel stale alarms
+ok 6 - task deletion, edits, skip, pause and occurrence reschedule cancel stale alarms
+  ---
+  duration_ms: 1.619
+  type: 'test'
+  ...
+# Subtest: all recurrence types and created dates reuse taskDue, without ordinary or completed alarms
+ok 7 - all recurrence types and created dates reuse taskDue, without ordinary or completed alarms
+  ---
+  duration_ms: 24.3697
+  type: 'test'
+  ...
+# Subtest: quiet hours respect local clock, overnight and same-time full-day intervals
+ok 8 - quiet hours respect local clock, overnight and same-time full-day intervals
+  ---
+  duration_ms: 0.461
+  type: 'test'
+  ...
+# Subtest: timezone changes rebase untriggered wall-clock alarms; snooze remains elapsed time
+ok 9 - timezone changes rebase untriggered wall-clock alarms; snooze remains elapsed time
+  ---
+  duration_ms: 0.8207
+  type: 'test'
+  ...
+# Subtest: alarm data validates without requiring a save migration
+ok 10 - alarm data validates without requiring a save migration
+  ---
+  duration_ms: 1.1274
+  type: 'test'
+  ...
+# Subtest: relative alarms save one fixed timestamp and survive unrelated edits and refresh
+ok 11 - relative alarms save one fixed timestamp and survive unrelated edits and refresh
+  ---
+  duration_ms: 0.8332
+  type: 'test'
+  ...
+# Subtest: relative snooze and stop reuse the same alarm without rearming or affecting history
+ok 12 - relative snooze and stop reuse the same alarm without rearming or affecting history
+  ---
+  duration_ms: 0.3267
+  type: 'test'
+  ...
+# Subtest: relative alarms explicitly restart or switch back to wall-clock scheduling
+ok 13 - relative alarms explicitly restart or switch back to wall-clock scheduling
+  ---
+  duration_ms: 0.6215
+  type: 'test'
+  ...
+# Subtest: relative deadlines across midnight remain absolute and cancel on delete, skip or completion
+ok 14 - relative deadlines across midnight remain absolute and cancel on delete, skip or completion
+  ---
+  duration_ms: 0.7657
+  type: 'test'
+  ...
+# Subtest: shared countdown formats absolute deadlines and chooses only an active nearest alarm
+ok 15 - shared countdown formats absolute deadlines and chooses only an active nearest alarm
+  ---
+  duration_ms: 5.2055
+  type: 'test'
+  ...
+# Subtest: existing time-alarm signatures remain compatible with pre-countdown saves
+ok 16 - existing time-alarm signatures remain compatible with pre-countdown saves
+  ---
+  duration_ms: 2.9352
+  type: 'test'
+  ...
+# Subtest: a relative deadline after midnight still belongs to the task occurrence being completed
+ok 17 - a relative deadline after midnight still belongs to the task occurrence being completed
+  ---
+  duration_ms: 0.8012
+  type: 'test'
+  ...
+# Subtest: each saved reminder/alarm flag combination selects exactly one notification path
+ok 18 - each saved reminder/alarm flag combination selects exactly one notification path
+  ---
+  duration_ms: 1.0666
+  type: 'test'
+  ...
+# Subtest: visual countdown uses persisted real start and deadline with a continuous color progression
+ok 19 - visual countdown uses persisted real start and deadline with a continuous color progression
+  ---
+  duration_ms: 1.2478
+  type: 'test'
+  ...
+# Subtest: snoozing saves a new start so the visual bar resets and survives refresh
+ok 20 - snoozing saves a new start so the visual bar resets and survives refresh
+  ---
+  duration_ms: 0.3935
+  type: 'test'
+  ...
+# Subtest: legacy relative alarms recover known starts without resetting dates; unknown old snoozes are not fabricated
+ok 21 - legacy relative alarms recover known starts without resetting dates; unknown old snoozes are not fabricated
+  ---
+  duration_ms: 0.2947
+  type: 'test'
+  ...
+# Subtest: default economy caps coins and balls at three while keeping all 20 positive actions
+ok 22 - default economy caps coins and balls at three while keeping all 20 positive actions
+  ---
+  duration_ms: 43.8883
+  type: 'test'
+  ...
+# Subtest: custom goal rewards only its target; additional entries and negatives stay independent
+ok 23 - custom goal rewards only its target; additional entries and negatives stay independent
+  ---
+  duration_ms: 4.4852
+  type: 'test'
+  ...
+# Subtest: unlimited has a finite currency quota and never gains automatic misses
+ok 24 - unlimited has a finite currency quota and never gains automatic misses
+  ---
+  duration_ms: 4.1589
+  type: 'test'
+  ...
+# Subtest: per-task reward cap and zero-reward tracking work
+ok 25 - per-task reward cap and zero-reward tracking work
+  ---
+  duration_ms: 6.8544
+  type: 'test'
+  ...
+# Subtest: same transaction ID never duplicates an action, reward or jar ball
+ok 26 - same transaction ID never duplicates an action, reward or jar ball
+  ---
+  duration_ms: 1.2736
+  type: 'test'
+  ...
+# Subtest: twenty positive-negative corrections append adjustments without producing profit
+ok 27 - twenty positive-negative corrections append adjustments without producing profit
+  ---
+  duration_ms: 5.6142
+  type: 'test'
+  ...
+# Subtest: correcting funded income after purchase and consumption reserves debt and never duplicates goods
+ok 28 - correcting funded income after purchase and consumption reserves debt and never duplicates goods
+  ---
+  duration_ms: 2.8645
+  type: 'test'
+  ...
+# Subtest: undoing an eligible result promotes an already tracked extra without exceeding the cap
+ok 29 - undoing an eligible result promotes an already tracked extra without exceeding the cap
+  ---
+  duration_ms: 1.755
+  type: 'test'
+  ...
+# Subtest: policy edits affect new entries and preserve old reward rate snapshots
+ok 30 - policy edits affect new entries and preserve old reward rate snapshots
+  ---
+  duration_ms: 1.7794
+  type: 'test'
+  ...
+# Subtest: daily reward limits reset on a new local calendar date
+ok 31 - daily reward limits reset on a new local calendar date
+  ---
+  duration_ms: 3.454
+  type: 'test'
+  ...
+# Subtest: every X days uses the start-date calendar anchor
+ok 32 - every X days uses the start-date calendar anchor
+  ---
+  duration_ms: 0.4045
+  type: 'test'
+  ...
+# Subtest: after-completion recurrence resets its anchor after a corrected completion
+ok 33 - after-completion recurrence resets its anchor after a corrected completion
+  ---
+  duration_ms: 0.8338
+  type: 'test'
+  ...
+# Subtest: weekly, selected weekdays and one-time schedules retain their local dates
+ok 34 - weekly, selected weekdays and one-time schedules retain their local dates
+  ---
+  duration_ms: 0.2407
+  type: 'test'
+  ...
+# Subtest: DST boundaries use calendar days rather than 24-hour elapsed periods
+ok 35 - DST boundaries use calendar days rather than 24-hour elapsed periods
+  ---
+  duration_ms: 0.4308
+  type: 'test'
+  ...
+# Subtest: creation-date snapshots prevent penalties before task creation even after timezone changes
+ok 36 - creation-date snapshots prevent penalties before task creation even after timezone changes
+  ---
+  duration_ms: 0.2476
+  type: 'test'
+  ...
+# Subtest: finite goals count manual misses and only auto-record genuine shortfalls once
+ok 37 - finite goals count manual misses and only auto-record genuine shortfalls once
+  ---
+  duration_ms: 1.4625
+  type: 'test'
+  ...
+# Subtest: skip with a reason suppresses automatic penalties but keeps prior actions
+ok 38 - skip with a reason suppresses automatic penalties but keeps prior actions
+  ---
+  duration_ms: 0.8238
+  type: 'test'
+  ...
+# Subtest: vacation pause covers inclusive dates and resumes afterward without backfilled misses
+ok 39 - vacation pause covers inclusive dates and resumes afterward without backfilled misses
+  ---
+  duration_ms: 0.336
+  type: 'test'
+  ...
+# Subtest: indefinite pause and explicit resume respect prior paused dates
+ok 40 - indefinite pause and explicit resume respect prior paused dates
+  ---
+  duration_ms: 0.2836
+  type: 'test'
+  ...
+# Subtest: rescheduling moves only one occurrence, with no penalty on its original day
+ok 41 - rescheduling moves only one occurrence, with no penalty on its original day
+  ---
+  duration_ms: 0.5555
+  type: 'test'
+  ...
+# Subtest: snoozing overrides just today’s reminder and is recorded in history
+ok 42 - snoozing overrides just today’s reminder and is recorded in history
+  ---
+  duration_ms: 0.5928
+  type: 'test'
+  ...
+# Subtest: Today’s 3 is optional, capped at three and local-date specific
+ok 43 - Today’s 3 is optional, capped at three and local-date specific
+  ---
+  duration_ms: 0.5479
+  type: 'test'
+  ...
+# Subtest: tiny steps contribute exactly one parent reward without per-step coins
+ok 44 - tiny steps contribute exactly one parent reward without per-step coins
+  ---
+  duration_ms: 2.3797
+  type: 'test'
+  ...
+# Subtest: tiny steps do not award a second parent completion after a manual positive
+ok 45 - tiny steps do not award a second parent completion after a manual positive
+  ---
+  duration_ms: 0.5363
+  type: 'test'
+  ...
+# Subtest: editing keeps original outcome snapshots, ledger and tiny-step history
+ok 46 - editing keeps original outcome snapshots, ledger and tiny-step history
+  ---
+  duration_ms: 0.767
+  type: 'test'
+  ...
+# Subtest: older saves keep existing rewards, goods and care when the ledger is first introduced
+ok 47 - older saves keep existing rewards, goods and care when the ledger is first introduced
+  ---
+  duration_ms: 3.451
+  type: 'test'
+  ...
+# Subtest: malformed habit policies and unknown ledger entries are rejected safely
+ok 48 - malformed habit policies and unknown ledger entries are rejected safely
+  ---
+  duration_ms: 0.3086
+  type: 'test'
+  ...
+# Subtest: skips and reschedules can be corrected by restoring today without erasing history
+ok 49 - skips and reschedules can be corrected by restoring today without erasing history
+  ---
+  duration_ms: 0.8677
+  type: 'test'
+  ...
+# Subtest: compatibility outcome corrections also respect a coins-only task without a care link
+ok 50 - compatibility outcome corrections also respect a coins-only task without a care link
+  ---
+  duration_ms: 25.3417
+  type: 'test'
+  ...
+# Subtest: deleting a focused task frees today’s focus slot while keeping older focus history
+ok 51 - deleting a focused task frees today’s focus slot while keeping older focus history
+  ---
+  duration_ms: 3.0617
+  type: 'test'
+  ...
+# Subtest: step row edits preserve IDs, checked history, older penalties and more than 30 steps
+ok 52 - step row edits preserve IDs, checked history, older penalties and more than 30 steps
+  ---
+  duration_ms: 14.2181
+  type: 'test'
+  ...
+# Subtest: mini personalities yield to sleep, death, low health, hunger and thirst
+ok 53 - mini personalities yield to sleep, death, low health, hunger and thirst
+  ---
+  duration_ms: 2.027
+  type: 'test'
+  ...
+# Subtest: single idle selection avoids immediate repeats and waits 8–20 seconds
+ok 54 - single idle selection avoids immediate repeats and waits 8–20 seconds
+  ---
+  duration_ms: 0.6341
+  type: 'test'
+  ...
+# Subtest: all Mini pets retain two existing arms and one exclusive face in every health/sleep/care state
+ok 55 - all Mini pets retain two existing arms and one exclusive face in every health/sleep/care state
+  ---
+  duration_ms: 556.0688
+  type: 'test'
+  ...
+# Subtest: multiple-entry progress uses a daily target without changing scheduling or reward policy
+ok 56 - multiple-entry progress uses a daily target without changing scheduling or reward policy
+  ---
+  duration_ms: 27.595
+  type: 'test'
+  ...
+# Subtest: unlimited done-for-day is explicit, reversible, saved, and never pays coins
+ok 57 - unlimited done-for-day is explicit, reversible, saved, and never pays coins
+  ---
+  duration_ms: 2.8909
+  type: 'test'
+  ...
+# Subtest: older current-version inventories gain only zero entries for new products
+ok 58 - older current-version inventories gain only zero entries for new products
+  ---
+  duration_ms: 58.0517
+  type: 'test'
+  ...
+# Subtest: all ten new products purchase, consume, persist and render on every pet
+ok 59 - all ten new products purchase, consume, persist and render on every pet
+  ---
+  duration_ms: 1306.4726
+  type: 'test'
+  ...
+1..59
+# tests 59
+# suites 0
+# pass 59
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3293.1932

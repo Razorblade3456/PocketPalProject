@@ -532,3 +532,75 @@ test("legacy relative alarms recover known starts without resetting dates; unkno
     null,
   );
 });
+
+test("notification delivery uses the worker, deduplicates reloads, and never asks permission", async () => {
+  const { notifyTask } = await import("./notifications");
+  const names = [
+    "window",
+    "navigator",
+    "Notification",
+    "localStorage",
+  ] as const;
+  const old = Object.fromEntries(
+    names.map((k) => [k, Object.getOwnPropertyDescriptor(globalThis, k)]),
+  );
+  const store = new Map<string, string>();
+  let deliveries = 0;
+  let requests = 0;
+  let permission = "granted";
+  try {
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: { Notification: {} },
+    });
+    Object.defineProperty(globalThis, "Notification", {
+      configurable: true,
+      value: {
+        get permission() {
+          return permission;
+        },
+        requestPermission() {
+          requests++;
+        },
+      },
+    });
+    Object.defineProperty(globalThis, "navigator", {
+      configurable: true,
+      value: {
+        serviceWorker: {
+          getRegistration: async () => ({
+            active: true,
+            showNotification: async () => {
+              deliveries++;
+            },
+          }),
+        },
+      },
+    });
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => store.set(k, v),
+        removeItem: (k: string) => store.delete(k),
+        key: (i: number) => [...store.keys()][i],
+        get length() {
+          return store.size;
+        },
+      },
+    });
+    await notifyTask("Reminder", "Task", "same");
+    await notifyTask("Reminder", "Task", "same");
+    assert.equal(deliveries, 1);
+    permission = "default";
+    await notifyTask("Reminder", "Task", "permission");
+    assert.equal(deliveries, 1);
+    assert.equal(requests, 0);
+  } finally {
+    for (const k of names) {
+      const descriptor = old[k];
+      if (descriptor) Object.defineProperty(globalThis, k, descriptor);
+      else Reflect.deleteProperty(globalThis, k);
+    }
+  }
+});

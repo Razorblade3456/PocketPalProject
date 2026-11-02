@@ -256,8 +256,10 @@ export function OutcomeHistory({
           .map((e) => (
             <div key={e.id}>
               <span>
-                {s.outcomes.find((o) => o.id === e.entryId)?.name ||
-                  "Task reward"}
+                {e.source === "daily-care"
+                  ? "Daily Care Bonus"
+                  : s.outcomes.find((o) => o.id === e.entryId)?.name ||
+                    "Task reward"}
               </span>
               <small>
                 {e.amount > 0 ? "+" : ""}

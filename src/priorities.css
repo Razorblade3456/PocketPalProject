@@ -1,0 +1,32 @@
+/* Small, consistent accents; keep the existing card backgrounds. */
+.priority-high {
+  --priority-color: #c98594;
+}
+.priority-normal {
+  --priority-color: #b6a2cc;
+}
+.priority-low {
+  --priority-color: #a5b58d;
+}
+.app .task-card.outcome-card {
+  border-left: 3px solid var(--priority-color, #b6a2cc);
+}
+.task-meta .priority-indicator {
+  color: var(--priority-color);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+}
+.priority-indicator::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--priority-color);
+  flex: 0 0 auto;
+}
+.priority-select select {
+  border-left: 3px solid var(--priority-color);
+}

@@ -82,6 +82,9 @@ export type Occurrence = Completion & {
   timeZone?: string;
 };
 type Settings = {
+  petCare?: boolean;
+  alarmSound?: boolean;
+  alarmsEnabled?: boolean;
   alarmVolume?: number;
   quietHours?: boolean;
   quietStart?: string;
@@ -96,6 +99,7 @@ type Settings = {
 type CareEvent =
   | {
       kind: "settings";
+      petCare?: boolean;
       at: number;
       speed: number;
       cozy: boolean;
@@ -121,6 +125,8 @@ type CareEvent =
       morale: number;
     };
 export type RewardTransaction = {
+  source?: "daily-care";
+  date?: string;
   id: string;
   entryId: string;
   amount: number;
@@ -237,9 +243,11 @@ export function initial(n = Date.now()): State {
     achievements: [],
     settings: {
       sound: false,
+      alarmSound: true,
+      alarmsEnabled: true,
       motion: true,
       theme: "auto",
-      reminders: false,
+      reminders: true,
       speed: 1,
       cozy: true,
     },
@@ -389,7 +397,7 @@ export const stageForCare = (care: Care, cozy = false) => {
             : 5;
 };
 export const stage = (s: Pick<State, "care" | "settings">) =>
-  stageForCare(s.care, s.settings.cozy);
+  s.settings.petCare === false ? 0 : stageForCare(s.care, s.settings.cozy);
 export function outcomeFor(s: State, id: string, date: string) {
   return s.outcomes.find(
     (o) => o.taskId === id && o.date === date && !o.deleted,
@@ -542,6 +550,7 @@ function project(s: State, n: number): State {
     speed = s.baseline.speed,
     cozy = s.baseline.cozy,
     last = s.baseline.at;
+  let petCare = true;
   const penalties = new Map<string, number>();
   const events = [
     ...s.careEvents.map((e, i) => ({
@@ -566,7 +575,11 @@ function project(s: State, n: number): State {
         at - Math.max(last, s.created + BALANCE.graceHours * 3600000),
       ) / 3600000;
     for (const c of categories)
-      care[c] = clamp(care[c] - hours * speed * BALANCE.rates[c], cozy ? 5 : 0);
+      if (petCare)
+        care[c] = clamp(
+          care[c] - hours * speed * BALANCE.rates[c],
+          cozy ? 5 : 0,
+        );
     last = Math.max(last, at);
   };
   let recovered = false;
@@ -578,6 +591,7 @@ function project(s: State, n: number): State {
     advance(at);
     if ("kind" in e) {
       if (e.kind === "pat") {
+        if (!petCare) continue;
         const before = stage({ care, settings: { ...s.settings, cozy } });
         care.happy = clamp(care.happy + BALANCE.headPat, cozy ? 5 : 0);
         if (
@@ -598,6 +612,7 @@ function project(s: State, n: number): State {
           const before = stage({ care, settings: { ...s.settings, cozy } });
           inventory[e.item]--;
           const category = SUPPLIES[e.item].category;
+          if (!petCare) continue;
           care[category] = clamp(care[category] + e.boost, cozy ? 5 : 0);
           care.happy = clamp(care.happy + e.morale, cozy ? 5 : 0);
           if (
@@ -611,12 +626,15 @@ function project(s: State, n: number): State {
       if (e.kind === "revive")
         care = { food: 90, water: 90, clean: 90, happy: 90 };
       else {
+        petCare = e.petCare ?? petCare;
         speed = e.speed;
         cozy = e.cozy;
-        for (const c of categories) care[c] = clamp(care[c], cozy ? 5 : 0);
+        if (petCare)
+          for (const c of categories) care[c] = clamp(care[c], cozy ? 5 : 0);
       }
       continue;
     }
+    if (!petCare) continue;
     const before = stage({ care, settings: { ...s.settings, cozy } });
     let amount = 0;
     if (e.status === "completed" && !e.deleted) amount = e.rewardCare;
@@ -848,7 +866,9 @@ export function changeSettings(
   s = decay(s, n);
   const settings = { ...s.settings, ...patch };
   const changes =
-    settings.speed !== s.settings.speed || settings.cozy !== s.settings.cozy;
+    settings.speed !== s.settings.speed ||
+    settings.cozy !== s.settings.cozy ||
+    settings.petCare !== s.settings.petCare;
   return project(
     {
       ...s,
@@ -862,6 +882,7 @@ export function changeSettings(
               sequence: s.lastSequence + 1,
               at: n,
               speed: settings.speed,
+              petCare: settings.petCare !== false,
               cozy: settings.cozy,
             },
           ]
@@ -886,6 +907,7 @@ export function revive(s: State, n = Date.now()): State {
 }
 export function headPat(s: State, n = Date.now()): State {
   s = decay(s, n);
+  if (s.settings.petCare === false) return s;
   if (stage(s) === 5 || s.care.happy >= 100) return s;
   return project(
     {
@@ -964,6 +986,7 @@ export function useSupply(
   id: string = crypto.randomUUID(),
 ): State {
   s = decay(s, n);
+  if (s.settings.petCare === false) return s;
   if (s.careEvents.some((e) => "id" in e && e.id === id)) return s;
   const supply = isSupply(item) ? SUPPLIES[item] : null;
   if (!supply || s.inventory[item] < 1 || stage(s) === 5) return s;
@@ -1001,6 +1024,7 @@ export function buyAndUseBasic(
   if (s.careEvents.some((e) => "id" in e && (e.id === buyId || e.id === useId)))
     return s;
   s = decay(s, n);
+  if (s.settings.petCare === false) return s;
   if (stage(s) === 5) return s;
   const stocked = s.inventory[item] > 0 ? s : buyItem(s, item, n, buyId);
   const used = useSupply(stocked, item, n, useId);
@@ -1080,6 +1104,11 @@ function commonValid(x: unknown): boolean {
     Array.isArray(s.achievements) &&
     s.achievements.every((a) => typeof a === "string") &&
     !!s.settings &&
+    ["petCare", "alarmSound", "alarmsEnabled"].every(
+      (k) =>
+        s.settings[k as keyof Settings] === undefined ||
+        typeof s.settings[k as keyof Settings] === "boolean",
+    ) &&
     ["auto", "day", "night"].includes(s.settings.theme) &&
     [0.5, 1, 2].includes(s.settings.speed) &&
     ["sound", "motion", "reminders", "cozy"].every(
@@ -1130,7 +1159,8 @@ function validModel(x: unknown, version: number): x is State {
                 e.morale <= 100))) ||
           (e.kind === "settings" &&
             [0.5, 1, 2].includes(e.speed) &&
-            typeof e.cozy === "boolean")),
+            typeof e.cozy === "boolean" &&
+            (e.petCare === undefined || typeof e.petCare === "boolean"))),
     ) &&
     Array.isArray(s.outcomes) &&
     s.outcomes.every(
@@ -1501,7 +1531,10 @@ export function validHabitData(s: State) {
           bounded(e.amount, -100, 100) &&
           e.amount !== 0 &&
           Number.isFinite(e.at) &&
-          s.outcomes?.some((o) => o.id === e.entryId),
+          (e.source === "daily-care"
+            ? isDailyCareBonus(e)
+            : e.source === undefined &&
+              s.outcomes?.some((o) => o.id === e.entryId)),
       ) ||
       new Set(s.rewardLedger.map((e) => e.id)).size !== s.rewardLedger.length)
   )
@@ -1706,3 +1739,61 @@ export const taskReminderMode = (task: Task): "alarm" | "reminder" | "off" =>
     : task.reminderEnabled === false
       ? "off"
       : "reminder";
+
+const dailyCareId = (date: string) => "daily-care:" + date;
+export function isDailyCareBonus(e: RewardTransaction) {
+  return (
+    e.source === "daily-care" &&
+    typeof e.date === "string" &&
+    isDate(e.date) &&
+    e.id === dailyCareId(e.date) &&
+    e.entryId === e.id &&
+    e.amount === 6 &&
+    Number.isFinite(e.at)
+  );
+}
+/** One ledger entry per visited local date. Never fill unvisited days. */
+export function dailyCareBonus(s: State, n = Date.now()): State {
+  const date = dateKey(n),
+    id = dailyCareId(date);
+  if (s.rewardLedger?.some((e) => e.id === id)) return s;
+  return project(
+    {
+      ...s,
+      rewardLedger: [
+        ...(s.rewardLedger || []),
+        { id, entryId: id, source: "daily-care", date, amount: 6, at: n },
+      ],
+    },
+    s.updated,
+  );
+}
+/** Keep deterministic daily receipts when another open tab saves an older snapshot. */
+export function mergeDailyCareBonuses(s: State, other: State): State {
+  const ids = new Set((s.rewardLedger || []).map((e) => e.id));
+  const additions = (other.rewardLedger || []).filter(
+    (e) => isDailyCareBonus(e) && !ids.has(e.id),
+  );
+  return additions.length
+    ? project(
+        { ...s, rewardLedger: [...(s.rewardLedger || []), ...additions] },
+        s.updated,
+      )
+    : s;
+}
+/** Priority changes affect the active view only; stable order breaks equal-time ties. */
+export function sortActiveTasks(tasks: Task[]): Task[] {
+  const rank = { high: 0, normal: 1, low: 2 };
+  return tasks
+    .map((task, index) => ({ task, index }))
+    .sort((a, b) => {
+      const priority =
+        rank[a.task.priority || "normal"] - rank[b.task.priority || "normal"];
+      if (priority) return priority;
+      // Unscheduled tasks follow timed tasks and retain their relative order.
+      if (!a.task.time || !b.task.time)
+        return a.task.time ? -1 : b.task.time ? 1 : a.index - b.index;
+      return a.task.time.localeCompare(b.task.time) || a.index - b.index;
+    })
+    .map(({ task }) => task);
+}

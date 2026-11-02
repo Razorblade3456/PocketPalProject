@@ -1,3 +1,11 @@
+import {
+  dailyCareBonus,
+  mergeDailyCareBonuses,
+  sortActiveTasks,
+  correctAttempt,
+  buyAndUseBasic,
+} from "./model";
+import { TaskAdvancedFields } from "./HabitTools";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
@@ -102,7 +110,7 @@ test("older current-version inventories gain only zero entries for new products"
   for (const id of EXTRA_SUPPLY_IDS) assert.equal(restored.inventory[id], 0);
   assert.deepEqual(restored.tasks, s.tasks);
   assert.deepEqual(restored.outcomes, s.outcomes);
-  assert.equal(restored.coins, s.coins - 4);
+  assert.equal(restored.coins, s.coins - SUPPLIES.water.price);
 });
 test("all ten new products purchase, consume, persist and render on every pet", () => {
   for (const kind of ["mochi", "pippin", "crumb", "rattle"] as PetKind[])
@@ -143,4 +151,98 @@ test("all ten new products purchase, consume, persist and render on every pet", 
       );
       if (SUPPLIES[item].tab === "treats") assert.ok(SUPPLIES[item].price > 6);
     }
+});
+
+test("daily care bonus is six coins, once per visited local day, with no health or jar changes", () => {
+  let s = initial(n);
+  const care = { ...s.care };
+  s = dailyCareBonus(s, n);
+  assert.equal(s.coins, 6);
+  assert.deepEqual(s.care, care);
+  assert.equal(s.completions.length, 0);
+  assert.equal(s.outcomes.length, 0);
+  assert.equal(dailyCareBonus(s, n + 1000), s);
+  const restored = parseState(JSON.parse(JSON.stringify(s)), n)!;
+  assert.ok(restored);
+  assert.equal(dailyCareBonus(restored, n).coins, 6);
+  const later = dailyCareBonus(restored, +new Date(2026, 10, 4, 12));
+  assert.equal(later.coins, 12);
+  assert.equal(later.rewardLedger?.length, 2);
+  assert.equal(dailyCareBonus(later, n).coins, 12);
+});
+test("simultaneous tab grants and stale saves merge the same receipt only once", () => {
+  const base = initial(n),
+    a = dailyCareBonus(base, n),
+    b = dailyCareBonus(base, n + 10);
+  const merged = mergeDailyCareBonuses(a, b);
+  assert.equal(merged.coins, 6);
+  assert.equal(merged.rewardLedger?.length, 1);
+  const stale = mergeDailyCareBonuses(base, merged);
+  assert.equal(stale.coins, 6);
+  assert.equal(dailyCareBonus(stale, n).coins, 6);
+  assert.ok(parseState(JSON.parse(JSON.stringify(stale)), n));
+});
+test("six bonus coins buy one food, water and soap, and corrections preserve recorded costs", () => {
+  let s = dailyCareBonus(initial(n), n);
+  for (const item of ["food", "water", "soap"] as const) {
+    assert.equal(SUPPLIES[item].price, 2);
+    s = buyAndUseBasic(s, item, n, item);
+    assert.equal(s.inventory[item], 0);
+  }
+  assert.equal(s.coins, 0);
+  assert.equal(s.debt, 0);
+  assert.equal(s.care.food, 100);
+  assert.equal(s.care.water, 100);
+  assert.equal(s.care.clean, 100);
+  assert.equal(
+    dailyCareBonus(parseState(JSON.parse(JSON.stringify(s)), n)!, n).coins,
+    0,
+  );
+  let old = funded();
+  old = buyItem(old, "food", n, "old-price");
+  old.careEvents = old.careEvents.map((e) =>
+    e.kind === "buy" ? { ...e, cost: 5 } : e,
+  );
+  const loaded = parseState(JSON.parse(JSON.stringify(old)), n)!;
+  assert.ok(loaded);
+  assert.equal(loaded.coins, 495);
+  assert.equal(loaded.inventory.food, 1);
+  const corrected = correctAttempt(loaded, "fund-0", "missed", n);
+  assert.equal(corrected.coins, 490);
+  assert.equal(corrected.inventory.food, 1);
+});
+test("active tasks sort priority then time, without mutating saved order or repetition progress", () => {
+  const tasks = [
+    task({ id: "low", priority: "low", time: "08:00" }),
+    task({ id: "normal", time: "07:00" }),
+    task({ id: "high-late", priority: "high", time: "18:00" }),
+    task({ id: "high-early", priority: "high", time: "09:00" }),
+    task({ id: "untimed-a", time: "" }),
+    task({ id: "untimed-b", time: "" }),
+  ];
+  const before = JSON.stringify(tasks);
+  assert.deepEqual(
+    sortActiveTasks(tasks).map((t) => t.id),
+    ["high-early", "high-late", "normal", "untimed-a", "untimed-b", "low"],
+  );
+  assert.equal(JSON.stringify(tasks), before);
+  assert.equal(
+    sortActiveTasks(
+      tasks.map((t) => (t.id === "low" ? { ...t, priority: "high" } : t)),
+    )[0].id,
+    "low",
+  );
+});
+test("compact task editor preserves hidden legacy caps and duration while showing priority", () => {
+  const t = task({ durationMinutes: 30, rewardCap: 2 });
+  const before = JSON.stringify(t);
+  const html = renderToStaticMarkup(
+    createElement(TaskAdvancedFields, { task: t, update: () => {} }),
+  );
+  assert.ok(!html.includes("Duration (minutes)"));
+  assert.ok(!html.includes("Daily rewarded completions"));
+  assert.ok(html.includes("High — Important"));
+  assert.ok(html.includes("Normal — Standard"));
+  assert.ok(html.includes("Low — Whenever"));
+  assert.equal(JSON.stringify(t), before);
 });

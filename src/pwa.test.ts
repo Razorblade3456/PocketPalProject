@@ -72,3 +72,43 @@ test("worker caches offline shell and only activates update on request", async (
   listeners.message({ data: { type: "SKIP_WAITING" } });
   assert.equal(skipped, 1);
 });
+
+test("notification clicks focus PocketPal or open its existing scope", async () => {
+  const listeners: Record<string, Function> = {};
+  let focused = 0,
+    opened = 0,
+    closed = 0;
+  let clients: { url: string; focus: () => void }[] = [
+    {
+      url: "https://example.test/pocketpal/",
+      focus: () => {
+        focused++;
+      },
+    },
+  ];
+  const self = {
+    registration: { scope: "https://example.test/pocketpal/" },
+    addEventListener: (name: string, fn: Function) => (listeners[name] = fn),
+    clients: {
+      matchAll: async () => clients,
+      openWindow: async () => {
+        opened++;
+      },
+    },
+  };
+  vm.runInNewContext(readFileSync("dist/sw.js", "utf8"), { self, URL });
+  const click = () =>
+    new Promise<void>((resolve, reject) =>
+      listeners.notificationclick({
+        notification: { close: () => closed++ },
+        waitUntil: (p: Promise<unknown>) => p.then(() => resolve(), reject),
+      }),
+    );
+  await click();
+  assert.equal(focused, 1);
+  assert.equal(opened, 0);
+  clients = [];
+  await click();
+  assert.equal(opened, 1);
+  assert.equal(closed, 2);
+});

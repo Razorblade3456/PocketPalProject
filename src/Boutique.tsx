@@ -25,7 +25,7 @@ export function Boutique({
   onWardrobe: () => void;
 }) {
   const [tab, setTab] = useState<"essentials" | "treats" | "outfits">(
-    "essentials",
+    s.settings.petCare === false ? "outfits" : "essentials",
   );
   const items: ShopItem[] =
     tab === "outfits"
@@ -37,7 +37,11 @@ export function Boutique({
         <div>
           <span className="eyebrow">SUPPLIES & GEAR</span>
           <h2>Shop</h2>
-          <p>Care supplies, food, and outfits.</p>
+          <p>
+            {s.settings.petCare === false
+              ? "Outfits · care supplies are optional while care is paused."
+              : "Care supplies, food, and outfits."}
+          </p>
         </div>
         <span className="boutique-wallet">
           <Coins size={17} />
@@ -181,14 +185,14 @@ export function Wardrobe({
       <span className="eyebrow">THE TINIEST LITTLE CLOSET</span>
       <h2>Your pal's wardrobe</h2>
       <p>
-        One item per slot; hats,
-        neckwear, backpacks and clothing can be combined.
+        One item per slot; hats, neckwear, backpacks and clothing can be
+        combined.
       </p>
       <div className="wardrobe-preview">
         <Pet
           kind={s.pet}
           level={stage(s)}
-          care={s.care}
+          care={s.settings.petCare === false ? undefined : s.care}
           preview
           sleep={petRhythm().sleeping && stage(s) < 3}
           equipped={s.equipped}

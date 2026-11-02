@@ -324,7 +324,7 @@ test("nighttime sleep preserves sleeping eyes and dirt without crying or reachin
 });
 test("species-specific cues and hunger shape preserve compatible clothing layers", () => {
   const hungry = { food: 10, water: 25, clean: 25, happy: 10 };
-  assert.ok(render("mochi", hungry).includes('rx="30.72"'));
+  assert.ok(render("mochi", hungry).includes('rx="20.64"'));
   assert.ok(render("pippin", hungry).includes("moth-wings wrapped"));
   assert.ok(render("pippin", hungry).includes("M127 115Q105 60 72 94"));
   assert.ok(render("crumb", hungry).includes("pet-art curled"));

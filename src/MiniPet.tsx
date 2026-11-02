@@ -38,7 +38,14 @@ export function MiniPet({
   const [stats, setStats] = useState(false);
   const [idle, setIdle] = useState<MiniIdle | null>(null);
   const [paused, setPaused] = useState(true);
-  const choices = miniIdleChoices(s.pet, s.care, level, sleep).join(",");
+  const choices = miniIdleChoices(
+    s.pet,
+    s.settings.petCare === false
+      ? { food: 100, water: 100, clean: 100, happy: 100 }
+      : s.care,
+    level,
+    sleep,
+  ).join(",");
   const blocked = !!feeding || !!reaction;
   const slow = calm || level > 0;
   useEffect(() => {
@@ -112,7 +119,7 @@ export function MiniPet({
       >
         <Pet
           kind={s.pet}
-          care={s.care}
+          care={s.settings.petCare === false ? undefined : s.care}
           equipped={s.equipped}
           level={level}
           sleep={sleep}
@@ -121,7 +128,7 @@ export function MiniPet({
           reaction={reaction}
           onPet={() => {
             fitWindow(!stats);
-            setStats((v) => !v);
+            if (s.settings.petCare !== false) setStats((v) => !v);
           }}
         />
         {active === "smoke" && (
@@ -145,7 +152,7 @@ export function MiniPet({
             alarm={alarm}
             name={s.tasks.find((t) => t.id === alarm?.taskId)?.name}
           />
-          {stats && (
+          {stats && s.settings.petCare !== false && (
             <div className="mini-stats" aria-label="Pet care stats">
               {indicators.map(({ key, label, Icon, color }) => (
                 <div

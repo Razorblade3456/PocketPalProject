@@ -129,11 +129,11 @@ test("correcting funded income after purchase and consumption reserves debt and 
   s = useSupply(s, "food", n, "consume");
   const food = s.care.food;
   s = correctAttempt(s, "tap:0", "missed", n);
-  assert.equal(s.debt, 5);
+  assert.equal(s.debt, 2);
   assert.equal(s.inventory.food, 0);
   assert.equal(s.care.food, food);
   s = correctAttempt(s, "tap:0", "completed", n);
-  assert.equal(s.coins, 0);
+  assert.equal(s.coins, 3);
   assert.equal(s.debt, 0);
   assert.equal(s.inventory.food, 0);
   assert.equal(s.careEvents.filter((e) => e.kind === "buy").length, 1);
@@ -357,7 +357,7 @@ test("older saves keep existing rewards, goods and care when the ledger is first
   });
   const restored = parseState(old, n)!;
   assert.ok(restored);
-  assert.equal(restored.coins, 45);
+  assert.equal(restored.coins, 48);
   assert.equal(restored.inventory.food, 1);
   assert.deepEqual(restored.care, s.care);
   assert.equal(
