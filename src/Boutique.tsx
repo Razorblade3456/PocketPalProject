@@ -182,7 +182,7 @@ export function Wardrobe({
 }) {
   return (
     <>
-      <span className="eyebrow">THE TINIEST LITTLE CLOSET</span>
+      <span className="eyebrow">CUSTOMIZATION</span>
       <h2>Your pal's wardrobe</h2>
       <p>
         One item per slot; hats, neckwear, backpacks and clothing can be

@@ -151,7 +151,7 @@ export function OutcomeHistory({
   );
   return (
     <section className="outcome-history">
-      <h3>Every little moment</h3>
+      <h3>Task History</h3>
       <p className="fine">
         Each press has its own entry. Correct or remove just that moment; its
         original date stays the same. Bought items stay yours, with spent-coin

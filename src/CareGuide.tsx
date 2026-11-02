@@ -33,7 +33,7 @@ export function CareGuide({
   return (
     <section className="care-guide" aria-label="Care condition previews">
       <div className="care-guide-heading">
-        <span className="eyebrow">THE LITTLE DETAILS SAY A LOT</span>
+        <span className="eyebrow">CARE PREVIEW</span>
         <h2>Care Conditions</h2>
         <p>
           Four needs, five conditions each. These layers combine on your pal,
@@ -120,7 +120,7 @@ export function CareGuide({
       <div className="care-simulator" aria-label="Preview-only care simulator">
         <div className="simulator-heading">
           <SlidersHorizontal size={18} />
-          <h3>Mix a little mood</h3>
+          <h3>Preview care levels</h3>
           <span className="preview-badge">Preview only · never saved</span>
         </div>
         <p>

@@ -35,7 +35,8 @@ export function TaskCalendar({
   today?: string;
 }) {
   const [selected, setSelected] = useState(today),
-    [month, setMonth] = useState(() => calendarMonth(today));
+    [month, setMonth] = useState(() => calendarMonth(today)),
+    [expanded, setExpanded] = useState(false);
   const days = useMemo(() => calendarDaysForMonth(month), [month]);
   const byDate = useMemo(
     () =>
@@ -55,10 +56,24 @@ export function TaskCalendar({
     const next = calendarMonth(month, offset);
     setMonth(next);
     setSelected(next);
+    setExpanded(false);
   };
   return (
     <section className="task-calendar" aria-label="Task Calendar">
-      <h2>Task Calendar</h2>
+      <div className="calendar-heading">
+        <h2>Task Calendar</h2>
+        <button
+          type="button"
+          className="calendar-today"
+          onClick={() => {
+            setMonth(calendarMonth(today));
+            setSelected(today);
+            setExpanded(true);
+          }}
+        >
+          Today
+        </button>
+      </div>
       <div className="calendar-navigation">
         <button
           type="button"
@@ -80,16 +95,6 @@ export function TaskCalendar({
           <ChevronRight size={17} />
         </button>
       </div>
-      <button
-        type="button"
-        className="calendar-today"
-        onClick={() => {
-          setMonth(calendarMonth(today));
-          setSelected(today);
-        }}
-      >
-        Today
-      </button>
       <div className="calendar-weekdays" aria-hidden="true">
         {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
           <span key={day}>{day}</span>
@@ -116,7 +121,10 @@ export function TaskCalendar({
                 byDate.get(date)!.filter((r) => r.completed).length +
                 " completed"
               }
-              onClick={() => setSelected(date)}
+              onClick={() => {
+                setSelected(date);
+                setExpanded(true);
+              }}
             >
               <span className="calendar-date">{localDate(date).getDate()}</span>
               <span className="calendar-orbs">
@@ -143,12 +151,18 @@ export function TaskCalendar({
         Pending <span className="calendar-orb priority-normal is-complete" />
         Completed
       </p>
-      <section
+      <details
+        open={expanded}
+        onToggle={(e) => setExpanded(e.currentTarget.open)}
         className="calendar-selected"
         aria-live="polite"
         aria-label="Selected day tasks"
       >
-        <h3>{dayLabel(selected)}</h3>
+        <summary>
+          {dayLabel(selected)}
+          {" · "}
+          <span>{rows.length} tasks</span>
+        </summary>
         {!rows.length ? (
           <p className="fine">No tasks scheduled.</p>
         ) : (
@@ -183,7 +197,7 @@ export function TaskCalendar({
             ))}
           </ul>
         )}
-      </section>
+      </details>
     </section>
   );
 }

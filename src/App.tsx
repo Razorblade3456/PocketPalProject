@@ -11,7 +11,6 @@ import { PwaSettings } from "./Pwa";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, MotionConfig } from "motion/react";
 import {
-  CalendarDays,
   Plus,
   Sun,
   Moon,
@@ -132,7 +131,6 @@ function tone(enabled: boolean, kind = 0) {
 export default function App() {
   const [s, setS] = useState<State>(load);
   const [panel, setPanel] = useState<
-    | "calendar"
     | "settings"
     | "history"
     | "rewards"
@@ -318,7 +316,7 @@ export default function App() {
         const key = t.id + today + reminderFor(s, t, today);
         if (reminded.current.has(key)) return;
         reminded.current.add(key);
-        setMessage(`A gentle nudge: ${t.name}`);
+        setMessage(`Reminder: ${t.name}`);
         void notifyTask("PocketPal Reminder", t.name, "reminder:" + key);
       });
   }, [now, s.settings, s.name, today, s.tasks, s.outcomes]);
@@ -772,9 +770,7 @@ export default function App() {
         <main>
           <div className="intro">
             <div>
-              <h1>
-                Make progress, <em>your way.</em>
-              </h1>
+              <h1>Dashboard</h1>
             </div>
             <div className="today-summary">
               <LocalClock />
@@ -793,18 +789,7 @@ export default function App() {
           <div className="game-layout">
             <section className="task-panel" aria-label="Tasks" id="tasks">
               <div className="section-heading">
-                <h2>
-                  Today's Tasks{" "}
-                  <button
-                    type="button"
-                    className="icon-button calendar-launch"
-                    aria-label="Open Task Calendar"
-                    title="Task Calendar"
-                    onClick={() => setPanel("calendar")}
-                  >
-                    <CalendarDays size={17} />
-                  </button>
-                </h2>
+                <h2>Today's Tasks</h2>
                 <span className="count">
                   {done}/{dailyTarget || "∞"}
                 </span>
@@ -849,20 +834,12 @@ export default function App() {
               >
                 Manage all {s.tasks.length} tasks <ChevronRight size={12} />
               </button>
-              <div className="paper-note">
-                <span>✧</span>
-                <p>
-                  Stay consistent.
-                  <br />
-                  <b>Progress counts.</b>
-                </p>
-              </div>
             </section>
             <section className="room-panel" aria-label="Your pet's cozy room">
               <div className="room-top">
                 <span className="room-label">
                   <span />
-                  {night ? "AFTER HOURS" : "YOUR LITTLE HIDEOUT"}
+                  {night ? "AFTER HOURS" : "PET ROOM"}
                 </span>
                 <span className="room-spark">✧</span>
               </div>
@@ -989,55 +966,58 @@ export default function App() {
                   : "Care Stats"}
               </div>
             </section>
-            <section className="progress-panel">
-              <div className="section-heading">
-                <h2>Progress Jar</h2>
-                <span>✧</span>
-              </div>
-              <p className="section-note">Today's rewarded completions.</p>
-              <button
-                className="jar-button"
-                onClick={() => setPanel("rewards")}
-                aria-label="Inspect today's earned rewards"
-              >
-                <Jar
-                  balls={earned}
-                  jarRef={jarRef}
-                  incoming={flights.map((f) => f.key)}
-                  landed={landed}
-                  pulse={jarPulse}
-                />
-              </button>
-              <div className="jar-progress">
-                <strong>{earned.length}</strong>
-                <p>rewarded completions</p>
-                <div className="progress-track">
-                  <span style={{ width: percent + "%" }} />
+            <div className="dashboard-right">
+              <TaskCalendar s={s} today={today} />
+              <section className="progress-panel">
+                <div className="section-heading">
+                  <h2>Progress Jar</h2>
+                  <span>✧</span>
                 </div>
-                <span>{percent}% of today's targets</span>
-              </div>
-              <button
-                className="history-button"
-                onClick={() => setPanel("history")}
-              >
-                <History size={16} /> History <ChevronRight size={16} />
-              </button>
-              <div className="jar-legend">
-                <span>
-                  <Coins size={13} /> Rewarded completions earn{" "}
-                  {policyFor(s).coins} coins
-                </span>
-              </div>
-              {s.settings.petCare !== false && (
-                <Supplies
-                  s={s}
-                  onBuy={purchase}
-                  onUse={careFor}
-                  onShop={openShop}
-                  onInventory={openPantry}
-                />
-              )}
-            </section>
+                <p className="section-note">Today's rewarded completions.</p>
+                <button
+                  className="jar-button"
+                  onClick={() => setPanel("rewards")}
+                  aria-label="Inspect today's earned rewards"
+                >
+                  <Jar
+                    balls={earned}
+                    jarRef={jarRef}
+                    incoming={flights.map((f) => f.key)}
+                    landed={landed}
+                    pulse={jarPulse}
+                  />
+                </button>
+                <div className="jar-progress">
+                  <strong>{earned.length}</strong>
+                  <p>rewarded completions</p>
+                  <div className="progress-track">
+                    <span style={{ width: percent + "%" }} />
+                  </div>
+                  <span>{percent}% of today's targets</span>
+                </div>
+                <button
+                  className="history-button"
+                  onClick={() => setPanel("history")}
+                >
+                  <History size={16} /> History <ChevronRight size={16} />
+                </button>
+                <div className="jar-legend">
+                  <span>
+                    <Coins size={13} /> Rewarded completions earn{" "}
+                    {policyFor(s).coins} coins
+                  </span>
+                </div>
+                {s.settings.petCare !== false && (
+                  <Supplies
+                    s={s}
+                    onBuy={purchase}
+                    onUse={careFor}
+                    onShop={openShop}
+                    onInventory={openPantry}
+                  />
+                )}
+              </section>
+            </div>
           </div>
           <footer>
             <span>PocketPal · saved on this device</span>
@@ -1141,7 +1121,7 @@ export default function App() {
               <>
                 <span className="eyebrow">WELCOME TO POCKETPAL</span>
                 <h2>Choose your companion</h2>
-                <p>Take care of yourself, and your pal grows with you.</p>
+                <p>Tasks, reminders, and pet care.</p>
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -1177,7 +1157,7 @@ export default function App() {
                       checked={demo}
                       onChange={(e) => setDemo(e.target.checked)}
                     />{" "}
-                    Start with four gentle example tasks
+                    Start with four example tasks
                   </label>
                   <p className="fine">
                     Your first day is decay-free. Cozy mode starts on, so your
@@ -1348,11 +1328,9 @@ export default function App() {
                   }}
                 />
               </>
-            ) : panel === "calendar" ? (
-              <TaskCalendar s={s} today={today} />
             ) : panel === "tasks" ? (
               <>
-                <span className="eyebrow">YOUR LITTLE ROUTINES</span>
+                <span className="eyebrow">TASKS</span>
                 <h2>All Tasks</h2>
                 {s.tasks.map((t) => (
                   <div className="managed-habit" key={t.id}>
@@ -1483,8 +1461,8 @@ export default function App() {
               </>
             ) : (
               <>
-                <span className="eyebrow">EVERY LITTLE THING COUNTS</span>
-                <h2>Today's jar of joy</h2>
+                <span className="eyebrow">REWARDED COMPLETIONS</span>
+                <h2>Today's rewards</h2>
                 {earned.length ? (
                   earned.map((c) => {
                     return (

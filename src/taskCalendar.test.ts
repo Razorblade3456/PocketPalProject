@@ -197,6 +197,12 @@ test("calendar renders four orbs plus overflow, readable statuses, and a seven-d
   assert.ok(html.includes('aria-pressed="true"'));
   assert.ok(html.includes('aria-current="date"'));
   assert.ok(html.includes("6 tasks, 1 completed"));
+  const selected = html.match(
+    /<details[^>]*class="calendar-selected"[^>]*>/,
+  )?.[0];
+  assert.ok(selected);
+  assert.ok(!selected.includes(" open"));
+  assert.ok(html.includes("<summary>"));
   assert.ok(html.includes("Pending"));
   assert.ok(html.includes("Completed"));
   assert.ok(html.indexOf("Task 0</strong>") < html.indexOf("Task 5</strong>"));
