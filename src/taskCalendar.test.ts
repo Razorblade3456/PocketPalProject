@@ -1,3 +1,4 @@
+import { sortActiveTasks } from "./model";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
@@ -207,4 +208,35 @@ test("calendar renders four orbs plus overflow, readable statuses, and a seven-d
   assert.ok(html.includes("Completed"));
   assert.ok(html.indexOf("Task 0</strong>") < html.indexOf("Task 5</strong>"));
   assert.equal(JSON.stringify(s), before);
+});
+
+test("calendar rows and four visible orbs follow the main list's priority/time order", () => {
+  const s = initial(now);
+  s.tasks = [
+    task({ id: "low-late", priority: "low", time: "18:00" }),
+    task({ id: "normal", priority: "normal", time: "07:00" }),
+    task({ id: "high-late", priority: "high", time: "11:00" }),
+    task({ id: "high-early", priority: "high", time: "08:00" }),
+    task({ id: "low-early", priority: "low", time: "09:00" }),
+  ];
+  const rows = calendarTasks(s, "2026-11-01", "2026-11-01");
+  assert.deepEqual(
+    rows.map((r) => r.task.id),
+    sortActiveTasks(s.tasks).map((t) => t.id),
+  );
+  assert.deepEqual(
+    rows.map((r) => r.task.id),
+    ["high-early", "high-late", "normal", "low-early", "low-late"],
+  );
+  const html = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-01" }),
+  );
+  const firstDay = html.match(
+    /<span class="calendar-orbs">([\s\S]*?)<\/button>/,
+  )![1];
+  assert.deepEqual(
+    [...firstDay.matchAll(/priority-(high|normal|low)/g)].map((m) => m[1]),
+    ["high", "high", "normal", "low"],
+  );
+  assert.ok(firstDay.includes('calendar-more">+1'));
 });

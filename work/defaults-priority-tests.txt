@@ -1,0 +1,962 @@
+
+> pocketpal@1.0.0 test
+> tsx --test src/model.test.ts src/careVisuals.test.ts src/habits.test.ts src/alarms.test.ts src/polish.test.ts src/miniIdle.test.ts src/taskCalendar.test.ts
+
+TAP version 13
+# Subtest: important alarms use local task time, queue once, and do not mutate task/currency history
+ok 1 - important alarms use local task time, queue once, and do not mutate task/currency history
+  ---
+  duration_ms: 4.3808
+  type: 'test'
+  ...
+# Subtest: stopped alarms persist across refresh without completing tasks or duplicating
+ok 2 - stopped alarms persist across refresh without completing tasks or duplicating
+  ---
+  duration_ms: 4.6712
+  type: 'test'
+  ...
+# Subtest: 5, 10 and 30 minute snoozes stop ringing, persist and ring again exactly once
+ok 3 - 5, 10 and 30 minute snoozes stop ringing, persist and ring again exactly once
+  ---
+  duration_ms: 1.9751
+  type: 'test'
+  ...
+# Subtest: snooze across midnight keeps its original occurrence and new day's schedule
+ok 4 - snooze across midnight keeps its original occurrence and new day's schedule
+  ---
+  duration_ms: 0.4185
+  type: 'test'
+  ...
+# Subtest: closed-session catch-up discovers overdue alarms and preserves a deterministic queue
+ok 5 - closed-session catch-up discovers overdue alarms and preserves a deterministic queue
+  ---
+  duration_ms: 0.6241
+  type: 'test'
+  ...
+# Subtest: task deletion, edits, skip, pause and occurrence reschedule cancel stale alarms
+ok 6 - task deletion, edits, skip, pause and occurrence reschedule cancel stale alarms
+  ---
+  duration_ms: 1.9066
+  type: 'test'
+  ...
+# Subtest: all recurrence types and created dates reuse taskDue, without ordinary or completed alarms
+ok 7 - all recurrence types and created dates reuse taskDue, without ordinary or completed alarms
+  ---
+  duration_ms: 26.583
+  type: 'test'
+  ...
+# Subtest: quiet hours respect local clock, overnight and same-time full-day intervals
+ok 8 - quiet hours respect local clock, overnight and same-time full-day intervals
+  ---
+  duration_ms: 0.4459
+  type: 'test'
+  ...
+# Subtest: timezone changes rebase untriggered wall-clock alarms; snooze remains elapsed time
+ok 9 - timezone changes rebase untriggered wall-clock alarms; snooze remains elapsed time
+  ---
+  duration_ms: 1.6506
+  type: 'test'
+  ...
+# Subtest: alarm data validates without requiring a save migration
+ok 10 - alarm data validates without requiring a save migration
+  ---
+  duration_ms: 1.4718
+  type: 'test'
+  ...
+# Subtest: relative alarms save one fixed timestamp and survive unrelated edits and refresh
+ok 11 - relative alarms save one fixed timestamp and survive unrelated edits and refresh
+  ---
+  duration_ms: 1.4502
+  type: 'test'
+  ...
+# Subtest: relative snooze and stop reuse the same alarm without rearming or affecting history
+ok 12 - relative snooze and stop reuse the same alarm without rearming or affecting history
+  ---
+  duration_ms: 0.5192
+  type: 'test'
+  ...
+# Subtest: relative alarms explicitly restart or switch back to wall-clock scheduling
+ok 13 - relative alarms explicitly restart or switch back to wall-clock scheduling
+  ---
+  duration_ms: 0.968
+  type: 'test'
+  ...
+# Subtest: relative deadlines across midnight remain absolute and cancel on delete, skip or completion
+ok 14 - relative deadlines across midnight remain absolute and cancel on delete, skip or completion
+  ---
+  duration_ms: 2.5343
+  type: 'test'
+  ...
+# Subtest: shared countdown formats absolute deadlines and chooses only an active nearest alarm
+ok 15 - shared countdown formats absolute deadlines and chooses only an active nearest alarm
+  ---
+  duration_ms: 0.3867
+  type: 'test'
+  ...
+# Subtest: existing time-alarm signatures remain compatible with pre-countdown saves
+ok 16 - existing time-alarm signatures remain compatible with pre-countdown saves
+  ---
+  duration_ms: 0.1868
+  type: 'test'
+  ...
+# Subtest: a relative deadline after midnight still belongs to the task occurrence being completed
+ok 17 - a relative deadline after midnight still belongs to the task occurrence being completed
+  ---
+  duration_ms: 0.7023
+  type: 'test'
+  ...
+# Subtest: each saved reminder/alarm flag combination selects exactly one notification path
+ok 18 - each saved reminder/alarm flag combination selects exactly one notification path
+  ---
+  duration_ms: 0.9326
+  type: 'test'
+  ...
+# Subtest: visual countdown uses persisted real start and deadline with a continuous color progression
+ok 19 - visual countdown uses persisted real start and deadline with a continuous color progression
+  ---
+  duration_ms: 1.0528
+  type: 'test'
+  ...
+# Subtest: snoozing saves a new start so the visual bar resets and survives refresh
+ok 20 - snoozing saves a new start so the visual bar resets and survives refresh
+  ---
+  duration_ms: 0.3884
+  type: 'test'
+  ...
+# Subtest: legacy relative alarms recover known starts without resetting dates; unknown old snoozes are not fabricated
+ok 21 - legacy relative alarms recover known starts without resetting dates; unknown old snoozes are not fabricated
+  ---
+  duration_ms: 0.3044
+  type: 'test'
+  ...
+# Subtest: notification delivery uses the worker, deduplicates reloads, and never asks permission
+ok 22 - notification delivery uses the worker, deduplicates reloads, and never asks permission
+  ---
+  duration_ms: 16.3145
+  type: 'test'
+  ...
+# Subtest: care tiers use all exact boundaries, including fractional live stats
+ok 23 - care tiers use all exact boundaries, including fractional live stats
+  ---
+  duration_ms: 1.3395
+  type: 'test'
+  ...
+# Subtest: all four care tiers are independent and derived without mutation
+ok 24 - all four care tiers are independent and derived without mutation
+  ---
+  duration_ms: 0.7464
+  type: 'test'
+  ...
+# Subtest: each species renders all five tiers of every need
+ok 25 - each species renders all five tiers of every need
+  ---
+  duration_ms: 325.7575
+  type: 'test'
+  ...
+# Subtest: example mixture visibly combines a full belly, dryness, dirt and sobbing on all pets
+ok 26 - example mixture visibly combines a full belly, dryness, dirt and sobbing on all pets
+  ---
+  duration_ms: 20.2379
+  type: 'test'
+  ...
+# Subtest: all 625 tier combinations render together on each species without dropping an outfit
+ok 27 - all 625 tier combinations render together on each species without dropping an outfit
+  ---
+  duration_ms: 6558.7023
+  type: 'test'
+  ...
+# Subtest: expression priorities keep open mouths free of closed-lip curves and licking overlays
+ok 28 - expression priorities keep open mouths free of closed-lip curves and licking overlays
+  ---
+  duration_ms: 2038.8249
+  type: 'test'
+  ...
+# Subtest: sleep and death outrank reactions; Rattle anger never borrows tears or face-covering limbs
+ok 29 - sleep and death outrank reactions; Rattle anger never borrows tears or face-covering limbs
+  ---
+  duration_ms: 231.2224
+  type: 'test'
+  ...
+# Subtest: Rattle round-trips through saves, purchases, care and every outfit at all stages
+ok 30 - Rattle round-trips through saves, purchases, care and every outfit at all stages
+  ---
+  duration_ms: 405.1645
+  type: 'test'
+  ...
+# Subtest: six life stages remain renderable alongside care, with dead emotion override
+ok 31 - six life stages remain renderable alongside care, with dead emotion override
+  ---
+  duration_ms: 291.1444
+  type: 'test'
+  ...
+# Subtest: nighttime sleep preserves sleeping eyes and dirt without crying or reaching
+ok 32 - nighttime sleep preserves sleeping eyes and dirt without crying or reaching
+  ---
+  duration_ms: 45.3125
+  type: 'test'
+  ...
+# Subtest: species-specific cues and hunger shape preserve compatible clothing layers
+ok 33 - species-specific cues and hunger shape preserve compatible clothing layers
+  ---
+  duration_ms: 35.6061
+  type: 'test'
+  ...
+# Subtest: gallery and simulator render with five real previews and four accessible sliders
+ok 34 - gallery and simulator render with five real previews and four accessible sliders
+  ---
+  duration_ms: 17.8815
+  type: 'test'
+  ...
+# Subtest: preview generation and rendering leave the entire real save byte-for-byte unchanged
+ok 35 - preview generation and rendering leave the entire real save byte-for-byte unchanged
+  ---
+  duration_ms: 316.8052
+  type: 'test'
+  ...
+# Subtest: preview lifecycle uses the same thresholds as gameplay
+ok 36 - preview lifecycle uses the same thresholds as gameplay
+  ---
+  duration_ms: 0.6857
+  type: 'test'
+  ...
+# Subtest: care rendering is a pure view and stat improvements immediately clear bad layers
+ok 37 - care rendering is a pure view and stat improvements immediately clear bad layers
+  ---
+  duration_ms: 80.4468
+  type: 'test'
+  ...
+# Subtest: redesigned Mochi keeps one face, two eyes, one mouth and two original arms across care states
+ok 38 - redesigned Mochi keeps one face, two eyes, one mouth and two original arms across care states
+  ---
+  duration_ms: 1597.4254
+  type: 'test'
+  ...
+# Subtest: default economy caps coins and balls at three while keeping all 20 positive actions
+ok 39 - default economy caps coins and balls at three while keeping all 20 positive actions
+  ---
+  duration_ms: 43.0042
+  type: 'test'
+  ...
+# Subtest: custom goal rewards only its target; additional entries and negatives stay independent
+ok 40 - custom goal rewards only its target; additional entries and negatives stay independent
+  ---
+  duration_ms: 4.1677
+  type: 'test'
+  ...
+# Subtest: unlimited has a finite currency quota and never gains automatic misses
+ok 41 - unlimited has a finite currency quota and never gains automatic misses
+  ---
+  duration_ms: 3.2205
+  type: 'test'
+  ...
+# Subtest: per-task reward cap and zero-reward tracking work
+ok 42 - per-task reward cap and zero-reward tracking work
+  ---
+  duration_ms: 6.166
+  type: 'test'
+  ...
+# Subtest: same transaction ID never duplicates an action, reward or jar ball
+ok 43 - same transaction ID never duplicates an action, reward or jar ball
+  ---
+  duration_ms: 1.2601
+  type: 'test'
+  ...
+# Subtest: twenty positive-negative corrections append adjustments without producing profit
+ok 44 - twenty positive-negative corrections append adjustments without producing profit
+  ---
+  duration_ms: 5.1532
+  type: 'test'
+  ...
+# Subtest: correcting funded income after purchase and consumption reserves debt and never duplicates goods
+ok 45 - correcting funded income after purchase and consumption reserves debt and never duplicates goods
+  ---
+  duration_ms: 2.1494
+  type: 'test'
+  ...
+# Subtest: undoing an eligible result promotes an already tracked extra without exceeding the cap
+ok 46 - undoing an eligible result promotes an already tracked extra without exceeding the cap
+  ---
+  duration_ms: 2.3939
+  type: 'test'
+  ...
+# Subtest: policy edits affect new entries and preserve old reward rate snapshots
+ok 47 - policy edits affect new entries and preserve old reward rate snapshots
+  ---
+  duration_ms: 1.5091
+  type: 'test'
+  ...
+# Subtest: daily reward limits reset on a new local calendar date
+ok 48 - daily reward limits reset on a new local calendar date
+  ---
+  duration_ms: 2.1301
+  type: 'test'
+  ...
+# Subtest: every X days uses the start-date calendar anchor
+ok 49 - every X days uses the start-date calendar anchor
+  ---
+  duration_ms: 0.2921
+  type: 'test'
+  ...
+# Subtest: after-completion recurrence resets its anchor after a corrected completion
+ok 50 - after-completion recurrence resets its anchor after a corrected completion
+  ---
+  duration_ms: 0.7287
+  type: 'test'
+  ...
+# Subtest: weekly, selected weekdays and one-time schedules retain their local dates
+ok 51 - weekly, selected weekdays and one-time schedules retain their local dates
+  ---
+  duration_ms: 0.2061
+  type: 'test'
+  ...
+# Subtest: DST boundaries use calendar days rather than 24-hour elapsed periods
+ok 52 - DST boundaries use calendar days rather than 24-hour elapsed periods
+  ---
+  duration_ms: 0.2613
+  type: 'test'
+  ...
+# Subtest: creation-date snapshots prevent penalties before task creation even after timezone changes
+ok 53 - creation-date snapshots prevent penalties before task creation even after timezone changes
+  ---
+  duration_ms: 0.1187
+  type: 'test'
+  ...
+# Subtest: finite goals count manual misses and only auto-record genuine shortfalls once
+ok 54 - finite goals count manual misses and only auto-record genuine shortfalls once
+  ---
+  duration_ms: 1.2705
+  type: 'test'
+  ...
+# Subtest: skip with a reason suppresses automatic penalties but keeps prior actions
+ok 55 - skip with a reason suppresses automatic penalties but keeps prior actions
+  ---
+  duration_ms: 0.707
+  type: 'test'
+  ...
+# Subtest: vacation pause covers inclusive dates and resumes afterward without backfilled misses
+ok 56 - vacation pause covers inclusive dates and resumes afterward without backfilled misses
+  ---
+  duration_ms: 0.2607
+  type: 'test'
+  ...
+# Subtest: indefinite pause and explicit resume respect prior paused dates
+ok 57 - indefinite pause and explicit resume respect prior paused dates
+  ---
+  duration_ms: 0.2316
+  type: 'test'
+  ...
+# Subtest: rescheduling moves only one occurrence, with no penalty on its original day
+ok 58 - rescheduling moves only one occurrence, with no penalty on its original day
+  ---
+  duration_ms: 0.5388
+  type: 'test'
+  ...
+# Subtest: snoozing overrides just today’s reminder and is recorded in history
+ok 59 - snoozing overrides just today’s reminder and is recorded in history
+  ---
+  duration_ms: 0.5481
+  type: 'test'
+  ...
+# Subtest: Today’s 3 is optional, capped at three and local-date specific
+ok 60 - Today’s 3 is optional, capped at three and local-date specific
+  ---
+  duration_ms: 0.4648
+  type: 'test'
+  ...
+# Subtest: tiny steps contribute exactly one parent reward without per-step coins
+ok 61 - tiny steps contribute exactly one parent reward without per-step coins
+  ---
+  duration_ms: 2.2746
+  type: 'test'
+  ...
+# Subtest: tiny steps do not award a second parent completion after a manual positive
+ok 62 - tiny steps do not award a second parent completion after a manual positive
+  ---
+  duration_ms: 0.4721
+  type: 'test'
+  ...
+# Subtest: editing keeps original outcome snapshots, ledger and tiny-step history
+ok 63 - editing keeps original outcome snapshots, ledger and tiny-step history
+  ---
+  duration_ms: 0.6536
+  type: 'test'
+  ...
+# Subtest: older saves keep existing rewards, goods and care when the ledger is first introduced
+ok 64 - older saves keep existing rewards, goods and care when the ledger is first introduced
+  ---
+  duration_ms: 3.0851
+  type: 'test'
+  ...
+# Subtest: malformed habit policies and unknown ledger entries are rejected safely
+ok 65 - malformed habit policies and unknown ledger entries are rejected safely
+  ---
+  duration_ms: 0.2259
+  type: 'test'
+  ...
+# Subtest: skips and reschedules can be corrected by restoring today without erasing history
+ok 66 - skips and reschedules can be corrected by restoring today without erasing history
+  ---
+  duration_ms: 2.0648
+  type: 'test'
+  ...
+# Subtest: compatibility outcome corrections also respect a coins-only task without a care link
+ok 67 - compatibility outcome corrections also respect a coins-only task without a care link
+  ---
+  duration_ms: 12.9427
+  type: 'test'
+  ...
+# Subtest: deleting a focused task frees today’s focus slot while keeping older focus history
+ok 68 - deleting a focused task frees today’s focus slot while keeping older focus history
+  ---
+  duration_ms: 2.7167
+  type: 'test'
+  ...
+# Subtest: step row edits preserve IDs, checked history, older penalties and more than 30 steps
+ok 69 - step row edits preserve IDs, checked history, older penalties and more than 30 steps
+  ---
+  duration_ms: 8.7917
+  type: 'test'
+  ...
+# Subtest: mini personalities yield to sleep, death, low health, hunger and thirst
+ok 70 - mini personalities yield to sleep, death, low health, hunger and thirst
+  ---
+  duration_ms: 2.0689
+  type: 'test'
+  ...
+# Subtest: single idle selection avoids immediate repeats and waits 8–20 seconds
+ok 71 - single idle selection avoids immediate repeats and waits 8–20 seconds
+  ---
+  duration_ms: 0.563
+  type: 'test'
+  ...
+# Subtest: all Mini pets retain two existing arms and one exclusive face in every health/sleep/care state
+ok 72 - all Mini pets retain two existing arms and one exclusive face in every health/sleep/care state
+  ---
+  duration_ms: 435.9533
+  type: 'test'
+  ...
+# Subtest: new users get 24 hours of passive decay grace
+ok 73 - new users get 24 hours of passive decay grace
+  ---
+  duration_ms: 3.1393
+  type: 'test'
+  ...
+# Subtest: passive decay is timestamp based and refresh idempotent
+ok 74 - passive decay is timestamp based and refresh idempotent
+  ---
+  duration_ms: 1.6665
+  type: 'test'
+  ...
+# Subtest: all six health stages remain available
+ok 75 - all six health stages remain available
+  ---
+  duration_ms: 0.4206
+  type: 'test'
+  ...
+# Subtest: positive earns 5 coins without direct care, while a miss applies -8
+ok 76 - positive earns 5 coins without direct care, while a miss applies -8
+  ---
+  duration_ms: 1.4049
+  type: 'test'
+  ...
+# Subtest: repeat clicks cannot stack rewards or penalties
+ok 77 - repeat clicks cannot stack rewards or penalties
+  ---
+  duration_ms: 0.8206
+  type: 'test'
+  ...
+# Subtest: undo at the 100 cap restores the original value, rather than subtracting 10
+ok 78 - undo at the 100 cap restores the original value, rather than subtracting 10
+  ---
+  duration_ms: 1.256
+  type: 'test'
+  ...
+# Subtest: both outcome switches reverse the original effect and preserve one occurrence
+ok 79 - both outcome switches reverse the original effect and preserve one occurrence
+  ---
+  duration_ms: 0.5027
+  type: 'test'
+  ...
+# Subtest: multiple capped transactions replay correctly when an earlier one is undone
+ok 80 - multiple capped transactions replay correctly when an earlier one is undone
+  ---
+  duration_ms: 0.6769
+  type: 'test'
+  ...
+# Subtest: daily, weekly, selected weekdays, one-time and start dates use local calendar days
+ok 81 - daily, weekly, selected weekdays, one-time and start dates use local calendar days
+  ---
+  duration_ms: 0.3429
+  type: 'test'
+  ...
+# Subtest: automatic misses reconcile multiple days once and reset today to pending
+ok 82 - automatic misses reconcile multiple days once and reset today to pending
+  ---
+  duration_ms: 0.9586
+  type: 'test'
+  ...
+# Subtest: days without scheduled tasks have no penalties
+ok 83 - days without scheduled tasks have no penalties
+  ---
+  duration_ms: 0.277
+  type: 'test'
+  ...
+# Subtest: a backdated new task cannot be missed before its creation
+ok 84 - a backdated new task cannot be missed before its creation
+  ---
+  duration_ms: 0.3016
+  type: 'test'
+  ...
+# Subtest: past-day correction changes the original jar and does not create a reward today
+ok 85 - past-day correction changes the original jar and does not create a reward today
+  ---
+  duration_ms: 0.4746
+  type: 'test'
+  ...
+# Subtest: edits and deletions settle old schedules and preserve historical snapshots
+ok 86 - edits and deletions settle old schedules and preserve historical snapshots
+  ---
+  duration_ms: 0.3418
+  type: 'test'
+  ...
+# Subtest: many misses have a daily and per-category cushion; undo redistributes it deterministically
+ok 87 - many misses have a daily and per-category cushion; undo redistributes it deterministically
+  ---
+  duration_ms: 11.1961
+  type: 'test'
+  ...
+# Subtest: single missed task cannot kill a weak pet; cozy mode always keeps energy
+ok 88 - single missed task cannot kill a weak pet; cozy mode always keeps energy
+  ---
+  duration_ms: 0.812
+  type: 'test'
+  ...
+# Subtest: extended passive neglect allows death and revival retains task outcomes
+ok 89 - extended passive neglect allows death and revival retains task outcomes
+  ---
+  duration_ms: 1.5955
+  type: 'test'
+  ...
+# Subtest: settings are timestamped, so correction does not retroactively apply new decay speed
+ok 90 - settings are timestamped, so correction does not retroactively apply new decay speed
+  ---
+  duration_ms: 0.4951
+  type: 'test'
+  ...
+# Subtest: DST spring and autumn transitions are calendar days, not 24-hour jumps
+ok 91 - DST spring and autumn transitions are calendar days, not 24-hour jumps
+  ---
+  duration_ms: 0.6931
+  type: 'test'
+  ...
+# Subtest: migration retains name, care, settings, old jars and achievements without retroactive penalties
+ok 92 - migration retains name, care, settings, old jars and achievements without retroactive penalties
+  ---
+  duration_ms: 1.0257
+  type: 'test'
+  ...
+# Subtest: backup validation rejects malformed dates, duplicate occurrences, bad pets and bad timelines
+ok 93 - backup validation rejects malformed dates, duplicate occurrences, bad pets and bad timelines
+  ---
+  duration_ms: 0.3314
+  type: 'test'
+  ...
+# Subtest: streaks, jar history and achievements remain derived from positive outcomes
+ok 94 - streaks, jar history and achievements remain derived from positive outcomes
+  ---
+  duration_ms: 0.2803
+  type: 'test'
+  ...
+# Subtest: same-millisecond transactions preserve action order through revive and correction
+ok 95 - same-millisecond transactions preserve action order through revive and correction
+  ---
+  duration_ms: 0.7944
+  type: 'test'
+  ...
+# Subtest: missed-task floor is reversible without manufacturing care
+ok 96 - missed-task floor is reversible without manufacturing care
+  ---
+  duration_ms: 0.2245
+  type: 'test'
+  ...
+# Subtest: a task undone today becomes an automatic miss at day end, but a past-day undo stays pending
+ok 97 - a task undone today becomes an automatic miss at day end, but a past-day undo stays pending
+  ---
+  duration_ms: 0.4453
+  type: 'test'
+  ...
+# Subtest: coins reverse on undo and switches, with no duplicate earnings after refresh
+ok 98 - coins reverse on undo and switches, with no duplicate earnings after refresh
+  ---
+  duration_ms: 0.4029
+  type: 'test'
+  ...
+# Subtest: purchasing stocks inventory without improving care
+ok 99 - purchasing stocks inventory without improving care
+  ---
+  duration_ms: 0.5102
+  type: 'test'
+  ...
+# Subtest: each supply improves the correct need by 15 and happiness by 4
+ok 100 - each supply improves the correct need by 15 and happiness by 4
+  ---
+  duration_ms: 0.9964
+  type: 'test'
+  ...
+# Subtest: insufficient funds and empty inventory cannot create items, debt or care
+ok 101 - insufficient funds and empty inventory cannot create items, debt or care
+  ---
+  duration_ms: 0.1798
+  type: 'test'
+  ...
+# Subtest: using supplies caps care at 100 and cannot consume more than owned
+ok 102 - using supplies caps care at 100 and cannot consume more than owned
+  ---
+  duration_ms: 0.2605
+  type: 'test'
+  ...
+# Subtest: undoing spent coins reserves a shortfall without erasing inventory or care
+ok 103 - undoing spent coins reserves a shortfall without erasing inventory or care
+  ---
+  duration_ms: 0.4009
+  type: 'test'
+  ...
+# Subtest: repeated outcome toggles cannot duplicate supplies or erase spent-coin reservations
+ok 104 - repeated outcome toggles cannot duplicate supplies or erase spent-coin reservations
+  ---
+  duration_ms: 2.462
+  type: 'test'
+  ...
+# Subtest: new earnings settle a reservation before new coins become spendable
+ok 105 - new earnings settle a reservation before new coins become spendable
+  ---
+  duration_ms: 0.6106
+  type: 'test'
+  ...
+# Subtest: past-date correction reverses currency without moving its jar ball into today
+ok 106 - past-date correction reverses currency without moving its jar ball into today
+  ---
+  duration_ms: 0.4253
+  type: 'test'
+  ...
+# Subtest: dead pets keep their supplies until revival
+ok 107 - dead pets keep their supplies until revival
+  ---
+  duration_ms: 0.8506
+  type: 'test'
+  ...
+# Subtest: sleep boundaries follow actual local time, independently of any theme setting
+ok 108 - sleep boundaries follow actual local time, independently of any theme setting
+  ---
+  duration_ms: 0.7581
+  type: 'test'
+  ...
+# Subtest: migration from version 2 preserves existing capped care and grants one coin reward per old completion
+ok 109 - migration from version 2 preserves existing capped care and grants one coin reward per old completion
+  ---
+  duration_ms: 0.7848
+  type: 'test'
+  ...
+# Subtest: backup validation rejects forged item names, duplicate transactions and impossible inventory use
+ok 110 - backup validation rejects forged item names, duplicate transactions and impossible inventory use
+  ---
+  duration_ms: 0.375
+  type: 'test'
+  ...
+# Subtest: all three pet drawings render every stage with unique late-stage damage and dead ghosts
+ok 111 - all three pet drawings render every stage with unique late-stage damage and dead ghosts
+  ---
+  duration_ms: 47.5187
+  type: 'test'
+  ...
+# Subtest: derived wallet caches cannot buy supplies without earned currency
+ok 112 - derived wallet caches cannot buy supplies without earned currency
+  ---
+  duration_ms: 0.2507
+  type: 'test'
+  ...
+# Subtest: head pats give only happiness and persist without changing wallet or inventory
+ok 113 - head pats give only happiness and persist without changing wallet or inventory
+  ---
+  duration_ms: 0.4211
+  type: 'test'
+  ...
+# Subtest: head pats cap at 100, avoid empty ledger entries and cannot revive dead pets
+ok 114 - head pats cap at 100, avoid empty ledger entries and cannot revive dead pets
+  ---
+  duration_ms: 0.2325
+  type: 'test'
+  ...
+# Subtest: head-pat happiness survives task undo without granting food or water
+ok 115 - head-pat happiness survives task undo without granting food or water
+  ---
+  duration_ms: 0.228
+  type: 'test'
+  ...
+# Subtest: tired drawings keep open eyes for every species while awake
+ok 116 - tired drawings keep open eyes for every species while awake
+  ---
+  duration_ms: 4.9894
+  type: 'test'
+  ...
+# Subtest: re-completing version-2 history grants coins without restoring old direct care
+ok 117 - re-completing version-2 history grants coins without restoring old direct care
+  ---
+  duration_ms: 0.433
+  type: 'test'
+  ...
+# Subtest: re-completing version-1 history never restores its old food, water or happiness reward
+ok 118 - re-completing version-1 history never restores its old food, water or happiness reward
+  ---
+  duration_ms: 0.6219
+  type: 'test'
+  ...
+# Subtest: approved basic care buys and consumes once, preserves prices/effects, and survives refresh
+ok 119 - approved basic care buys and consumes once, preserves prices/effects, and survives refresh
+  ---
+  duration_ms: 20.6475
+  type: 'test'
+  ...
+# Subtest: approved quick care uses newly stocked inventory and never charges when funds or health prevent use
+ok 120 - approved quick care uses newly stocked inventory and never charges when funds or health prevent use
+  ---
+  duration_ms: 1.1604
+  type: 'test'
+  ...
+# Subtest: finished-today grouping is derived from the daily target and reverses after undo/corrections
+ok 121 - finished-today grouping is derived from the daily target and reverses after undo/corrections
+  ---
+  duration_ms: 1.1353
+  type: 'test'
+  ...
+# Subtest: each intentional positive and negative press is a unique independent entry
+ok 122 - each intentional positive and negative press is a unique independent entry
+  ---
+  duration_ms: 1.0309
+  type: 'test'
+  ...
+# Subtest: replaying the same press ID cannot duplicate an entry, including after deletion
+ok 123 - replaying the same press ID cannot duplicate an entry, including after deletion
+  ---
+  duration_ms: 0.3747
+  type: 'test'
+  ...
+# Subtest: undo removes only the latest entry and preserves previous jar balls
+ok 124 - undo removes only the latest entry and preserves previous jar balls
+  ---
+  duration_ms: 1.1863
+  type: 'test'
+  ...
+# Subtest: correcting or deleting a particular entry changes only that entry
+ok 125 - correcting or deleting a particular entry changes only that entry
+  ---
+  duration_ms: 0.6867
+  type: 'test'
+  ...
+# Subtest: custom goals generate only unaccounted missing slots once at local day end
+ok 126 - custom goals generate only unaccounted missing slots once at local day end
+  ---
+  duration_ms: 1.229
+  type: 'test'
+  ...
+# Subtest: unlimited tasks never generate automatic missed attempts, even over many days
+ok 127 - unlimited tasks never generate automatic missed attempts, even over many days
+  ---
+  duration_ms: 0.2809
+  type: 'test'
+  ...
+# Subtest: once and multiple modes have a daily minimum but allow intentional entries beyond it
+ok 128 - once and multiple modes have a daily minimum but allow intentional entries beyond it
+  ---
+  duration_ms: 1.3497
+  type: 'test'
+  ...
+# Subtest: goals reached or exceeded have no extra automatic penalties
+ok 129 - goals reached or exceeded have no extra automatic penalties
+  ---
+  duration_ms: 0.8367
+  type: 'test'
+  ...
+# Subtest: a manually missed once-per-day goal is not penalized again at midnight
+ok 130 - a manually missed once-per-day goal is not penalized again at midnight
+  ---
+  duration_ms: 0.3271
+  type: 'test'
+  ...
+# Subtest: goal changes settle earlier days under their original configuration
+ok 131 - goal changes settle earlier days under their original configuration
+  ---
+  duration_ms: 0.3358
+  type: 'test'
+  ...
+# Subtest: premium foods consume one item and apply their own care and happiness effects
+ok 132 - premium foods consume one item and apply their own care and happiness effects
+  ---
+  duration_ms: 10.8953
+  type: 'test'
+  ...
+# Subtest: purchase and consumption request IDs are idempotent and stock cannot go below zero
+ok 133 - purchase and consumption request IDs are idempotent and stock cannot go below zero
+  ---
+  duration_ms: 1.1275
+  type: 'test'
+  ...
+# Subtest: outfits remain owned after refresh, cannot be purchased twice, and require ownership to equip
+ok 134 - outfits remain owned after refresh, cannot be purchased twice, and require ownership to equip
+  ---
+  duration_ms: 8.0275
+  type: 'test'
+  ...
+# Subtest: compatible wardrobe combinations persist and same-slot outfits replace one another
+ok 135 - compatible wardrobe combinations persist and same-slot outfits replace one another
+  ---
+  duration_ms: 18.4509
+  type: 'test'
+  ...
+# Subtest: undoing a funding occurrence preserves bought clothing and used food, and reserves spent coins
+ok 136 - undoing a funding occurrence preserves bought clothing and used food, and reserves spent coins
+  ---
+  duration_ms: 1.4516
+  type: 'test'
+  ...
+# Subtest: version-3 saves migrate single results, purchased essentials and head pats without data loss
+ok 137 - version-3 saves migrate single results, purchased essentials and head pats without data loss
+  ---
+  duration_ms: 2.5954
+  type: 'test'
+  ...
+# Subtest: every outfit renders on all three species through all six health stages
+ok 138 - every outfit renders on all three species through all six health stages
+  ---
+  duration_ms: 297.474
+  type: 'test'
+  ...
+# Subtest: hundreds of repeated entries retain unique ball IDs and round-trip without duplicate rewards
+ok 139 - hundreds of repeated entries retain unique ball IDs and round-trip without duplicate rewards
+  ---
+  duration_ms: 65.4832
+  type: 'test'
+  ...
+# Subtest: reminder-only mode freezes care across refresh and resumes without catch-up
+ok 140 - reminder-only mode freezes care across refresh and resumes without catch-up
+  ---
+  duration_ms: 0.6887
+  type: 'test'
+  ...
+# Subtest: new notification defaults do not replace existing saved settings
+ok 141 - new notification defaults do not replace existing saved settings
+  ---
+  duration_ms: 0.2734
+  type: 'test'
+  ...
+# Subtest: care-linked missed attempts during reminder-only mode never reduce care or return on resume
+ok 142 - care-linked missed attempts during reminder-only mode never reduce care or return on resume
+  ---
+  duration_ms: 0.4796
+  type: 'test'
+  ...
+# Subtest: multiple-entry progress uses a daily target without changing scheduling or reward policy
+ok 143 - multiple-entry progress uses a daily target without changing scheduling or reward policy
+  ---
+  duration_ms: 22.9555
+  type: 'test'
+  ...
+# Subtest: unlimited done-for-day is explicit, reversible, saved, and never pays coins
+ok 144 - unlimited done-for-day is explicit, reversible, saved, and never pays coins
+  ---
+  duration_ms: 2.376
+  type: 'test'
+  ...
+# Subtest: older current-version inventories gain only zero entries for new products
+ok 145 - older current-version inventories gain only zero entries for new products
+  ---
+  duration_ms: 38.8253
+  type: 'test'
+  ...
+# Subtest: all ten new products purchase, consume, persist and render on every pet
+ok 146 - all ten new products purchase, consume, persist and render on every pet
+  ---
+  duration_ms: 1024.9565
+  type: 'test'
+  ...
+# Subtest: daily care bonus is six coins, once per visited local day, with no health or jar changes
+ok 147 - daily care bonus is six coins, once per visited local day, with no health or jar changes
+  ---
+  duration_ms: 0.7307
+  type: 'test'
+  ...
+# Subtest: simultaneous tab grants and stale saves merge the same receipt only once
+ok 148 - simultaneous tab grants and stale saves merge the same receipt only once
+  ---
+  duration_ms: 0.3509
+  type: 'test'
+  ...
+# Subtest: six bonus coins buy one food, water and soap, and corrections preserve recorded costs
+ok 149 - six bonus coins buy one food, water and soap, and corrections preserve recorded costs
+  ---
+  duration_ms: 29.4903
+  type: 'test'
+  ...
+# Subtest: active tasks sort priority then time, without mutating saved order or repetition progress
+ok 150 - active tasks sort priority then time, without mutating saved order or repetition progress
+  ---
+  duration_ms: 1.1089
+  type: 'test'
+  ...
+# Subtest: compact task editor preserves hidden legacy caps and duration while showing priority
+ok 151 - compact task editor preserves hidden legacy caps and duration while showing priority
+  ---
+  duration_ms: 2.3636
+  type: 'test'
+  ...
+# Subtest: future start dates reuse recurrence without appearing early or changing the save
+ok 152 - future start dates reuse recurrence without appearing early or changing the save
+  ---
+  duration_ms: 16.8434
+  type: 'test'
+  ...
+# Subtest: recurrence, pauses, skips and intervals come from existing scheduler
+ok 153 - recurrence, pauses, skips and intervals come from existing scheduler
+  ---
+  duration_ms: 10.4237
+  type: 'test'
+  ...
+# Subtest: one orb per task becomes hollow only at the full daily goal; corrections update it
+ok 154 - one orb per task becomes hollow only at the full daily goal; corrections update it
+  ---
+  duration_ms: 1.3866
+  type: 'test'
+  ...
+# Subtest: recorded history retains old names, priorities, goals and deleted tasks
+ok 155 - recorded history retains old names, priorities, goals and deleted tasks
+  ---
+  duration_ms: 1.567
+  type: 'test'
+  ...
+# Subtest: month grid handles year boundaries, leap February and local DST dates
+ok 156 - month grid handles year boundaries, leap February and local DST dates
+  ---
+  duration_ms: 0.648
+  type: 'test'
+  ...
+# Subtest: calendar renders four orbs plus overflow, readable statuses, and a seven-day grid
+ok 157 - calendar renders four orbs plus overflow, readable statuses, and a seven-day grid
+  ---
+  duration_ms: 19.0915
+  type: 'test'
+  ...
+# Subtest: calendar rows and four visible orbs follow the main list's priority/time order
+ok 158 - calendar rows and four visible orbs follow the main list's priority/time order
+  ---
+  duration_ms: 16.3296
+  type: 'test'
+  ...
+1..158
+# tests 158
+# suites 0
+# pass 158
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 13636.8319

@@ -85,8 +85,8 @@
   width: 6px;
   height: 6px;
   box-sizing: border-box;
-  border: 1.5px solid var(--priority-color, #b6a2cc);
-  background: var(--priority-color, #b6a2cc);
+  border: 1.5px solid var(--priority-color, #e5a35d);
+  background: var(--priority-color, #e5a35d);
   border-radius: 50%;
   display: inline-block;
   flex: 0 0 auto;

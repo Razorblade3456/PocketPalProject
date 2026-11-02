@@ -1505,21 +1505,29 @@ function TaskEditor({
   onSave: (t: Task) => void;
   onDelete?: () => void;
 }) {
-  const [t, setT] = useState<Task>(
-    task || {
+  const [t, setT] = useState<Task>(() => {
+    if (task) return task;
+    const opened = new Date();
+    return {
       id: crypto.randomUUID(),
       name: "",
       description: "",
-      time: "09:00",
-      repeat: "daily",
+      time:
+        String(opened.getHours()).padStart(2, "0") +
+        ":" +
+        String(opened.getMinutes()).padStart(2, "0"),
+      repeat: "once",
       days: [1, 2, 3, 4, 5],
-      date: dateKey(),
+      date: dateKey(+opened),
       category: "happy",
       careLinked: false,
       repetitions: "once",
       dailyGoal: 1,
-    },
-  );
+      priority: "normal",
+      reminderEnabled: true,
+      importantAlarm: false,
+    };
+  });
   const [alarmMinutes, setAlarmMinutes] = useState(20);
   const [relativeChanged, setRelativeChanged] = useState(false);
   const [customMinutes, setCustomMinutes] = useState(false);

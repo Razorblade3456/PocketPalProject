@@ -1,17 +1,17 @@
 /* Small, consistent accents; keep the existing card backgrounds. */
 .priority-high {
-  --priority-color: #c98594;
+  --priority-color: #c46b80;
 }
 .priority-normal {
-  --priority-color: #b6a2cc;
+  --priority-color: #e5a35d;
 }
 .priority-low {
-  --priority-color: #a5b58d;
+  --priority-color: #9cb58b;
 }
 .app .task-card.outcome-card {
-  border-left: 3px solid var(--priority-color, #b6a2cc);
+  border-left: 3px solid var(--priority-color, #e5a35d);
 }
-.task-meta .priority-indicator {
+.app .task-meta .priority-indicator {
   color: var(--priority-color);
   display: inline-flex;
   align-items: center;
@@ -27,6 +27,6 @@
   background: var(--priority-color);
   flex: 0 0 auto;
 }
-.priority-select select {
+.app .modal .task-editor .task-advanced .priority-select select {
   border-left: 3px solid var(--priority-color);
 }
