@@ -1,3 +1,6 @@
+import { MiniPet } from "./MiniPet";
+import { AlarmCountdown } from "./AlarmCountdown";
+import { nearestAlarm } from "./alarms";
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Pet, pets } from "./Pets";
@@ -12,6 +15,8 @@ import {
 } from "./model";
 import "./style.css";
 import "./careVisuals.css";
+import "./miniMochi.css";
+import "./countdown.css";
 import "./desktopPet.css";
 type DesktopSettings = { kind?: PetKind; snapshot?: string };
 declare global {
@@ -24,6 +29,7 @@ declare global {
       popup(): void;
       menu(): void;
       close(): void;
+      timerVisible(visible: boolean): void;
       drag(action: "start" | "move" | "end"): void;
       onChange(callback: () => void): () => void;
     };
@@ -58,6 +64,15 @@ function DesktopPet() {
     };
   }, []);
   const kind = saved?.pet || settings.kind || "mochi";
+  const alarm =
+    saved?.settings.alarmsEnabled === false
+      ? undefined
+      : nearestAlarm(saved?.alarms);
+  const alarmName =
+    saved?.tasks.find((t) => t.id === alarm?.taskId)?.name || "";
+  useEffect(() => {
+    if (!popup) window.desktopPet.timerVisible(!!alarm);
+  }, [popup, !!alarm]);
   if (popup)
     return (
       <main className="desktop-popup">
@@ -160,17 +175,38 @@ function DesktopPet() {
         window.desktopPet.drag("end");
       }}
     >
-      <Pet
-        kind={kind}
-        level={level}
-        care={saved?.settings.petCare === false ? undefined : saved?.care}
-        equipped={saved?.equipped}
-        sleep={rhythm.sleeping && level < 3}
-        calm={rhythm.calm}
-        onPet={() => {
-          /* Pointer handler distinguishes clicks from drags. */
-        }}
-      />
+      <div className="desktop-pet-stage">
+        {saved ? (
+          <MiniPet
+            s={saved}
+            level={level}
+            sleep={rhythm.sleeping && level < 3}
+            calm={rhythm.calm}
+            host={window}
+            interactiveStats={false}
+          />
+        ) : (
+          <Pet
+            kind={kind}
+            level={level}
+            sleep={rhythm.sleeping && level < 3}
+            calm={rhythm.calm}
+            onPet={() => {
+              /* Drag handler owns clicks. */
+            }}
+          />
+        )}
+      </div>
+      {alarm && (
+        <div className="desktop-timer" aria-label="Task countdown">
+          {alarmName && (
+            <span className="desktop-timer-name" title={alarmName}>
+              {alarmName}
+            </span>
+          )}
+          <AlarmCountdown compact alarm={alarm} name={alarmName} />
+        </div>
+      )}
       <button
         type="button"
         className="desktop-close"

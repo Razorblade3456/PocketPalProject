@@ -25,6 +25,7 @@ export function MiniPet({
   feeding,
   reaction = "",
   alarms,
+  interactiveStats = true,
 }: {
   s: State;
   level: number;
@@ -34,6 +35,7 @@ export function MiniPet({
   feeding?: Supply | null;
   reaction?: string;
   alarms?: AlarmRecord[];
+  interactiveStats?: boolean;
 }) {
   const [stats, setStats] = useState(false);
   const [idle, setIdle] = useState<MiniIdle | null>(null);
@@ -127,6 +129,7 @@ export function MiniPet({
           feeding={feeding}
           reaction={reaction}
           onPet={() => {
+            if (!interactiveStats) return;
             fitWindow(!stats);
             if (s.settings.petCare !== false) setStats((v) => !v);
           }}

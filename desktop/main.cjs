@@ -3,21 +3,24 @@ const { app, BrowserWindow, ipcMain, Menu, shell, screen, dialog } = require('el
 const fs = require('node:fs');
 const path = require('node:path');
 let pet, popup, settings = {}, settingsPath;
-const PET_SIZE = 100;
+const PET_SIZE = 160;
+const PET_HEIGHT = 168;
+const TIMER_HEIGHT = 226;
 const page = path.join(__dirname, '../dist-desktop/companion.html');
 function save() {
   try { fs.writeFileSync(settingsPath, JSON.stringify(settings)); } catch (error) { console.error('Could not save companion position:', error.message); }
 }
 function position(x, y) {
   const area = screen.getDisplayNearestPoint({ x, y }).workArea;
-  return { x: Math.round(Math.max(area.x, Math.min(x, area.x + area.width - PET_SIZE))), y: Math.round(Math.max(area.y, Math.min(y, area.y + area.height - PET_SIZE))) };
+  const { width, height } = pet && !pet.isDestroyed() ? pet.getBounds() : { width: PET_SIZE, height: PET_HEIGHT };
+  return { x: Math.round(Math.max(area.x, Math.min(x, area.x + area.width - width))), y: Math.round(Math.max(area.y, Math.min(y, area.y + area.height - height))) };
 }
 function closePopup() { if (popup && !popup.isDestroyed()) popup.close(); popup = null; }
 function showPopup() {
   if (popup) { closePopup(); return; }
   const bounds = pet.getBounds();
   const area = screen.getDisplayMatching(bounds).workArea;
-  popup = new BrowserWindow({ width: 250, height: 330, x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - 250)), y: bounds.y >= area.y + 330 ? bounds.y - 330 : Math.min(bounds.y + PET_SIZE, area.y + area.height - 330), frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  popup = new BrowserWindow({ width: 250, height: 330, x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - 250)), y: bounds.y >= area.y + 330 ? bounds.y - 330 : Math.min(bounds.y + bounds.height, area.y + area.height - 330), frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   popup.setAlwaysOnTop(true, 'screen-saver');
   popup.loadFile(page, { query: { popup: '1' } });
   popup.on('blur', closePopup);
@@ -33,7 +36,7 @@ app.whenReady().then(async () => {
   try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
   const area = screen.getPrimaryDisplay().workArea;
   const initial = position(Number.isFinite(settings.x) ? settings.x : area.x + area.width - 120, Number.isFinite(settings.y) ? settings.y : area.y + area.height - 120);
-  pet = new BrowserWindow({ ...initial, width: PET_SIZE, height: PET_SIZE, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  pet = new BrowserWindow({ ...initial, width: PET_SIZE, height: PET_HEIGHT, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   pet.setAlwaysOnTop(true, 'screen-saver');
   pet.webContents.setFrameRate(30);
   pet.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -73,6 +76,14 @@ ipcMain.handle('pet:import', async event => {
 ipcMain.handle('pet:snapshot', (event, value) => {
   if (!trusted(event) || typeof value !== 'string' || value.length > 10000000) return;
   settings.snapshot = value; save(); pet.webContents.send('pet:changed');
+});
+ipcMain.on('pet:timer-visible', (event, visible) => {
+  if (event.sender !== pet?.webContents || typeof visible !== 'boolean') return;
+  const height = visible ? TIMER_HEIGHT : PET_HEIGHT;
+  if (pet.getContentBounds().height === height) return;
+  pet.setContentSize(PET_SIZE, height);
+  const p = position(...pet.getPosition());
+  pet.setPosition(p.x, p.y);
 });
 ipcMain.on('pet:popup', event => { if (trusted(event)) showPopup(); });
 ipcMain.on('pet:close', event => { if (trusted(event)) app.quit(); });

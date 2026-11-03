@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('desktopPet', {
   popup: () => ipcRenderer.send('pet:popup'),
   menu: () => ipcRenderer.send('pet:menu'),
   close: () => ipcRenderer.send('pet:close'),
+  timerVisible: visible => ipcRenderer.send('pet:timer-visible', visible),
   drag: action => ipcRenderer.send('pet:drag', action),
   onChange: callback => { const listener = () => callback(); ipcRenderer.on('pet:changed', listener); return () => ipcRenderer.removeListener('pet:changed', listener); },
 });
