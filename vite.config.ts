@@ -4,6 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 export default defineConfig({
+  // Scan source entries only, never generated desktop/portable bundles.
+  optimizeDeps: { entries: ["index.html", "companion.html"] },
   plugins: [
     react(),
     tailwindcss(),

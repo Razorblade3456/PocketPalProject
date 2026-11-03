@@ -10,7 +10,8 @@
     "preview": "vite preview --host 127.0.0.1",
     "desktop:build": "tsc -b && vite build --config vite.desktop.config.ts",
     "desktop": "npm run desktop:build && node desktop/launch.cjs",
-    "test:pwa": "npm run build && tsx --test src/pwa.test.ts"
+    "test:pwa": "npm run build && tsx --test src/pwa.test.ts",
+    "build:desktop": "npm run desktop:build && node desktop/package.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -25,6 +26,7 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.5.0",
     "electron": "^45.2.0",
+    "electron-builder": "^26.18.0",
     "prettier": "^3.9.10",
     "tailwindcss": "^4.1.0",
     "tsx": "^4.20.0",

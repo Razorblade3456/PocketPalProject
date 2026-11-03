@@ -63,7 +63,7 @@ function DesktopPet() {
       clearInterval(timer);
     };
   }, []);
-  const kind = saved?.pet || settings.kind || "mochi";
+  const kind = settings.kind || saved?.pet || "mochi";
   const alarm =
     saved?.settings.alarmsEnabled === false
       ? undefined
@@ -178,12 +178,14 @@ function DesktopPet() {
       <div className="desktop-pet-stage">
         {saved ? (
           <MiniPet
-            s={saved}
+            s={{ ...saved, pet: kind }}
             level={level}
             sleep={rhythm.sleeping && level < 3}
             calm={rhythm.calm}
             host={window}
             interactiveStats={false}
+            alarms={saved.settings.alarmsEnabled === false ? [] : saved.alarms}
+            showCountdown={false}
           />
         ) : (
           <Pet

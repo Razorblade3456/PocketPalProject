@@ -1,4 +1,4 @@
-import { PwaUpdate } from "./Pwa";
+import { PwaUpdate, checkForAppUpdate } from "./Pwa";
 import "./pwa.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
@@ -23,6 +23,13 @@ class SaveBoundary extends React.Component<
         "Your saved little world could not be opened. It has not been overwritten.",
     };
   }
+  componentDidCatch(error: Error) {
+    this.setState({
+      message:
+        error.message ||
+        "PocketPal could not finish opening. The original save is still available below.",
+    });
+  }
   render() {
     if (!this.state.error) return this.props.children;
     return (
@@ -30,6 +37,24 @@ class SaveBoundary extends React.Component<
         <span className="eyebrow">LET'S KEEP YOUR LITTLE WORLD SAFE</span>
         <h1>A little help getting home.</h1>
         <p role="alert">{this.state.message}</p>
+        <button
+          className="secondary"
+          onClick={async () => {
+            try {
+              const status = await checkForAppUpdate();
+              this.setState({
+                message: status + " Your saved data has not been changed.",
+              });
+            } catch {
+              this.setState({
+                message:
+                  "Could not check for an update. Reconnect and try again; your save is unchanged.",
+              });
+            }
+          }}
+        >
+          Check for app updates
+        </button>
         <p>
           Download your current save before restoring a valid PocketPal backup.
         </p>
@@ -98,8 +123,8 @@ root.render(
   <React.StrictMode>
     <SaveBoundary>
       <App />
-      <PwaUpdate />
     </SaveBoundary>
+    <PwaUpdate />
   </React.StrictMode>,
 );
 

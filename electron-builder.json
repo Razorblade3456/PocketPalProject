@@ -1,0 +1,28 @@
+{
+  "appId": "com.pocketpal.desktop",
+  "productName": "PocketPal Desktop",
+  "directories": {
+    "output": "release-desktop"
+  },
+  "electronDist": "node_modules/electron/dist",
+  "asar": true,
+  "npmRebuild": false,
+  "files": [
+    "desktop/main.cjs",
+    "desktop/preload.cjs",
+    "dist-desktop/**/*",
+    "package.json",
+    "!node_modules/**/*"
+  ],
+  "extraMetadata": {
+    "main": "desktop/main.cjs",
+    "description": "PocketPal floating desktop companion",
+    "dependencies": {}
+  },
+  "win": {
+    "target": ["portable"],
+    "executableName": "PocketPal Desktop",
+    "artifactName": "PocketPal Desktop.exe",
+    "signAndEditExecutable": false
+  }
+}

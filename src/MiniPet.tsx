@@ -1,10 +1,12 @@
-import { AlarmCountdown } from "./AlarmCountdown";
+import { AlarmCountdown, useCountdownNow } from "./AlarmCountdown";
 import { nearestAlarm, type AlarmRecord } from "./alarms";
 import { useEffect, useState } from "react";
 import { Apple, Droplets, Sparkles, Heart } from "lucide-react";
 import { Pet } from "./Pets";
 import type { State, Supply } from "./model";
 import {
+  countdownMood,
+  countdownIdleChoices,
   miniIdleChoices,
   miniIdleDelay,
   nextMiniIdle,
@@ -26,6 +28,7 @@ export function MiniPet({
   reaction = "",
   alarms,
   interactiveStats = true,
+  showCountdown = true,
 }: {
   s: State;
   level: number;
@@ -36,19 +39,30 @@ export function MiniPet({
   reaction?: string;
   alarms?: AlarmRecord[];
   interactiveStats?: boolean;
+  showCountdown?: boolean;
 }) {
   const [stats, setStats] = useState(false);
   const [idle, setIdle] = useState<MiniIdle | null>(null);
   const [paused, setPaused] = useState(true);
-  const choices = miniIdleChoices(
+  const alarm = nearestAlarm(alarms);
+  const clock = useCountdownNow(alarm);
+  const blocked = !!feeding || !!reaction;
+  const mood =
+    sleep || level > 0 || blocked ? "chill" : countdownMood(alarm, clock);
+  const baseChoices = miniIdleChoices(
     s.pet,
     s.settings.petCare === false
       ? { food: 100, water: 100, clean: 100, happy: 100 }
       : s.care,
     level,
     sleep,
+  );
+  const needsCare =
+    s.settings.petCare !== false &&
+    Object.values(s.care).some((value) => value <= 75);
+  const choices = (
+    needsCare ? baseChoices : countdownIdleChoices(s.pet, baseChoices, mood)
   ).join(",");
-  const blocked = !!feeding || !!reaction;
   const slow = calm || level > 0;
   useEffect(() => {
     const media = host.matchMedia("(prefers-reduced-motion: reduce)");
@@ -60,24 +74,33 @@ export function MiniPet({
       setIdle(null);
     };
     const schedule = () => {
-      timer = host.setTimeout(() => {
-        if (disposed) return;
-        const next = nextMiniIdle(
-          choices ? (choices.split(",") as MiniIdle[]) : [],
-          previous,
-        );
-        previous = next;
-        setIdle(next);
-        timer = host.setTimeout(
-          () => {
-            if (!disposed) {
-              setIdle(null);
-              schedule();
-            }
-          },
-          slow ? 3000 : 2400,
-        );
-      }, miniIdleDelay());
+      timer = host.setTimeout(
+        () => {
+          if (disposed) return;
+          const next = nextMiniIdle(
+            choices ? (choices.split(",") as MiniIdle[]) : [],
+            previous,
+          );
+          previous = next;
+          setIdle(next);
+          timer = host.setTimeout(
+            () => {
+              if (!disposed) {
+                setIdle(null);
+                schedule();
+              }
+            },
+            slow
+              ? 3000
+              : mood === "anxious"
+                ? 1400
+                : mood === "nervous"
+                  ? 2000
+                  : 2400,
+          );
+        },
+        miniIdleDelay(Math.random, mood),
+      );
     };
     const refresh = () => {
       cancel();
@@ -95,11 +118,11 @@ export function MiniPet({
       host.document.removeEventListener("visibilitychange", refresh);
       media.removeEventListener("change", refresh);
     };
-  }, [host, s.pet, s.settings.motion, choices, blocked, slow]);
-  const alarm = nearestAlarm(alarms);
+  }, [host, s.pet, s.settings.motion, choices, blocked, slow, mood]);
+  const visibleAlarm = showCountdown ? alarm : undefined;
   const fitWindow = (showStats: boolean) => {
     if (!host.document.body.classList.contains("mini-mochi-window")) return;
-    const height = 140 + (alarm ? 28 : 0) + (showStats ? 24 : 0);
+    const height = 140 + (visibleAlarm ? 28 : 0) + (showStats ? 24 : 0);
     try {
       if (Math.abs(host.innerHeight - height) > 1)
         host.resizeBy(0, height - host.innerHeight);
@@ -109,13 +132,14 @@ export function MiniPet({
   };
   useEffect(() => {
     fitWindow(stats);
-  }, [host, !!alarm, stats]);
+  }, [host, !!visibleAlarm, stats]);
   const active = !paused && !blocked && !sleep && level !== 5 ? idle : null;
   return (
     <div className="mini-pet-stack">
       <div
         className="mini-mochi-pet-area mini-idle"
         data-mini-idle={active || "rest"}
+        data-countdown-mood={mood}
         data-mini-paused={paused}
         data-mini-slow={slow}
       >
@@ -148,11 +172,11 @@ export function MiniPet({
           </svg>
         )}
       </div>
-      {(alarm || stats) && (
+      {(visibleAlarm || stats) && (
         <div className="mini-pet-info">
           <AlarmCountdown
             compact
-            alarm={alarm}
+            alarm={visibleAlarm}
             name={s.tasks.find((t) => t.id === alarm?.taskId)?.name}
           />
           {stats && s.settings.petCare !== false && (

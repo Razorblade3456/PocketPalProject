@@ -967,7 +967,14 @@ export default function App() {
               </div>
             </section>
             <div className="dashboard-right">
-              <TaskCalendar s={s} today={today} />
+              <TaskCalendar
+                s={s}
+                today={today}
+                onEdit={(task) => {
+                  setPanel(null);
+                  setEdit(task);
+                }}
+              />
               <section className="progress-panel">
                 <div className="section-heading">
                   <h2>Progress Jar</h2>

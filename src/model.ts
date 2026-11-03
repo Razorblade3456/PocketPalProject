@@ -1268,35 +1268,7 @@ const upgradedEntry = (o: Occurrence, index: number): Occurrence => {
   };
 };
 export function parseState(x: unknown, n = Date.now()): State | null {
-  // Catalog additions only: fill missing new keys, never replace saved stock/history.
-  if (
-    x &&
-    typeof x === "object" &&
-    (x as State).version === 4 &&
-    (x as State).inventory &&
-    typeof (x as State).inventory === "object"
-  ) {
-    const original = x as State;
-    const added: Supply[] = [
-      "juiceBox",
-      "snackPack",
-      "bubbleBath",
-      "toyBall",
-      "donut",
-      "cupcake",
-      "hotDog",
-      "fries",
-      "ramenCup",
-      "milkshake",
-    ];
-    x = {
-      ...original,
-      inventory: {
-        ...Object.fromEntries(added.map((id) => [id, 0])),
-        ...original.inventory,
-      },
-    };
-  }
+  x = compatibleSaveShape(x);
   if (validModel(x, 3)) {
     const old = x as State;
     return decay(
@@ -1380,7 +1352,9 @@ export function parseState(x: unknown, n = Date.now()): State | null {
       ...seed,
       name: old.name,
       color: old.color,
-      pet: "mochi",
+      pet: ["mochi", "pippin", "crumb", "rattle"].includes(old.pet)
+        ? old.pet
+        : "mochi",
       created: old.created,
       tasks,
       outcomes,
@@ -1397,43 +1371,164 @@ export function parseState(x: unknown, n = Date.now()): State | null {
     n,
   );
 }
-export function load(): State {
-  try {
-    const raw = localStorage.getItem("pocketpal-v1");
-    if (raw) {
-      const parsed = JSON.parse(raw);
+/** Fill only absent, additive fields. Never replace invalid values or user choices. */
+function compatibleSaveShape(x: unknown): unknown {
+  if (
+    !x ||
+    typeof x !== "object" ||
+    ![1, 2, 3, 4].includes((x as State).version)
+  )
+    return x;
+  const original = x as State;
+  let next = original;
+  const patch = (value: Partial<State>) => {
+    next = { ...next, ...value };
+  };
+  if (
+    original.settings &&
+    typeof original.settings === "object" &&
+    !Array.isArray(original.settings)
+  ) {
+    const defaults = {
+      sound: false,
+      motion: true,
+      reminders: false,
+      theme: "auto",
+      speed: original.baseline?.speed ?? 1,
+      cozy: original.baseline?.cozy ?? true,
+    };
+    const missing = Object.fromEntries(
+      Object.entries(defaults).filter(
+        ([key]) =>
+          original.settings[key as keyof State["settings"]] === undefined,
+      ),
+    );
+    if (Object.keys(missing).length)
+      patch({ settings: { ...original.settings, ...missing } });
+  }
+  if (
+    original.version === 4 &&
+    original.inventory &&
+    typeof original.inventory === "object" &&
+    !Array.isArray(original.inventory)
+  ) {
+    const missing = Object.fromEntries(
+      SUPPLY_IDS.filter((id) => original.inventory[id] === undefined).map(
+        (id) => [id, 0],
+      ),
+    );
+    if (Object.keys(missing).length)
+      patch({ inventory: { ...original.inventory, ...missing } });
+  }
+  const legacyTask = (t: Task): Task => {
+    if (!t || typeof t !== "object") return t;
+    const missing: Partial<Task> = {};
+    if (t.description === undefined) missing.description = "";
+    if (t.days === undefined && ["once", "daily", "weekly"].includes(t.repeat))
+      missing.days = [];
+    return Object.keys(missing).length ? { ...t, ...missing } : t;
+  };
+  if (Array.isArray(next.tasks)) {
+    const tasks = next.tasks.map(legacyTask);
+    if (tasks.some((t, i) => t !== next.tasks[i])) patch({ tasks });
+  }
+  if (Array.isArray(next.outcomes)) {
+    const outcomes = next.outcomes.map((o) => {
+      if (!o || !o.task) return o;
+      const task = legacyTask(o.task);
+      return task === o.task ? o : { ...o, task };
+    });
+    if (outcomes.some((o, i) => o !== next.outcomes[i])) patch({ outcomes });
+  }
+  return next;
+}
+export function saveLoadIssue(x: unknown): string {
+  if (!x || typeof x !== "object")
+    return "Saved data is not a PocketPal object.";
+  const s = x as State;
+  if (![1, 2, 3, 4].includes(s.version))
+    return "Unsupported save version. Update PocketPal before restoring this save.";
+  const normalized = compatibleSaveShape(s) as State;
+  if (normalized.version === 4 && normalized.inventory) {
+    const invalid = SUPPLY_IDS.find(
+      (id) =>
+        !Number.isSafeInteger(normalized.inventory[id]) ||
+        normalized.inventory[id] < 0,
+    );
+    if (invalid) return "Invalid saved inventory count: " + invalid + ".";
+  }
+  if (normalized.settings) {
+    for (const key of [
+      "sound",
+      "motion",
+      "reminders",
+      "cozy",
+      "petCare",
+      "alarmSound",
+      "alarmsEnabled",
+    ] as const) {
       if (
-        !parsed.rewardLedger &&
-        !localStorage.getItem("pocketpal-before-smart-habits")
-      ) {
-        try {
-          localStorage.setItem("pocketpal-before-smart-habits", raw);
-        } catch {
-          /* The original save remains available on storage failure. */
-        }
-      }
-      const s = parseState(parsed);
-      if (s) {
-        if (
-          parsed.version < 4 &&
-          !localStorage.getItem("pocketpal-before-boutique")
-        ) {
-          try {
-            localStorage.setItem("pocketpal-before-outcomes", raw);
-          } catch {
-            /* Leave the original save available if storage is full. */
-          }
-        }
-        return s;
-      }
-      throw Error("Invalid saved PocketPal data");
+        normalized.settings[key] !== undefined &&
+        typeof normalized.settings[key] !== "boolean"
+      )
+        return "Invalid saved preference: " + key + ".";
     }
+  }
+  if (Array.isArray(normalized.tasks)) {
+    const index = normalized.tasks.findIndex((task) => !taskValid(task));
+    if (index >= 0)
+      return "Incompatible saved task fields at task " + (index + 1) + ".";
+  }
+  if (!normalized.settings || !commonValid(normalized))
+    return "Save compatibility check failed: task fields, care values, or preferences.";
+  if (s.version === 4 && !validHabitData(normalized))
+    return "Save compatibility check failed: alarm, habit, or coin-ledger records.";
+  return "Save compatibility check failed: inventory, outfits, or transaction history.";
+}
+export function load(): State {
+  let raw: string | null;
+  try {
+    raw = localStorage.getItem("pocketpal-v1");
   } catch {
     throw Error(
-      "PocketPal could not read saved data. Your save has not been overwritten; restore a valid backup or clear the site data to start fresh.",
+      "Browser storage is unavailable. Allow site storage and try again. No save was written.",
     );
   }
-  return initial();
+  if (raw === null) return initial();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw Error(
+      "Saved JSON could not be decoded. Download the original save for recovery; it has not been overwritten.",
+    );
+  }
+  let state: State | null;
+  try {
+    state = parseState(parsed);
+  } catch (error) {
+    throw Error(
+      "Saved data could not be processed: " +
+        (error instanceof Error ? error.message : "unknown error") +
+        ". The original save has not been overwritten.",
+    );
+  }
+  if (!state)
+    throw Error(
+      saveLoadIssue(parsed) + " The original save has not been overwritten.",
+    );
+  // Preserve raw bytes before an additive repair or older-version migration is persisted.
+  if (compatibleSaveShape(parsed) !== parsed || (parsed as State).version < 4) {
+    const key = "pocketpal-before-compatibility-repair";
+    try {
+      if (localStorage.getItem(key) === null) localStorage.setItem(key, raw);
+    } catch {
+      throw Error(
+        "A safety copy could not be saved. Export the original save before trying recovery; it has not been overwritten.",
+      );
+    }
+  }
+  return state;
 }
 export const demoTasks = (n = Date.now()): Task[] =>
   [

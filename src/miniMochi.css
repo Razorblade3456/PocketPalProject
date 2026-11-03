@@ -567,3 +567,19 @@ body.mini-mochi-window {
   box-sizing: border-box;
   width: 100%;
 }
+
+/* Same existing moves, quicker pacing. One data-mini-idle still owns the limbs. */
+.mini-idle[data-countdown-mood="nervous"],
+.mini-idle[data-countdown-mood="nervous"] .care-idle {
+  --mini-duration: 2s;
+}
+.mini-idle[data-countdown-mood="anxious"],
+.mini-idle[data-countdown-mood="anxious"] .care-idle {
+  --mini-duration: 1.4s;
+}
+.mini-idle[data-countdown-mood="nervous"] .pet-art {
+  animation-duration: 3.4s !important;
+}
+.mini-idle[data-countdown-mood="anxious"] .pet-art {
+  animation-duration: 2.6s !important;
+}

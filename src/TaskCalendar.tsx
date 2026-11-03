@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { dateKey, localDate, type State } from "./model";
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { dateKey, localDate, type State, type Task } from "./model";
 import {
   calendarMonth,
   calendarDaysForMonth,
@@ -30,9 +30,11 @@ function Orb({ row }: { row: CalendarTask }) {
 export function TaskCalendar({
   s,
   today = dateKey(),
+  onEdit,
 }: {
   s: State;
   today?: string;
+  onEdit?: (task: Task) => void;
 }) {
   const [selected, setSelected] = useState(today),
     [month, setMonth] = useState(() => calendarMonth(today)),
@@ -193,6 +195,38 @@ export function TaskCalendar({
                     {row.missed > 0 ? " · " + row.missed + " missed" : ""}
                   </span>
                 </div>
+                {onEdit && s.tasks.some((t) => t.id === row.task.id) && (
+                  <button
+                    type="button"
+                    className="calendar-edit"
+                    title={
+                      s.tasks.find((t) => t.id === row.task.id)!.repeat ===
+                      "once"
+                        ? "Edit Task"
+                        : "Edit Task Series"
+                    }
+                    aria-label={
+                      (s.tasks.find((t) => t.id === row.task.id)!.repeat ===
+                      "once"
+                        ? "Edit Task: "
+                        : "Edit Task Series: ") + row.task.name
+                    }
+                    onClick={() => {
+                      const original = s.tasks.find(
+                        (t) => t.id === row.task.id,
+                      );
+                      if (original) onEdit(original);
+                    }}
+                  >
+                    <Pencil size={12} aria-hidden="true" />
+                    <span>
+                      {s.tasks.find((t) => t.id === row.task.id)!.repeat ===
+                      "once"
+                        ? "Edit"
+                        : "Edit series"}
+                    </span>
+                  </button>
+                )}
               </li>
             ))}
           </ul>

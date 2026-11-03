@@ -1,3 +1,5 @@
+import { countdownMood, countdownIdleChoices } from "./miniIdle";
+import { dismissAlarm, type AlarmRecord } from "./alarms";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
@@ -81,4 +83,93 @@ test("all Mini pets retain two existing arms and one exclusive face in every hea
           assert.ok(!html.includes("mini-stats"));
           assert.ok(html.includes('data-mini-idle="rest"'));
         }
+});
+
+test("countdown moods use the existing percentage boundaries and reset on snooze", () => {
+  const now = Date.now(),
+    alarm: AlarmRecord = {
+      id: "alarm",
+      taskId: "a",
+      date: "2026-11-02",
+      schedule: "test",
+      scheduledAt: now + 100000,
+      startedAt: now,
+      dueAt: now + 100000,
+      status: "pending",
+    };
+  assert.equal(countdownMood(alarm, now + 49999), "chill");
+  assert.equal(countdownMood(alarm, now + 50000), "nervous");
+  assert.equal(countdownMood(alarm, now + 80000), "nervous");
+  assert.equal(countdownMood(alarm, now + 80001), "anxious");
+  assert.equal(countdownMood(alarm, now + 100001), "anxious");
+  assert.equal(countdownMood({ ...alarm, status: "stopped" }, now), "chill");
+  assert.equal(countdownMood({ ...alarm, startedAt: undefined }, now), "chill");
+  assert.equal(countdownMood(undefined, now), "chill");
+  const snoozed = dismissAlarm(
+    { ...initial(now), alarms: [alarm] },
+    alarm.id,
+    5,
+    now + 90000,
+  );
+  assert.equal(countdownMood(snoozed.alarms![0], now + 90000), "chill");
+  assert.ok(
+    miniIdleDelay(() => 0, "anxious") < miniIdleDelay(() => 0, "nervous"),
+  );
+  assert.ok(
+    miniIdleDelay(() => 0, "nervous") < miniIdleDelay(() => 0, "chill"),
+  );
+});
+test("all countdown stages reuse one full-body face and two arms, yielding to sleep/death", () => {
+  for (const pet of kinds)
+    for (const [ratio, mood] of [
+      [0.7, "chill"],
+      [0.3, "nervous"],
+      [0.1, "anxious"],
+    ] as const) {
+      const now = Date.now(),
+        s = { ...initial(now), pet, care: { ...excellentCare } };
+      const alarm: AlarmRecord = {
+        id: "alarm",
+        taskId: "a",
+        date: "2026-11-02",
+        schedule: "test",
+        scheduledAt: now + ratio * 1000000,
+        startedAt: now - (1 - ratio) * 1000000,
+        dueAt: now + ratio * 1000000,
+        status: "pending",
+      };
+      assert.ok(
+        countdownIdleChoices(
+          pet,
+          miniIdleChoices(pet, excellentCare, 0, false),
+          mood,
+        ).length,
+      );
+      for (const [level, sleep] of [
+        [0, false],
+        [0, true],
+        [5, false],
+      ] as const) {
+        const html = renderToStaticMarkup(
+          createElement(MiniPet, {
+            s,
+            level,
+            sleep,
+            calm: false,
+            host: {} as Window,
+            alarms: [alarm],
+          }),
+        );
+        assert.ok(
+          html.includes(
+            'data-countdown-mood="' +
+              (sleep || level === 5 ? "chill" : mood) +
+              '"',
+          ),
+        );
+        assert.equal((html.match(/data-active-face=/g) || []).length, 1);
+        assert.equal((html.match(/class="[^"]*pet-arm /g) || []).length, 2);
+        assert.ok(html.includes('viewBox="0 0 320 340"'));
+      }
+    }
 });

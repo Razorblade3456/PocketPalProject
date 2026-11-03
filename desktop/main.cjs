@@ -3,6 +3,7 @@ const { app, BrowserWindow, ipcMain, Menu, shell, screen, dialog } = require('el
 const fs = require('node:fs');
 const path = require('node:path');
 let pet, popup, settings = {}, settingsPath;
+const PET_NAMES = { mochi: "Mochi", pippin: "Pippin", crumb: "Crumb", rattle: "Rattle" };
 const PET_SIZE = 160;
 const PET_HEIGHT = 168;
 const TIMER_HEIGHT = 226;
@@ -33,7 +34,11 @@ else {
 app.on('second-instance', () => { pet?.show(); });
 app.whenReady().then(async () => {
   settingsPath = path.join(app.getPath('userData'), 'desktop-pet.json');
-  try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
+  // The development launcher used Electron's default profile. Read its existing
+  // companion settings on the first packaged launch; never move/delete that file.
+  const source = app.isPackaged && !fs.existsSync(settingsPath)
+    ? path.join(app.getPath('appData'), 'Electron', 'desktop-pet.json') : settingsPath;
+  try { settings = JSON.parse(fs.readFileSync(source, 'utf8')); } catch {}
   const area = screen.getPrimaryDisplay().workArea;
   const initial = position(Number.isFinite(settings.x) ? settings.x : area.x + area.width - 120, Number.isFinite(settings.y) ? settings.y : area.y + area.height - 120);
   pet = new BrowserWindow({ ...initial, width: PET_SIZE, height: PET_HEIGHT, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
@@ -57,10 +62,12 @@ app.whenReady().then(async () => {
 });
 const trusted = event => [pet, popup].some(w => w && !w.isDestroyed() && w.webContents === event.sender);
 ipcMain.handle('pet:settings', event => trusted(event) ? settings : {});
-ipcMain.handle('pet:select', (event, kind) => {
-  if (!trusted(event) || !['mochi', 'pippin', 'crumb', 'rattle'].includes(kind)) return;
-  settings.kind = kind; save(); pet.webContents.send('pet:changed');
-});
+function selectPet(kind) {
+  if (typeof kind !== "string" || !Object.hasOwn(PET_NAMES, kind)) return;
+  settings.kind = kind; save();
+  for (const window of [pet,popup]) if (window && !window.isDestroyed()) window.webContents.send('pet:changed');
+}
+ipcMain.handle('pet:select', (event, kind) => { if (trusted(event)) selectPet(kind); });
 ipcMain.handle('pet:import', async event => {
   if (!trusted(event)) return null;
   // Keep the popup alive while the native file picker owns focus.
@@ -98,7 +105,7 @@ ipcMain.on('pet:drag', (event, action) => {
 ipcMain.on('pet:menu', event => {
   if (!trusted(event)) return;
   closePopup();
-  Menu.buildFromTemplate([{ label: 'Open PocketPal', click: () => shell.openExternal('http://127.0.0.1:5174/#') }, { label: 'Close Pet', click: () => app.quit() }]).popup({ window: pet });
+  Menu.buildFromTemplate([{ label: 'Change Pet', submenu: Object.entries(PET_NAMES).map(([kind,label]) => ({ label, type:'radio', checked:kind === (settings.kind || (()=>{try{return JSON.parse(settings.snapshot || '{}').pet;}catch{return undefined;}})() || 'mochi'), click:()=>selectPet(kind) })) }, { type:'separator' }, { label: 'Open PocketPal', click: () => shell.openExternal('http://127.0.0.1:5174/#') }, { label: 'Close Pet', click: () => app.quit() }]).popup({ window: pet });
 });
 app.on('window-all-closed', () => app.quit());
 }

@@ -1,3 +1,4 @@
+import { countdownProgress, type AlarmRecord } from "./alarms";
 import type { Care, PetKind } from "./model";
 export type MiniIdle =
   | "scratch"
@@ -65,5 +66,46 @@ export function nextMiniIdle(
       ]
     : null;
 }
-export const miniIdleDelay = (random = Math.random) =>
-  8000 + Math.floor(random() * 12000);
+export type CountdownMood = "chill" | "nervous" | "anxious";
+export function countdownMood(
+  alarm: AlarmRecord | undefined,
+  now: number,
+): CountdownMood {
+  if (!alarm || alarm.status === "stopped") return "chill";
+  const progress = countdownProgress(alarm, now);
+  return !progress || progress.percent > 50
+    ? "chill"
+    : progress.percent >= 20
+      ? "nervous"
+      : "anxious";
+}
+export function countdownIdleChoices(
+  kind: PetKind,
+  base: MiniIdle[],
+  mood: CountdownMood,
+): MiniIdle[] {
+  if (mood === "chill") return base;
+  const choices: Record<PetKind, MiniIdle[]> =
+    mood === "nervous"
+      ? {
+          mochi: ["look", "scratch"],
+          pippin: ["look", "antennae"],
+          crumb: ["look", "tummy"],
+          rattle: ["sideeye", "cross"],
+        }
+      : {
+          mochi: ["look", "bounce"],
+          pippin: ["flap", "antennae"],
+          crumb: ["stumble", "look"],
+          rattle: ["tap", "sideeye"],
+        };
+  return choices[kind];
+}
+export const miniIdleDelay = (
+  random = Math.random,
+  mood: CountdownMood = "chill",
+) =>
+  Math.round(
+    (8000 + Math.floor(random() * 12000)) *
+      (mood === "anxious" ? 0.3 : mood === "nervous" ? 0.6 : 1),
+  );

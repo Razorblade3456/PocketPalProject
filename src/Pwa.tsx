@@ -123,3 +123,19 @@ export function PwaUpdate() {
     </aside>
   );
 }
+
+/** Also available on the recovery screen; does not clear caches or saved progress. */
+export async function checkForAppUpdate() {
+  if (!("serviceWorker" in navigator))
+    return "App updates are unavailable in this browser. Reload the online page.";
+  const reg = await navigator.serviceWorker.getRegistration();
+  if (!reg)
+    return "No offline worker is installed. Reload the online page for the latest version.";
+  await reg.update();
+  if (reg.waiting) {
+    waiting = reg.waiting;
+    notify();
+    return "An update is ready. Use Refresh in the update banner.";
+  }
+  return "Update check requested. If an update becomes available, use its Refresh button.";
+}

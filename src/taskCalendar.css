@@ -376,3 +376,34 @@
     min-height: 7px;
   }
 }
+
+.calendar-selected li > div {
+  flex: 1;
+}
+.app .calendar-edit {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 4px 6px;
+  min-height: 30px;
+  border: 1px solid #65536e;
+  border-radius: 7px;
+  background: transparent;
+  color: #d3bfdf;
+  font-size: 9px;
+  cursor: pointer;
+}
+.app .calendar-edit:hover {
+  background: #352b40;
+}
+@media (max-width: 800px) {
+  .app .calendar-edit {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .calendar-edit span {
+    max-width: 38px;
+  }
+}

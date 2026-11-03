@@ -27,6 +27,14 @@ function subscribe(listener: () => void) {
   };
 }
 const dormant = () => () => {};
+export function useCountdownNow(alarm?: AlarmRecord) {
+  const clock = useSyncExternalStore(
+    alarm?.status === "pending" ? subscribe : dormant,
+    () => now,
+    () => now,
+  );
+  return Math.max(clock, Date.now());
+}
 export function AlarmCountdown({
   alarm,
   compact = false,
@@ -36,12 +44,7 @@ export function AlarmCountdown({
   compact?: boolean;
   name?: string;
 }) {
-  const clock = useSyncExternalStore(
-    alarm?.status === "pending" ? subscribe : dormant,
-    () => now,
-    () => now,
-  );
-  const at = Math.max(clock, Date.now());
+  const at = useCountdownNow(alarm);
   if (!alarm || alarm.status === "stopped") return null;
   const ringing = alarm.status === "ringing" || alarm.dueAt <= at;
   const text = ringing ? "Alarm ringing" : formatCountdown(alarm.dueAt, at);

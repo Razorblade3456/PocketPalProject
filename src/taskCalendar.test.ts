@@ -240,3 +240,46 @@ test("calendar rows and four visible orbs follow the main list's priority/time o
   );
   assert.ok(firstDay.includes('calendar-more">+1'));
 });
+
+test("calendar exposes existing task editors and labels recurring series without resurrecting deleted tasks", () => {
+  let s = initial(now);
+  s = saveTask(s, task({ id: "one", repeat: "once", date: "2026-11-01" }), now);
+  s = saveTask(s, task({ id: "series", name: "Series", repeat: "daily" }), now);
+  const html = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-01", onEdit: () => {} }),
+  );
+  assert.ok(html.includes("Edit Task: Water"));
+  assert.ok(html.includes("Edit Task Series: Series"));
+  s = recordAttempt(s, "one", "2026-11-01", "completed", now, "old-one");
+  s = deleteTask(s, "one", now);
+  const removed = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-01", onEdit: () => {} }),
+  );
+  assert.ok(!removed.includes("Edit Task: Water"));
+});
+test("editing a future series retains its original ID, completions and reward ledger", () => {
+  let s = saveTask(initial(now), task({ id: "series", repeat: "daily" }), now);
+  s = recordAttempt(s, "series", "2026-11-01", "completed", now, "history");
+  const outcomes = JSON.stringify(s.outcomes),
+    ledger = JSON.stringify(s.rewardLedger);
+  const original = s.tasks.find(
+    (t) => t.id === calendarTasks(s, "2026-11-12")[0].task.id,
+  )!;
+  s = saveTask(
+    s,
+    {
+      ...original,
+      name: "Edited series",
+      date: "2026-11-15",
+      repeat: "weekly",
+      priority: "high",
+    },
+    now,
+  );
+  assert.equal(s.tasks.length, 1);
+  assert.equal(s.tasks[0].id, "series");
+  assert.equal(calendarTasks(s, "2026-11-12").length, 0);
+  assert.equal(calendarTasks(s, "2026-11-15")[0].task.name, "Edited series");
+  assert.equal(JSON.stringify(s.outcomes), outcomes);
+  assert.equal(JSON.stringify(s.rewardLedger), ledger);
+});

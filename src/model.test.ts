@@ -1,3 +1,4 @@
+import { load } from "./model";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -1098,4 +1099,99 @@ test("care-linked missed attempts during reminder-only mode never reduce care or
   s = changeSettings(s, { petCare: true }, now + 2 * hour);
   assert.deepEqual(s.care, care);
   assert.equal(s.outcomes.length, 1);
+});
+
+test("older additive catalog, task and settings fields load without losing progress", () => {
+  let saved = earn(setup(), 6);
+  saved = buyItem(saved, "beanie", now, "legacy-hat");
+  saved = buyItem(saved, "water", now, "legacy-water");
+  saved.pet = "rattle";
+  saved.settings.reminders = false;
+  const old = JSON.parse(JSON.stringify(saved));
+  for (const key of SUPPLY_IDS)
+    if (!["food", "water", "soap"].includes(key)) delete old.inventory[key];
+  delete old.settings.theme;
+  delete old.settings.motion;
+  old.tasks.forEach((t: any) => {
+    delete t.description;
+    delete t.days;
+  });
+  old.outcomes.forEach((o: any) => {
+    delete o.task.description;
+    delete o.task.days;
+  });
+  const before = JSON.stringify(old),
+    restored = parseState(old, now)!;
+  assert.ok(restored);
+  assert.equal(JSON.stringify(old), before);
+  assert.equal(restored.pet, "rattle");
+  assert.equal(restored.coins, saved.coins);
+  assert.deepEqual(restored.inventory, saved.inventory);
+  assert.deepEqual(restored.ownedOutfits, saved.ownedOutfits);
+  assert.deepEqual(restored.care, saved.care);
+  assert.deepEqual(restored.rewardLedger, saved.rewardLedger);
+  assert.deepEqual(
+    restored.outcomes.map((o) => o.id),
+    saved.outcomes.map((o) => o.id),
+  );
+  assert.equal(restored.settings.reminders, false);
+  assert.equal(restored.tasks[0].repeat, saved.tasks[0].repeat);
+});
+test("unreadable saves never overwrite local storage, while repairs first preserve raw bytes", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "localStorage",
+  );
+  const values = new Map<string, string>();
+  const writes: string[] = [];
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (k: string) => values.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        writes.push(k);
+        values.set(k, v);
+      },
+    },
+  });
+  try {
+    for (const raw of [
+      "",
+      '{"version":',
+      JSON.stringify({ ...initial(), version: 99 }),
+      JSON.stringify({ ...initial(), settings: [] }),
+      JSON.stringify({
+        ...initial(),
+        inventory: { ...emptyInventory(), food: -1 },
+      }),
+    ]) {
+      values.clear();
+      writes.length = 0;
+      values.set("pocketpal-v1", raw);
+      assert.throws(() => load());
+      assert.equal(values.get("pocketpal-v1"), raw);
+      assert.deepEqual(writes, []);
+    }
+    values.clear();
+    writes.length = 0;
+    const old = JSON.parse(JSON.stringify(initial()));
+    delete old.inventory.pizza;
+    const raw = JSON.stringify(old);
+    values.set("pocketpal-v1", raw);
+    const restored = load();
+    assert.equal(restored.inventory.pizza, 0);
+    assert.equal(values.get("pocketpal-v1"), raw);
+    assert.equal(values.get("pocketpal-before-compatibility-repair"), raw);
+  } finally {
+    if (descriptor)
+      Object.defineProperty(globalThis, "localStorage", descriptor);
+    else Reflect.deleteProperty(globalThis, "localStorage");
+  }
+});
+
+test("legacy version-one companion identity survives migration", () => {
+  const raw = { ...setup(), version: 1, pet: "pippin" };
+  const restored = parseState(raw, now);
+  assert.ok(restored);
+  assert.equal(restored.pet, "pippin");
 });
