@@ -283,3 +283,36 @@ test("editing a future series retains its original ID, completions and reward le
   assert.equal(JSON.stringify(s.outcomes), outcomes);
   assert.equal(JSON.stringify(s.rewardLedger), ledger);
 });
+
+test("deleted tasks disappear from current/future calendar but retain past records and rewards", () => {
+  let s = saveTask(initial(now), task({ repeat: "daily" }), now);
+  s = recordAttempt(s, "a", "2026-11-01", "completed", now, "kept-reward");
+  const coins = s.coins,
+    ledger = JSON.stringify(s.rewardLedger),
+    outcomes = JSON.stringify(s.outcomes);
+  s = deleteTask(s, "a", now);
+  assert.equal(calendarTasks(s, "2026-11-01", "2026-11-01").length, 0);
+  assert.equal(calendarTasks(s, "2026-11-02", "2026-11-01").length, 0);
+  assert.equal(calendarTasks(s, "2026-11-01", "2026-11-02").length, 1);
+  assert.equal(s.coins, coins);
+  assert.equal(JSON.stringify(s.rewardLedger), ledger);
+  assert.equal(JSON.stringify(s.outcomes), outcomes);
+});
+
+test("future calendar creation uses existing save path and does not become due today", () => {
+  const s = saveTask(
+    initial(now),
+    task({ id: "future", repeat: "once", date: "2026-11-12" }),
+    now,
+  );
+  assert.equal(s.tasks.length, 1);
+  assert.equal(taskDue(s, s.tasks[0], now), false);
+  assert.equal(
+    calendarTasks(s, "2026-11-12", "2026-11-01")[0].task.id,
+    "future",
+  );
+  const html = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-01", onAdd: () => {} }),
+  );
+  assert.ok(html.includes("+ Add Task"));
+});

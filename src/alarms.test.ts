@@ -117,6 +117,7 @@ test("closed-session catch-up discovers overdue alarms and preserves a determini
 });
 test("task deletion, edits, skip, pause and occurrence reschedule cancel stale alarms", () => {
   const due = reconcileAlarms(setup(), evening);
+  assert.equal(deleteTask(due, "alarm", evening).alarms!.length, 0);
   assert.equal(
     reconcileAlarms(deleteTask(due, "alarm", evening), evening).alarms!.length,
     0,
@@ -603,4 +604,16 @@ test("notification delivery uses the worker, deduplicates reloads, and never ask
       else Reflect.deleteProperty(globalThis, k);
     }
   }
+});
+
+test("new users get 70 percent alarm volume while stored sound choices survive loading", () => {
+  const fresh = initial(+localDate("2026-11-03"));
+  assert.equal(fresh.settings.alarmVolume, 0.7);
+  assert.equal(fresh.settings.alarmSound, true);
+  assert.equal(fresh.settings.reminders, true);
+  fresh.settings.alarmSound = false;
+  fresh.settings.alarmVolume = 0.12;
+  const loaded = parseState(JSON.parse(JSON.stringify(fresh)))!;
+  assert.equal(loaded.settings.alarmSound, false);
+  assert.equal(loaded.settings.alarmVolume, 0.12);
 });

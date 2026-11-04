@@ -244,6 +244,7 @@ export function initial(n = Date.now()): State {
     settings: {
       sound: false,
       alarmSound: true,
+      alarmVolume: 0.7,
       alarmsEnabled: true,
       motion: true,
       theme: "auto",
@@ -850,6 +851,7 @@ export function deleteTask(s: State, id: string, n = Date.now()): State {
   return {
     ...s,
     tasks: s.tasks.filter((t) => t.id !== id),
+    alarms: s.alarms?.filter((a) => a.taskId !== id),
     focusDays: Object.fromEntries(
       Object.entries(s.focusDays || {}).map(([day, ids]) => [
         day,

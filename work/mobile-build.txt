@@ -1,0 +1,19 @@
+
+> pocketpal@1.0.0 build
+> tsc -b && vite build
+
+vite v6.4.5 building for production...
+transforming...
+✓ 2025 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.84 kB │ gzip:   0.45 kB
+dist/sw.js                        1.95 kB
+dist/assets/index-B8bVZqww.css  142.47 kB │ gzip:  32.61 kB
+dist/assets/index-DsP8emHI.js   554.75 kB │ gzip: 175.72 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 8.69s

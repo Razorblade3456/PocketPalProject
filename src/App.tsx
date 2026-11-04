@@ -91,7 +91,6 @@ import {
   TinySteps,
   TaskQuickActions,
   TaskAdvancedFields,
-  RewardSettings,
   TaskRewardNote,
 } from "./HabitTools";
 import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
@@ -148,6 +147,7 @@ export default function App() {
   const petRef = useRef<HTMLButtonElement>(null);
   const actionLocks = useRef(new Map<string, number>());
   const [edit, setEdit] = useState<Task | null | undefined>();
+  const [calendarStart, setCalendarStart] = useState<string>();
   const [message, setMessage] = useState("");
   const openedAt = useRef(Date.now());
   const externalSave = useRef<State | null>(null);
@@ -343,6 +343,7 @@ export default function App() {
   const close = () => {
     setPanel(null);
     setEdit(undefined);
+    setCalendarStart(undefined);
   };
   const openShop = () => {
     setInventoryOpen(false);
@@ -970,6 +971,11 @@ export default function App() {
               <TaskCalendar
                 s={s}
                 today={today}
+                onAdd={(date) => {
+                  setCalendarStart(date);
+                  setPanel(null);
+                  setEdit(null);
+                }}
                 onEdit={(task) => {
                   setPanel(null);
                   setEdit(task);
@@ -1110,6 +1116,7 @@ export default function App() {
             {edit !== undefined ? (
               <TaskEditor
                 task={edit}
+                startDate={calendarStart}
                 onSave={(t) => {
                   setS((p) => saveTask(p, t));
                   close();
@@ -1119,6 +1126,8 @@ export default function App() {
                   edit
                     ? () => {
                         setS((p) => deleteTask(p, edit.id));
+                        if (message === `Reminder: ${edit.name}`)
+                          setMessage("");
                         close();
                       }
                     : undefined
@@ -1279,7 +1288,7 @@ export default function App() {
                     </p>
                   </>
                 )}
-                <RewardSettings s={s} setS={setS} />
+
                 <div className="button-row">
                   <button
                     className="secondary"
@@ -1505,10 +1514,12 @@ export default function App() {
 }
 function TaskEditor({
   task,
+  startDate,
   onSave,
   onDelete,
 }: {
   task: Task | null;
+  startDate?: string;
   onSave: (t: Task) => void;
   onDelete?: () => void;
 }) {
@@ -1525,7 +1536,7 @@ function TaskEditor({
         String(opened.getMinutes()).padStart(2, "0"),
       repeat: "once",
       days: [1, 2, 3, 4, 5],
-      date: dateKey(+opened),
+      date: startDate || dateKey(+opened),
       category: "happy",
       careLinked: false,
       repetitions: "once",
@@ -1829,7 +1840,13 @@ function TaskEditor({
             type="button"
             className="delete-button"
             onClick={() => {
-              if (confirm("Delete this task? Your earned rewards will stay."))
+              if (
+                confirm(
+                  t.repeat === "once"
+                    ? "Delete this task? Your earned rewards will stay."
+                    : "Delete this task and all future occurrences?",
+                )
+              )
                 onDelete();
             }}
           >

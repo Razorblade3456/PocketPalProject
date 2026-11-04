@@ -47,7 +47,7 @@ export function calendarTasks(
     .filter((o) => o.date === date && !o.deleted && o.status !== "pending")
     .sort((a, b) => a.sequence - b.sequence);
   for (const o of records) {
-    if (date < today || !planned.has(o.taskId)) {
+    if (date < today) {
       const task = { ...o.task, id: o.taskId, name: o.name };
       if (date >= task.date) planned.set(o.taskId, task);
     }

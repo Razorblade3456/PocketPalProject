@@ -31,10 +31,12 @@ export function TaskCalendar({
   s,
   today = dateKey(),
   onEdit,
+  onAdd,
 }: {
   s: State;
   today?: string;
   onEdit?: (task: Task) => void;
+  onAdd?: (date: string) => void;
 }) {
   const [selected, setSelected] = useState(today),
     [month, setMonth] = useState(() => calendarMonth(today)),
@@ -165,6 +167,15 @@ export function TaskCalendar({
           {" · "}
           <span>{rows.length} tasks</span>
         </summary>
+        {onAdd && (
+          <button
+            type="button"
+            className="calendar-add"
+            onClick={() => onAdd(selected)}
+          >
+            + Add Task
+          </button>
+        )}
         {!rows.length ? (
           <p className="fine">No tasks scheduled.</p>
         ) : (

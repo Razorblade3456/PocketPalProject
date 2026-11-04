@@ -12,13 +12,11 @@ import {
 } from "lucide-react";
 import {
   addHabitEvent,
-  changeRewardPolicy,
   dateKey,
   goalFor,
   taskProgressGoal,
   taskFinishedToday,
   pausedOn,
-  policyFor,
   reminderFor,
   rewardLimitFor,
   setStep,
@@ -441,58 +439,6 @@ export function TaskAdvancedFields({
         </div>
       </div>
     </div>
-  );
-}
-export function RewardSettings({ s, setS }: { s: State; setS: Setter }) {
-  const policy = policyFor(s);
-  return (
-    <section className="reward-settings">
-      <h3>Reward Settings</h3>
-      <p>
-        Extra entries always count in history. Only eligible entries earn coins
-        and jar balls. Changes apply to new entries.
-      </p>
-      <div className="field-row">
-        <label>
-          Coins per rewarded completion
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={policy.coins}
-            onChange={(e) =>
-              setS((p) =>
-                changeRewardPolicy(p, {
-                  ...policy,
-                  coins: Number(e.target.value),
-                }),
-              )
-            }
-          />
-        </label>
-        <label>
-          Daily reward cap without a custom goal
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={policy.dailyCap}
-            onChange={(e) =>
-              setS((p) =>
-                changeRewardPolicy(p, {
-                  ...policy,
-                  dailyCap: Number(e.target.value),
-                }),
-              )
-            }
-          />
-        </label>
-      </div>
-      <p>
-        Custom daily goals reward up to their target. No goal? The default is{" "}
-        {policy.dailyCap} rewarded entries per task per day.
-      </p>
-    </section>
   );
 }
 export function TaskRewardNote({
