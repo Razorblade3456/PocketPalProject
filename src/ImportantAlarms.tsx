@@ -63,7 +63,9 @@ export function useImportantAlarms(
       if (s.settings.reminders)
         void notifyTask(
           "PocketPal · Important Alarm",
-          t?.name || "Important task",
+          (alarm.stepId
+            ? t?.steps?.find((step) => step.id === alarm.stepId)?.name
+            : t?.name) || "Important task",
           key,
         );
     }
@@ -350,7 +352,9 @@ export function useImportantAlarms(
         <h3>
           {testing
             ? "This is your alarm sound"
-            : task?.name || "Important task"}
+            : (current?.stepId
+                ? task?.steps?.find((step) => step.id === current.stepId)?.name
+                : task?.name) || "Important task"}
         </h3>
         <p>
           {testing ? (

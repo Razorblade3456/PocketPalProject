@@ -1,3 +1,5 @@
+import { setStepWithReminder } from "./alarms";
+import { AlarmCountdown } from "./AlarmCountdown";
 import { useState, type Dispatch, type SetStateAction } from "react";
 import {
   Star,
@@ -19,7 +21,6 @@ import {
   pausedOn,
   reminderFor,
   rewardLimitFor,
-  setStep,
   stepIsDone,
   taskCounts,
   taskDue,
@@ -170,7 +171,7 @@ export function TinySteps({
       <summary>
         <ListChecks size={12} />
         <span>
-          {count}/{task.steps.length} steps
+          {count}/{task.steps.length} · Steps & Timers
         </span>
       </summary>
       <div>
@@ -184,11 +185,30 @@ export function TinySteps({
                   id = crypto.randomUUID(),
                   at = Date.now();
                 setS((p) =>
-                  setStep(p, task.id, step.id, checked, today, at, id),
+                  setStepWithReminder(
+                    p,
+                    task.id,
+                    step.id,
+                    checked,
+                    today,
+                    at,
+                    id,
+                  ),
                 );
               }}
             />
-            {step.name}
+            <span>
+              {step.name}
+              <AlarmCountdown
+                alarm={s.alarms?.find(
+                  (a) =>
+                    a.taskId === task.id &&
+                    a.stepId === step.id &&
+                    a.status !== "stopped",
+                )}
+                name={step.name}
+              />
+            </span>
           </label>
         ))}
       </div>
@@ -375,12 +395,45 @@ export function TaskAdvancedFields({
             setStepsOpen((v) => !v);
           }}
         >
-          <Plus size={14} /> Break into Steps
+          <Plus size={14} /> Steps & Timers
           {task.steps?.filter((step) => step.name.trim()).length
             ? " (" + task.steps.filter((step) => step.name.trim()).length + ")"
             : ""}
         </button>
         <div id="step-rows" hidden={!stepsOpen}>
+          <label className="habit-check">
+            <input
+              type="checkbox"
+              disabled={task.repeat !== "once"}
+              checked={task.repeat === "once" && !!task.stepReminderMinutes}
+              onChange={(e) =>
+                update({
+                  stepReminderMinutes: e.target.checked ? 45 : undefined,
+                })
+              }
+            />
+            Remind me about the next step
+          </label>
+          {task.repeat !== "once" && (
+            <p className="fine">
+              Step timers are available for Just Once tasks.
+            </p>
+          )}
+          {task.repeat === "once" && task.stepReminderMinutes !== undefined && (
+            <label>
+              After (minutes)
+              <input
+                required
+                type="number"
+                min={1}
+                max={525600}
+                value={task.stepReminderMinutes}
+                onChange={(e) =>
+                  update({ stepReminderMinutes: Number(e.target.value) })
+                }
+              />
+            </label>
+          )}
           {(task.steps || []).map((step, index) => (
             <div className="step-edit-row" key={step.id}>
               <span className="step-box" aria-hidden="true">

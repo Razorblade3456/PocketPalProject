@@ -631,3 +631,121 @@ test("editor rejects newly scheduled past or near alarms but preserves unchanged
     "",
   );
 });
+
+import { setStepWithReminder } from "./alarms";
+import { stepIsDone } from "./model";
+const laundry = () =>
+  setup({
+    repeat: "once",
+    importantAlarm: false,
+    stepReminderMinutes: 45,
+    steps: [
+      { id: "load", name: "Load washer" },
+      { id: "dry", name: "Move clothes to dryer" },
+      { id: "fold", name: "Fold clothes" },
+    ],
+  });
+test("optional step reminders reuse saved alarms, replace sequentially and only reward the finished parent", () => {
+  let s = laundry();
+  const date = dateKey(noon);
+  s = setStepWithReminder(s, "alarm", "load", true, date, noon, "load-event");
+  assert.equal(s.alarms!.length, 1);
+  const first = s.alarms![0];
+  assert.equal(first.stepId, "dry");
+  assert.equal(first.startedAt, noon);
+  assert.equal(first.dueAt, noon + 45 * minute);
+  assert.equal(s.completions.length, 0);
+  assert.equal(s.rewardLedger!.length, 0);
+  const repeated = setStepWithReminder(
+    s,
+    "alarm",
+    "load",
+    true,
+    date,
+    noon + minute,
+    "duplicate",
+  );
+  assert.deepEqual(repeated.alarms, s.alarms);
+  const restored = parseState(JSON.parse(JSON.stringify(s)))!;
+  assert.ok(restored);
+  assert.equal(
+    reconcileAlarms(restored, noon + minute).alarms![0].dueAt,
+    first.dueAt,
+  );
+  s = reconcileAlarms(restored, noon + 45 * minute);
+  assert.equal(alarmQueue(s)[0].stepId, "dry");
+  s = dismissAlarm(s, first.id, 5, noon + 45 * minute);
+  assert.equal(s.alarms![0].dueAt, noon + 50 * minute);
+  s = dismissAlarm(s, first.id, 0, noon + 46 * minute);
+  assert.equal(stepIsDone(s, "alarm", "dry", date), false);
+  s = setStepWithReminder(
+    s,
+    "alarm",
+    "dry",
+    true,
+    date,
+    noon + 47 * minute,
+    "dry-event",
+  );
+  assert.equal(s.alarms!.length, 1);
+  assert.equal(s.alarms![0].stepId, "fold");
+  s = setStepWithReminder(
+    s,
+    "alarm",
+    "fold",
+    true,
+    date,
+    noon + 48 * minute,
+    "fold-event",
+  );
+  assert.equal(s.alarms!.length, 0);
+  assert.equal(s.completions.length, 1);
+});
+test("undo, deletion, disabling timers and changing steps cancel obsolete step alarms without changing ordinary alarms", () => {
+  const date = dateKey(noon);
+  let s: State = {
+    ...laundry(),
+    tasks: laundry().tasks.map((t) => ({ ...t, importantAlarm: true })),
+  };
+  s = setStepWithReminder(s, "alarm", "load", true, date, noon, "load-event");
+  assert.equal(s.alarms!.filter((a) => !a.stepId).length, 1);
+  const undone = setStepWithReminder(
+    s,
+    "alarm",
+    "load",
+    false,
+    date,
+    noon + minute,
+    "undo-event",
+  );
+  assert.equal(undone.alarms!.filter((a) => a.stepId).length, 0);
+  assert.equal(deleteTask(s, "alarm", noon + minute).alarms!.length, 0);
+  const off = {
+    ...s,
+    tasks: s.tasks.map((t) => ({ ...t, stepReminderMinutes: undefined })),
+  };
+  assert.equal(
+    reconcileAlarms(off, noon + minute).alarms!.filter((a) => a.stepId).length,
+    0,
+  );
+});
+test("legacy steps and recurring tasks never gain implicit timers", () => {
+  for (const patch of [
+    { stepReminderMinutes: undefined },
+    { repeat: "daily" as const },
+  ]) {
+    const base = laundry();
+    base.tasks = base.tasks.map((t) => ({ ...t, ...patch }));
+    const s = setStepWithReminder(
+      base,
+      "alarm",
+      "load",
+      true,
+      dateKey(noon),
+      noon,
+      "event",
+    );
+    assert.equal((s.alarms || []).length, 0);
+    assert.ok(parseState(JSON.parse(JSON.stringify(s))));
+  }
+});

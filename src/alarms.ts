@@ -1,5 +1,7 @@
 import {
   dateKey,
+  setStep,
+  stepIsDone,
   localDate,
   shiftDate,
   taskDue,
@@ -13,6 +15,8 @@ import {
 export type AlarmRecord = {
   id: string;
   taskId: string;
+  stepId?: string;
+  originStepId?: string;
   date: string;
   schedule: string;
   scheduledAt: number;
@@ -59,6 +63,18 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
   const records = (s.alarms || [])
     .filter((a) => {
       const t = tasks.get(a.taskId);
+      if (a.stepId)
+        return (
+          !!t &&
+          t.repeat === "once" &&
+          !!t.stepReminderMinutes &&
+          a.schedule === stepSchedule(t) &&
+          !!a.originStepId &&
+          !!t.steps?.some((step) => step.id === a.stepId) &&
+          !stepIsDone(s, t.id, a.stepId, a.date) &&
+          stepIsDone(s, t.id, a.originStepId, a.date) &&
+          !pausedOn(s, t.id, a.date)
+        );
       if (
         !t ||
         taskReminderMode(t) !== "alarm" ||
@@ -82,6 +98,7 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
       );
     })
     .map((a) => {
+      if (a.stepId) return a;
       const task = tasks.get(a.taskId)!;
       if (
         a.startedAt === undefined &&
@@ -291,4 +308,53 @@ export function taskAlarmWarning(
   return !Number.isFinite(at) || at <= n + 30000
     ? "Choose a future date and time at least 30 seconds from now for the alarm."
     : "";
+}
+
+const stepSchedule = (t: Task) =>
+  JSON.stringify(["step", t.date, t.stepReminderMinutes, t.steps]);
+/** Reuses the checklist event and ordinary alarm records; no extra task or reward. */
+export function setStepWithReminder(
+  s: State,
+  taskId: string,
+  stepId: string,
+  done: boolean,
+  date = dateKey(),
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
+  const wasDone = stepIsDone(s, taskId, stepId, date);
+  let next = setStep(s, taskId, stepId, done, date, n, id);
+  if (wasDone === done || stepIsDone(next, taskId, stepId, date) !== done)
+    return next;
+  next = reconcileAlarms(next, n);
+  const task = next.tasks.find((t) => t.id === taskId);
+  if (!done || task?.repeat !== "once" || !task.stepReminderMinutes)
+    return next;
+  const index = task.steps!.findIndex((step) => step.id === stepId);
+  const target = task
+    .steps!.slice(index + 1)
+    .find((step) => !stepIsDone(next, taskId, step.id, date));
+  const alarms = (next.alarms || []).filter(
+    (a) => a.taskId !== taskId || !a.stepId,
+  );
+  if (!target) return { ...next, alarms };
+  const dueAt = n + task.stepReminderMinutes * 60000;
+  return {
+    ...next,
+    alarms: [
+      ...alarms,
+      {
+        id: JSON.stringify(["step", taskId, date, id]),
+        taskId,
+        date,
+        stepId: target.id,
+        originStepId: stepId,
+        schedule: stepSchedule(task),
+        startedAt: n,
+        scheduledAt: dueAt,
+        dueAt,
+        status: "pending",
+      },
+    ],
+  };
 }

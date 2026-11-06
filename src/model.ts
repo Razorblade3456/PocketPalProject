@@ -48,6 +48,7 @@ export type Task = {
   careLinked?: boolean;
   rewardCap?: number;
   steps?: { id: string; name: string }[];
+  stepReminderMinutes?: number;
   days: number[];
   date: string;
   category: Category;
@@ -1702,6 +1703,8 @@ export function validHabitData(s: State) {
           typeof t.reminderEnabled === "boolean") &&
         (t.careLinked === undefined || typeof t.careLinked === "boolean") &&
         (t.rewardCap === undefined || bounded(t.rewardCap, 0, 100)) &&
+        (t.stepReminderMinutes === undefined ||
+          bounded(t.stepReminderMinutes, 1, 525600)) &&
         (t.steps === undefined ||
           (Array.isArray(t.steps) &&
             t.steps.every(
