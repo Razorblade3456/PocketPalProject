@@ -1,10 +1,6 @@
 import { jarBalls } from "./jarModel";
 import { TaskCalendar } from "./TaskCalendar";
-import {
-  dailyCareBonus,
-  mergeDailyCareBonuses,
-  sortActiveTasks,
-} from "./model";
+import { dailyCareBonus, mergeDailyCareBonuses, sortTodayTasks } from "./model";
 import "./priorities.css";
 import { notifyTask } from "./notifications";
 import { AlarmCountdown } from "./AlarmCountdown";
@@ -180,11 +176,15 @@ export default function App() {
         (new Date(now).getHours() < 7 || new Date(now).getHours() >= 19));
   const rhythm = petRhythm(now);
   const todayTasks = s.tasks.filter((t) => taskDue(s, t, now));
+  const orderedTodayTasks = sortTodayTasks(s, todayTasks, today);
   const finishedTasks = todayTasks.filter((t) =>
     taskFinishedToday(s, t, today),
   );
-  const activeTasks = sortActiveTasks(
-    todayTasks.filter((t) => !taskFinishedToday(s, t, today)),
+  const activeTasks = orderedTodayTasks.filter(
+    (t) => taskCounts(s, t.id, today).missed === 0,
+  );
+  const missedTasks = orderedTodayTasks.filter(
+    (t) => taskCounts(s, t.id, today).missed > 0,
   );
   const earned = s.completions.filter((c) => c.date === today);
   const dailyTarget = todayTasks.reduce(
@@ -834,6 +834,16 @@ export default function App() {
                   activeTasks.map(renderTask)
                 )}
               </div>
+              {missedTasks.length > 0 && (
+                <>
+                  <h3 className="active-task-heading missed-task-heading">
+                    Missed <span>{missedTasks.length}</span>
+                  </h3>
+                  <div className="task-list" aria-label="Missed tasks">
+                    {missedTasks.map(renderTask)}
+                  </div>
+                </>
+              )}
               {finishedTasks.length > 0 && (
                 <details className="finished-today">
                   <summary>
@@ -1596,6 +1606,10 @@ function TaskEditor({
       onSubmit={(e) => {
         e.preventDefault();
         if (t.repeat === "selected" && !t.days.length) return;
+        if (t.upNext?.some((next) => !next.name.trim())) {
+          setWarning("Add a name to each Up Next task before saving.");
+          return;
+        }
         const message = taskAlarmWarning(t, task, scheduleChanged);
         if (message) {
           setWarning(message);

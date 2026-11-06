@@ -1494,6 +1494,48 @@ function compatibleSaveShape(x: unknown): unknown {
     if (t.description === undefined) missing.description = "";
     if (t.days === undefined && ["once", "daily", "weekly"].includes(t.repeat))
       missing.days = [];
+    const legacy = t as Task & {
+      upNextAlarmMinutes?: unknown;
+      upNextDelayMinutes?: unknown;
+      upNextMinutes?: unknown;
+    };
+    const sharedDelay = [
+      legacy.upNextAlarmMinutes,
+      legacy.upNextDelayMinutes,
+      legacy.upNextMinutes,
+    ].find(
+      (value): value is number =>
+        typeof value === "number" &&
+        Number.isSafeInteger(value) &&
+        value >= 1 &&
+        value <= 525600,
+    );
+    if (Array.isArray(t.upNext)) {
+      const queue = t.upNext.map((item) => {
+        if (!item || typeof item !== "object") return item;
+        const oldItem = item as NonNullable<Task["upNext"]>[number] & {
+          delayMinutes?: unknown;
+        };
+        if (
+          Number.isSafeInteger(oldItem.alarmMinutes) &&
+          oldItem.alarmMinutes >= 1 &&
+          oldItem.alarmMinutes <= 525600
+        )
+          return item;
+        const delay = Number.isSafeInteger(oldItem.delayMinutes)
+          ? oldItem.delayMinutes
+          : sharedDelay;
+        return {
+          ...item,
+          alarmMinutes:
+            typeof delay === "number" && delay >= 1 && delay <= 525600
+              ? delay
+              : 45,
+        };
+      });
+      if (queue.some((item, i) => item !== t.upNext![i]))
+        missing.upNext = queue;
+    }
     return Object.keys(missing).length ? { ...t, ...missing } : t;
   };
   if (Array.isArray(next.tasks)) {
@@ -1978,4 +2020,21 @@ export function sortActiveTasks(tasks: Task[]): Task[] {
       return a.task.time.localeCompare(b.task.time) || a.index - b.index;
     })
     .map(({ task }) => task);
+}
+/** Today view ordering keeps the Up Next chain behind ordinary work and missed entries last. */
+export function sortTodayTasks(s: State, tasks: Task[], date: string): Task[] {
+  const unfinished = tasks.filter((task) => !taskFinishedToday(s, task, date));
+  const pending = unfinished.filter(
+    (task) => !taskCounts(s, task.id, date).missed,
+  );
+  const missed = unfinished.filter(
+    (task) => taskCounts(s, task.id, date).missed > 0,
+  );
+  const ordinary = pending.filter((task) => !task.id.startsWith("up-next:"));
+  const chained = pending.filter((task) => task.id.startsWith("up-next:"));
+  return [
+    ...sortActiveTasks(ordinary),
+    ...sortActiveTasks(chained),
+    ...sortActiveTasks(missed),
+  ];
 }

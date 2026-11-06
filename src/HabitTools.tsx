@@ -368,13 +368,14 @@ export function TaskAdvancedFields({
   update: (patch: Partial<Task>) => void;
 }) {
   const [stepsOpen, setStepsOpen] = useState(false);
+  const generated = task.id.startsWith("up-next:");
   const addStep = () =>
     update({
       steps: [...(task.steps || []), { id: crypto.randomUUID(), name: "" }],
     });
   return (
     <div className="task-advanced">
-      <details className="up-next-editor">
+      <details className="up-next-editor" hidden={generated}>
         <summary>
           Up Next{task.upNext?.length ? " · " + task.upNext.length : ""}
         </summary>
@@ -500,7 +501,7 @@ export function TaskAdvancedFields({
           Normal reminder
         </label>
       )}
-      <div className="step-row-editor">
+      <div className="step-row-editor" hidden={generated}>
         <button
           type="button"
           className="break-steps-toggle"

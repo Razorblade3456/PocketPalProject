@@ -39,6 +39,8 @@ import {
   buySupply,
   useSupply,
   petRhythm,
+  sortTodayTasks,
+  taskDue,
   SUPPLIES,
   type State,
   type Task,
@@ -1233,6 +1235,8 @@ test("Up Next creates one real task with an alarm on full completion and transfe
   assert.equal(next.name, "Move clothes to dryer");
   assert.equal(next.date, date);
   assert.equal(next.repeat, "once");
+  assert.equal(taskDue(s, next, now), true);
+  assert.equal(taskFinishedToday(s, next, date), false);
   assert.equal(next.priority, "high");
   assert.equal(next.relativeAlarmAt, now + 40 * 60000);
   assert.equal(next.upNext?.[0].name, "Fold clothes");
@@ -1254,6 +1258,92 @@ test("Up Next creates one real task with an alarm on full completion and transfe
     "completion-3",
   );
   assert.equal(s.tasks.length, 3);
+});
+test("Up Next legacy shared delay migrates without changing per-item delays", () => {
+  const saved = saveTask(
+    initial(now),
+    task("legacy-chain", { repeat: "once" }),
+    now,
+  );
+  const old = {
+    ...saved,
+    tasks: [
+      {
+        ...saved.tasks[0],
+        upNextAlarmMinutes: 25,
+        upNext: [
+          {
+            id: "legacy-a",
+            name: "First",
+            priority: "normal",
+            alarm: true,
+          },
+          {
+            id: "legacy-b",
+            name: "Second",
+            priority: "low",
+            alarm: true,
+            alarmMinutes: 50,
+          },
+        ],
+      },
+    ],
+  } as unknown as State;
+  const restored = parseState(old, now);
+  assert.ok(restored);
+  assert.deepEqual(
+    restored.tasks[0].upNext?.map((item) => item.alarmMinutes),
+    [25, 50],
+  );
+});
+test("today task ordering keeps active work before Up Next and all missed work last", () => {
+  const date = dateKey(now);
+  let s = initial(now);
+  const ordinaryLow = task("ordinary-low", {
+    repeat: "once",
+    priority: "low",
+    date,
+  });
+  const ordinaryHigh = task("ordinary-high", {
+    repeat: "once",
+    priority: "high",
+    date,
+  });
+  const chainedHigh = task("up-next:chain", {
+    repeat: "once",
+    priority: "high",
+    date,
+  });
+  const missedHigh = task("missed-high", {
+    repeat: "once",
+    priority: "high",
+    date,
+  });
+  const missedNormal = task("missed-normal", {
+    repeat: "once",
+    priority: "normal",
+    date,
+  });
+  for (const item of [
+    ordinaryLow,
+    ordinaryHigh,
+    chainedHigh,
+    missedHigh,
+    missedNormal,
+  ])
+    s = saveTask(s, item, now);
+  s = recordAttempt(s, missedHigh.id, date, "missed", now, "missed-high-1");
+  s = recordAttempt(s, missedNormal.id, date, "missed", now, "missed-normal-1");
+  assert.deepEqual(
+    sortTodayTasks(s, s.tasks, date).map((item) => item.id),
+    [
+      ordinaryHigh.id,
+      ordinaryLow.id,
+      chainedHigh.id,
+      missedHigh.id,
+      missedNormal.id,
+    ],
+  );
 });
 test("Up Next waits for the full target, saves across refresh and never regenerates after undo", () => {
   const date = dateKey(now),
