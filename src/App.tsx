@@ -47,6 +47,7 @@ import {
   taskProgressGoal,
   addHabitEvent,
   recordAttempt,
+  recordTaskCompletion,
   correctAttempt,
   deleteAttempt,
   taskCounts,
@@ -388,7 +389,11 @@ export default function App() {
       next = recordAttempt(s, t.id, date, status, at, id);
     const entry = next.outcomes.find((o) => o.id === id);
     if (!entry) return;
-    setS((p) => recordAttempt(p, t.id, date, status, at, id));
+    setS((p) =>
+      status === "completed"
+        ? recordTaskCompletion(p, t.id, date, at, id)
+        : recordAttempt(p, t.id, date, status, at, id),
+    );
     if (
       (status === "missed" || entry.rewardCoins > 0) &&
       date === today &&

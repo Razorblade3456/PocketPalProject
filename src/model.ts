@@ -48,6 +48,14 @@ export type Task = {
   careLinked?: boolean;
   rewardCap?: number;
   steps?: { id: string; name: string }[];
+  upNext?: {
+    id: string;
+    name: string;
+    priority: "high" | "normal" | "low";
+    alarmMinutes: number;
+    alarm: boolean;
+  }[];
+  upNextActivatedAt?: number;
   stepReminderMinutes?: number;
   days: number[];
   date: string;
@@ -832,6 +840,63 @@ export function setOutcome(
 }
 export const complete = (s: State, id: string, n = Date.now()) =>
   setOutcome(s, id, dateKey(n), "completed", n);
+/** Complete and consume at most one queued follow-up in the same idempotent state update. */
+export function recordTaskCompletion(
+  s: State,
+  taskId: string,
+  date: string,
+  n = Date.now(),
+  id: string = crypto.randomUUID(),
+): State {
+  if (s.outcomes.some((o) => o.id === id)) return s;
+  const source = s.tasks.find((t) => t.id === taskId);
+  let next = recordAttempt(s, taskId, date, "completed", n, id);
+  const recorded = next.outcomes.find((o) => o.id === id);
+  if (
+    !recorded ||
+    !source?.upNext?.length ||
+    source.upNextActivatedAt !== undefined ||
+    !taskFinishedToday(next, source, date)
+  )
+    return next;
+  const [template, ...remaining] = source.upNext;
+  const delay = template.alarmMinutes * 60000,
+    due = n + delay,
+    d = new Date(due);
+  const task: Task = {
+    id: "up-next:" + id,
+    name: template.name.trim(),
+    description: "",
+    time:
+      String(d.getHours()).padStart(2, "0") +
+      ":" +
+      String(d.getMinutes()).padStart(2, "0"),
+    repeat: "once",
+    days: [],
+    date: dateKey(n),
+    category: "happy",
+    createdAt: n,
+    createdDate: dateKey(n),
+    priority: template.priority,
+    importantAlarm: template.alarm,
+    reminderEnabled: template.alarm,
+    careLinked: false,
+    repetitions: "once",
+    dailyGoal: 1,
+    ...(template.alarm ? { relativeAlarmAt: due, alarmEnabledAt: n } : {}),
+    ...(remaining.length ? { upNext: remaining } : {}),
+  };
+  return {
+    ...next,
+    tasks: [
+      ...next.tasks.map((t) =>
+        t.id === taskId ? { ...t, upNextActivatedAt: n } : t,
+      ),
+      task,
+    ],
+  };
+}
+
 export function saveTask(s: State, task: Task, n = Date.now()): State {
   s = decay(s, n);
   const old = s.tasks.find((t) => t.id === task.id);
@@ -1705,6 +1770,23 @@ export function validHabitData(s: State) {
         (t.rewardCap === undefined || bounded(t.rewardCap, 0, 100)) &&
         (t.stepReminderMinutes === undefined ||
           bounded(t.stepReminderMinutes, 1, 525600)) &&
+        (t.upNextActivatedAt === undefined ||
+          (Number.isSafeInteger(t.upNextActivatedAt) &&
+            t.upNextActivatedAt >= 0)) &&
+        (t.upNext === undefined ||
+          (Array.isArray(t.upNext) &&
+            t.upNext.length <= 5 &&
+            t.upNext.every(
+              (x) =>
+                x &&
+                typeof x.id === "string" &&
+                typeof x.name === "string" &&
+                x.name.length <= 100 &&
+                ["high", "normal", "low"].includes(x.priority) &&
+                bounded(x.alarmMinutes, 1, 525600) &&
+                typeof x.alarm === "boolean",
+            ) &&
+            new Set(t.upNext.map((x) => x.id)).size === t.upNext.length)) &&
         (t.steps === undefined ||
           (Array.isArray(t.steps) &&
             t.steps.every(

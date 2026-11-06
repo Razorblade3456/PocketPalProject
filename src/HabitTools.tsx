@@ -374,6 +374,122 @@ export function TaskAdvancedFields({
     });
   return (
     <div className="task-advanced">
+      <details className="up-next-editor">
+        <summary>
+          Up Next{task.upNext?.length ? " · " + task.upNext.length : ""}
+        </summary>
+        {(task.upNext || []).map((item, index) => (
+          <fieldset className="up-next-card" key={item.id}>
+            <legend>{index + 1}</legend>
+            <label>
+              Task Name
+              <input
+                maxLength={100}
+                value={item.name}
+                onChange={(e) =>
+                  update({
+                    upNext: task.upNext!.map((x) =>
+                      x.id === item.id ? { ...x, name: e.target.value } : x,
+                    ),
+                  })
+                }
+              />
+            </label>
+            <div className="up-next-fields">
+              <label>
+                Priority
+                <select
+                  value={item.priority}
+                  onChange={(e) =>
+                    update({
+                      upNext: task.upNext!.map((x) =>
+                        x.id === item.id
+                          ? {
+                              ...x,
+                              priority: e.target.value as typeof x.priority,
+                            }
+                          : x,
+                      ),
+                    })
+                  }
+                >
+                  <option value="high">High</option>
+                  <option value="normal">Normal</option>
+                  <option value="low">Low</option>
+                </select>
+              </label>
+              <label>
+                Alarm after · minutes
+                <input
+                  type="number"
+                  min={1}
+                  max={525600}
+                  value={item.alarmMinutes}
+                  onChange={(e) =>
+                    update({
+                      upNext: task.upNext!.map((x) =>
+                        x.id === item.id
+                          ? { ...x, alarmMinutes: Number(e.target.value) }
+                          : x,
+                      ),
+                    })
+                  }
+                />
+              </label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={item.alarm}
+                  onChange={(e) =>
+                    update({
+                      upNext: task.upNext!.map((x) =>
+                        x.id === item.id
+                          ? { ...x, alarm: e.target.checked }
+                          : x,
+                      ),
+                    })
+                  }
+                />
+                Alarm
+              </label>
+            </div>
+            <button
+              type="button"
+              className="remove-step"
+              aria-label={"Remove next task " + (index + 1)}
+              onClick={() =>
+                update({ upNext: task.upNext!.filter((x) => x.id !== item.id) })
+              }
+            >
+              <X size={14} />
+            </button>
+          </fieldset>
+        ))}
+        <button
+          type="button"
+          className="add-step"
+          disabled={task.repeat !== "once" || (task.upNext?.length || 0) >= 5}
+          onClick={() =>
+            update({
+              upNext: [
+                ...(task.upNext || []),
+                {
+                  id: crypto.randomUUID(),
+                  name: "",
+                  priority: "normal",
+                  alarmMinutes: 45,
+                  alarm: true,
+                },
+              ],
+            })
+          }
+        >
+          + Add Next Task
+        </button>
+        {task.repeat !== "once" && (
+          <p className="fine">Up Next is available for Just Once tasks.</p>
+        )}
+      </details>
       {!task.importantAlarm && (
         <label className="habit-check">
           <input

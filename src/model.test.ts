@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   initial,
   recordAttempt,
+  recordTaskCompletion,
   correctAttempt,
   deleteAttempt,
   undoLatest,
@@ -1194,4 +1195,120 @@ test("legacy version-one companion identity survives migration", () => {
   const restored = parseState(raw, now);
   assert.ok(restored);
   assert.equal(restored.pet, "pippin");
+});
+
+test("Up Next creates one real task with an alarm on full completion and transfers the remaining sequence", () => {
+  const date = dateKey(now);
+  let s = saveTask(
+    initial(now),
+    task("laundry", {
+      repeat: "once",
+      upNext: [
+        {
+          id: "dry",
+          name: "Move clothes to dryer",
+          priority: "high",
+          alarmMinutes: 40,
+          alarm: true,
+        },
+        {
+          id: "fold",
+          name: "Fold clothes",
+          priority: "low",
+          alarmMinutes: 15,
+          alarm: false,
+        },
+      ],
+    }),
+    now,
+  );
+  const originalCoins = s.coins,
+    originalHistory = s.outcomes.length;
+  s = recordTaskCompletion(s, "laundry", date, now, "completion-1");
+  assert.equal(s.tasks.length, 2);
+  assert.equal(s.tasks[0].upNextActivatedAt, now);
+  assert.equal(s.tasks[0].upNext?.length, 2);
+  const next = s.tasks[1];
+  assert.equal(next.id, "up-next:completion-1");
+  assert.equal(next.name, "Move clothes to dryer");
+  assert.equal(next.date, date);
+  assert.equal(next.repeat, "once");
+  assert.equal(next.priority, "high");
+  assert.equal(next.relativeAlarmAt, now + 40 * 60000);
+  assert.equal(next.upNext?.[0].name, "Fold clothes");
+  assert.equal(s.coins, originalCoins + 5);
+  assert.equal(s.outcomes.length, originalHistory + 1);
+  s = recordTaskCompletion(s, "laundry", date, now, "completion-1");
+  assert.equal(s.tasks.length, 2);
+  s = recordTaskCompletion(s, next.id, date, now + 40 * 60000, "completion-2");
+  assert.equal(s.tasks.length, 3);
+  assert.equal(s.tasks[2].name, "Fold clothes");
+  assert.equal(s.tasks[2].priority, "low");
+  assert.equal(s.tasks[2].relativeAlarmAt, undefined);
+  assert.equal(s.tasks[2].importantAlarm, false);
+  s = recordTaskCompletion(
+    s,
+    s.tasks[2].id,
+    date,
+    now + 55 * 60000,
+    "completion-3",
+  );
+  assert.equal(s.tasks.length, 3);
+});
+test("Up Next waits for the full target, saves across refresh and never regenerates after undo", () => {
+  const date = dateKey(now),
+    minute = 60000;
+  let s = saveTask(
+    initial(now),
+    task("parent", {
+      repeat: "once",
+      repetitions: "multiple",
+      dailyGoal: 2,
+      upNext: [
+        {
+          id: "later",
+          name: "Later",
+          priority: "normal",
+          alarmMinutes: 45,
+          alarm: true,
+        },
+      ],
+    }),
+    now,
+  );
+  s = recordTaskCompletion(s, "parent", date, now, "partial");
+  assert.equal(s.tasks.length, 1);
+  assert.equal(s.tasks[0].upNextActivatedAt, undefined);
+  s = recordTaskCompletion(s, "parent", date, now + minute, "full");
+  assert.equal(s.tasks.length, 2);
+  const loaded = parseState(JSON.parse(JSON.stringify(s)))!;
+  assert.ok(loaded);
+  assert.equal(loaded.tasks[1].relativeAlarmAt, now + minute + 45 * 60000);
+  const undone = undoLatest(loaded, "parent", date, now + 2 * minute);
+  assert.equal(undone.tasks.length, 2);
+  assert.ok(undone.tasks.some((t) => t.id === "up-next:full"));
+  assert.equal(
+    recordTaskCompletion(undone, "parent", date, now + 3 * minute, "again")
+      .tasks.length,
+    2,
+  );
+});
+test("Up Next data is optional for old tasks and invalid queue lengths are rejected", () => {
+  const s = saveTask(initial(now), task("legacy"), now);
+  assert.ok(parseState(JSON.parse(JSON.stringify(s))));
+  const bad = {
+    ...s,
+    tasks: [
+      task("bad", {
+        upNext: Array.from({ length: 6 }, (_, i) => ({
+          id: String(i),
+          name: "Next",
+          priority: "normal" as const,
+          alarmMinutes: 5,
+          alarm: true,
+        })),
+      }),
+    ],
+  };
+  assert.equal(validState(bad), false);
 });

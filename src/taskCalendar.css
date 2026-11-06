@@ -448,3 +448,68 @@
   animation: none !important;
   transition: none !important;
 }
+.calendar-export {
+  flex: none;
+  min-width: 0;
+  max-width: 100%;
+}
+.calendar-export > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-height: 32px;
+  border: 1px solid #65536e;
+  border-radius: 7px;
+  color: #d3bfdf;
+  cursor: pointer;
+}
+.calendar-export > summary::-webkit-details-marker {
+  display: none;
+}
+.calendar-export[open] {
+  flex-basis: 100%;
+  order: 2;
+}
+.calendar-export > div {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  min-width: 0;
+}
+.calendar-export a,
+.calendar-export button {
+  color: #e2d4eb;
+  background: #31283a;
+  border: 1px solid #65536e;
+  border-radius: 7px;
+  padding: 8px;
+  text-align: center;
+  font: inherit;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.calendar-export small,
+.calendar-export-note {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #b9aabd;
+  overflow-wrap: anywhere;
+}
+.calendar-selected li:has(.calendar-export[open]) {
+  flex-wrap: wrap;
+}
+@media (max-width: 800px) {
+  .calendar-export > summary {
+    width: 44px;
+    min-height: 44px;
+  }
+  .calendar-export a,
+  .calendar-export button {
+    min-height: 44px;
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+  }
+}

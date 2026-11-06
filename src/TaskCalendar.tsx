@@ -1,7 +1,8 @@
+import { googleCalendarUrl, downloadCalendar } from "./calendarExport";
 import { Jar } from "./Jar";
 import { jarBalls } from "./jarModel";
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil, CalendarPlus } from "lucide-react";
 import { dateKey, localDate, type State, type Task } from "./model";
 import {
   calendarMonth,
@@ -208,6 +209,34 @@ export function TaskCalendar({
                     {row.missed > 0 ? " · " + row.missed + " missed" : ""}
                   </span>
                 </div>
+                <details className="calendar-export">
+                  <summary
+                    aria-label={"Add to Calendar: " + row.task.name}
+                    title="Add to Calendar"
+                  >
+                    <CalendarPlus size={15} aria-hidden="true" />
+                  </summary>
+                  <div>
+                    <a
+                      href={googleCalendarUrl(s, row.task, selected)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Google Calendar
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => downloadCalendar(s, row.task, selected)}
+                    >
+                      Download Calendar File (.ics)
+                    </button>
+                    <small>
+                      Open the .ics file in Calendar. On iPhone, save to Files
+                      and use a compatible calendar app; import options vary.
+                      Timed exports use a 15-minute placeholder.
+                    </small>
+                  </div>
+                </details>
                 {onEdit && s.tasks.some((t) => t.id === row.task.id) && (
                   <button
                     type="button"
@@ -244,6 +273,10 @@ export function TaskCalendar({
             ))}
           </ul>
         )}
+        <p className="calendar-export-note">
+          Calendar export is one-way. Changes in PocketPal won't automatically
+          update previously exported events.
+        </p>
         {expanded && <HistoricalJar s={s} date={selected} today={today} />}
       </details>
     </section>

@@ -436,3 +436,91 @@ test("calendar preview never fabricates jars for today, future dates, or empty h
   assert.ok(html.includes("No recorded activity"));
   assert.ok(!html.includes("jar-glass"));
 });
+
+import {
+  calendarEvent,
+  calendarFile,
+  googleCalendarUrl,
+} from "./calendarExport";
+test("calendar exports use selected occurrence, local time, encoded details and a 15-minute placeholder without mutation", () => {
+  const s = saveTask(
+    initial(now),
+    task({
+      name: "Laundry & rest / café",
+      description: "Line one\nLine two, semi; slash\\",
+      repeat: "daily",
+    }),
+    now,
+  );
+  const before = JSON.stringify(s),
+    t = s.tasks[0],
+    date = "2026-11-12";
+  const event = calendarEvent(s, t, date),
+    expected = localDate(date);
+  expected.setHours(9, 0, 0, 0);
+  const utc = (n: number) =>
+    new Date(n).toISOString().replace(/[-:]/g, "").replace(".000Z", "Z");
+  assert.equal(event.start, utc(+expected));
+  assert.equal(event.end, utc(+expected + 15 * 60000));
+  const url = new URL(googleCalendarUrl(s, t, date));
+  assert.equal(url.origin, "https://calendar.google.com");
+  assert.equal(url.searchParams.get("action"), "TEMPLATE");
+  assert.equal(url.searchParams.get("text"), t.name);
+  assert.equal(url.searchParams.get("details"), t.description);
+  assert.equal(url.searchParams.get("dates"), event.start + "/" + event.end);
+  const file = calendarFile(s, t, date, now);
+  assert.ok(file.includes("DTSTART:" + event.start));
+  assert.ok(!file.includes("RRULE"));
+  assert.ok(
+    file.includes("DESCRIPTION:Line one\\nLine two\\, semi\\; slash\\\\"),
+  );
+  assert.ok(file.includes("UID:a-2026-11-12@pocketpal.local"));
+  assert.ok(file.endsWith("END:VCALENDAR\r\n"));
+  assert.equal(JSON.stringify(s), before);
+});
+test("all-day exports use exclusive next local date and timed exports preserve local hours across DST boundaries", () => {
+  const s = initial(now),
+    t = task({ time: "" });
+  const file = calendarFile(s, t, "2026-12-31", now);
+  assert.ok(file.includes("DTSTART;VALUE=DATE:20261231"));
+  assert.ok(file.includes("DTEND;VALUE=DATE:20270101"));
+  assert.equal(
+    new URL(googleCalendarUrl(s, t, "2026-12-31")).searchParams.get("dates"),
+    "20261231/20270101",
+  );
+  for (const date of ["2026-03-07", "2026-03-08", "2026-11-01", "2026-11-02"]) {
+    const e = calendarEvent(s, task({ time: "08:30" }), date);
+    const iso = e.start.replace(
+      /(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z/,
+      "$1-$2-$3T$4:$5:$6Z",
+    );
+    const local = new Date(iso);
+    assert.equal(local.getHours(), 8);
+    assert.equal(local.getMinutes(), 30);
+    assert.equal(local.getDate(), Number(date.slice(-2)));
+  }
+});
+test("iCalendar folds UTF-8 lines safely and prevents injected properties from task text", () => {
+  const s = initial(now),
+    t = task({
+      name: "☁".repeat(100),
+      description: "hello\r\nBEGIN:VEVENT\u0000",
+    });
+  const file = calendarFile(s, t, "2026-11-01", now);
+  for (const line of file.split("\r\n"))
+    assert.ok(new TextEncoder().encode(line).length <= 75);
+  assert.equal((file.match(/^BEGIN:VEVENT$/gm) || []).length, 1);
+  assert.ok(!file.includes("\u0000"));
+  const unfolded = file.replace(/\r\n /g, "");
+  assert.ok(unfolded.includes("SUMMARY:" + t.name));
+  const html = renderToStaticMarkup(
+    createElement(TaskCalendar, {
+      s: saveTask(s, task(), now),
+      today: "2026-11-01",
+    }),
+  );
+  assert.ok(html.includes("Add to Calendar: Water"));
+  assert.ok(html.includes("Google Calendar"));
+  assert.ok(html.includes("Download Calendar File (.ics)"));
+  assert.ok(html.includes("Calendar export is one-way."));
+});

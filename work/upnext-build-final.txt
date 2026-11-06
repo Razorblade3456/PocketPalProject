@@ -1,0 +1,11 @@
+
+> pocketpal@1.0.0 build
+> tsc -b && vite build
+
+src/model.test.ts(1227,53): error TS2345: Argument of type '"completion-1"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/model.test.ts(1241,53): error TS2345: Argument of type '"completion-1"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/model.test.ts(1243,64): error TS2345: Argument of type '"completion-2"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/model.test.ts(1254,5): error TS2345: Argument of type '"completion-3"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/model.test.ts(1279,52): error TS2345: Argument of type '"partial"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/model.test.ts(1282,61): error TS2345: Argument of type '"full"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
+src/model.test.ts(1291,68): error TS2345: Argument of type '"again"' is not assignable to parameter of type '`${string}-${string}-${string}-${string}-${string}`'.
