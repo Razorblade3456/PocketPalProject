@@ -296,7 +296,13 @@ export function HistoricalJar({
   if (date >= today) return null;
   const balls = jarBalls(s, date);
   if (!balls.length)
-    return <p className="historical-jar-empty">No recorded activity</p>;
+    return (
+      <p className="historical-jar-empty">
+        {s.outcomes.some((o) => o.date === date)
+          ? "No visible jar entries · task history is preserved"
+          : "No recorded activity"}
+      </p>
+    );
   const missed = balls.filter((b) => b.missed).length;
   return (
     <section

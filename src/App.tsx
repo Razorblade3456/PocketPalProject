@@ -87,6 +87,7 @@ import {
   TodayThree,
   TaskMeta,
   TinySteps,
+  PickUpHere,
   TaskQuickActions,
   TaskAdvancedFields,
   TaskPriority,
@@ -154,6 +155,9 @@ export default function App() {
         (new Date(now).getHours() < 7 || new Date(now).getHours() >= 19));
   const rhythm = petRhythm(now);
   const todayTasks = s.tasks.filter((t) => taskDue(s, t, now));
+  const visibleFlights = flights.filter((flight) =>
+    s.tasks.some((task) => task.id === flight.taskId),
+  );
   const orderedTodayTasks = sortTodayTasks(s, todayTasks, today);
   const finishedTasks = todayTasks.filter((t) =>
     taskFinishedToday(s, t, today),
@@ -165,6 +169,8 @@ export default function App() {
     (t) => taskCounts(s, t.id, today).missed > 0,
   );
   const earned = s.completions.filter((c) => c.date === today);
+  const jarEntries = jarBalls(s, today);
+  const visibleCompletions = jarEntries.filter((ball) => !ball.missed).length;
   const dailyTarget = todayTasks.reduce(
     (sum, t) => sum + taskProgressGoal(t),
     0,
@@ -382,6 +388,7 @@ export default function App() {
         {
           key: entry.ballId,
           token: id,
+          taskId: t.id,
           category: entry.category,
           priority: entry.task.priority,
           missed: status === "missed",
@@ -596,6 +603,9 @@ export default function App() {
       >
         <div className="task-content">
           <h3>{t.name}</h3>
+          {!taskFinishedToday(s, t, today) && (
+            <PickUpHere task={t} setS={setS} />
+          )}
           <TaskMeta s={s} task={t} today={today} setS={setS} />
           <div className="task-schedule">
             <time hidden={t.reminderEnabled === false}>
@@ -635,15 +645,24 @@ export default function App() {
             <button
               className="finish-day"
               onClick={() =>
-                setS((p) =>
-                  addHabitEvent(p, {
+                setS((p) => {
+                  const finishing = !taskFinishedToday(p, t, today);
+                  const next = addHabitEvent(p, {
                     taskId: t.id,
                     date: today,
-                    kind: taskFinishedToday(p, t, today)
-                      ? "reopenDay"
-                      : "finishDay",
-                  }),
-                )
+                    kind: finishing ? "finishDay" : "reopenDay",
+                  });
+                  return finishing && p.tasks.find((task) => task.id === t.id)?.resumeNote
+                    ? {
+                        ...next,
+                        tasks: next.tasks.map((task) =>
+                          task.id === t.id
+                            ? { ...task, resumeNote: undefined }
+                            : task,
+                        ),
+                      }
+                    : next;
+                })
               }
             >
               {taskFinishedToday(s, t, today)
@@ -999,16 +1018,22 @@ export default function App() {
                   aria-label="Inspect today's earned rewards"
                 >
                   <Jar
-                    balls={jarBalls(s, today)}
+                    balls={jarEntries}
                     jarRef={jarRef}
-                    incoming={flights.map((f) => f.key)}
+                    incoming={visibleFlights.map((f) => f.key)}
                     landed={landed}
                     pulse={jarPulse}
                   />
                 </button>
                 <div className="jar-progress">
-                  <strong>{earned.length}</strong>
-                  <p>rewarded completions</p>
+                  <strong>{jarEntries.length}</strong>
+                  <p>visible jar entries</p>
+                  {earned.length !== visibleCompletions && (
+                    <small>
+                      {earned.length} rewarded completions total · deleted-task
+                      rewards remain earned
+                    </small>
+                  )}
                   <div className="progress-track">
                     <span style={{ width: percent + "%" }} />
                   </div>
@@ -1078,7 +1103,7 @@ export default function App() {
           </div>
         )}
         <RewardFlights
-          flights={flights}
+          flights={visibleFlights}
           jar={jarRef.current}
           onLand={land}
           enabled={s.settings.motion}
@@ -1481,21 +1506,31 @@ export default function App() {
                   {[...new Set(s.outcomes.map((c) => c.date))]
                     .sort()
                     .reverse()
-                    .map((d) => (
-                      <div key={d}>
-                        <Jar small balls={jarBalls(s, d)} />
-                        <b>
-                          {new Date(d + "T12:00:00").toLocaleDateString(
-                            undefined,
-                            { month: "short", day: "numeric", year: "numeric" },
-                          )}
-                        </b>
-                        <span>
-                          {s.completions.filter((c) => c.date === d).length}{" "}
-                          completions
-                        </span>
-                      </div>
-                    ))}
+                    .map((d) => {
+                      const entries = jarBalls(s, d);
+                      const rewards = s.completions.filter(
+                        (c) => c.date === d,
+                      ).length;
+                      return (
+                        <div key={d}>
+                          <Jar small balls={entries} />
+                          <b>
+                            {new Date(d + "T12:00:00").toLocaleDateString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )}
+                          </b>
+                          <span>
+                            {entries.length} jar entries · {rewards} rewards
+                            earned
+                          </span>
+                        </div>
+                      );
+                    })}
                 </div>
                 {!s.outcomes.length && <p>No history yet.</p>}
               </>

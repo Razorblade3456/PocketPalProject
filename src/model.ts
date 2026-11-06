@@ -46,6 +46,7 @@ export type Task = {
   priority?: "low" | "normal" | "high";
   reminderEnabled?: boolean;
   careLinked?: boolean;
+  resumeNote?: string;
   rewardCap?: number;
   steps?: { id: string; name: string }[];
   upNext?: {
@@ -852,11 +853,20 @@ export function recordTaskCompletion(
   const source = s.tasks.find((t) => t.id === taskId);
   let next = recordAttempt(s, taskId, date, "completed", n, id);
   const recorded = next.outcomes.find((o) => o.id === id);
+  const finished =
+    !!recorded && !!source && taskFinishedToday(next, source, date);
+  if (finished && source?.resumeNote)
+    next = {
+      ...next,
+      tasks: next.tasks.map((t) =>
+        t.id === taskId ? { ...t, resumeNote: undefined } : t,
+      ),
+    };
   if (
     !recorded ||
     !source?.upNext?.length ||
     source.upNextActivatedAt !== undefined ||
-    !taskFinishedToday(next, source, date)
+    !finished
   )
     return next;
   const [template, ...remaining] = source.upNext;
@@ -1811,6 +1821,8 @@ export function validHabitData(s: State) {
         (t.reminderEnabled === undefined ||
           typeof t.reminderEnabled === "boolean") &&
         (t.careLinked === undefined || typeof t.careLinked === "boolean") &&
+        (t.resumeNote === undefined ||
+          (typeof t.resumeNote === "string" && t.resumeNote.length <= 160)) &&
         (t.rewardCap === undefined || bounded(t.rewardCap, 0, 100)) &&
         (t.stepReminderMinutes === undefined ||
           bounded(t.stepReminderMinutes, 1, 525600)) &&

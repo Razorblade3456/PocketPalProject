@@ -385,7 +385,12 @@ test("past calendar jar reconstructs recorded colors and skulls without changing
   s = recordAttempt(s, "high", "2026-11-01", "missed", now + 1, "miss-one");
   s = recordAttempt(s, "low", "2026-11-01", "missed", now + 2, "miss-two");
   s = saveTask(s, { ...s.tasks[0], priority: "low" }, now + 3);
+  const earnedCoins = s.coins,
+    historyCount = s.outcomes.length;
   s = deleteTask(s, "normal", now + 3);
+  assert.equal(s.coins, earnedCoins);
+  assert.equal(s.outcomes.length, historyCount);
+  assert.equal(s.completions.filter((c) => c.taskId === "normal").length, 1);
   const before = JSON.stringify(s);
   const html = renderToStaticMarkup(
     createElement(HistoricalJar, {
@@ -394,11 +399,11 @@ test("past calendar jar reconstructs recorded colors and skulls without changing
       today: "2026-11-02",
     }),
   );
-  assert.ok(html.includes("3 completed"));
+  assert.ok(html.includes("2 completed"));
   assert.ok(html.includes("2 missed"));
-  assert.equal((html.match(/data-ball-key=/g) || []).length, 5);
+  assert.equal((html.match(/data-ball-key=/g) || []).length, 4);
   assert.equal((html.match(/jar-skull/g) || []).length, 2);
-  for (const color of Object.values(priorityBallColors))
+  for (const color of [priorityBallColors.high, priorityBallColors.low])
     assert.ok(html.includes(color));
   assert.ok(html.includes("static-jar"));
   assert.equal(JSON.stringify(s), before);
@@ -410,11 +415,47 @@ test("past calendar jar reconstructs recorded colors and skulls without changing
       today: "2026-11-02",
     }),
   );
-  assert.equal((updated.match(/data-ball-key=/g) || []).length, 4);
+  assert.equal((updated.match(/data-ball-key=/g) || []).length, 3);
   assert.ok(updated.includes("1 missed"));
   const restored = parseState(JSON.parse(JSON.stringify(s)))!;
   assert.ok(restored);
-  assert.equal(jarBalls(restored, "2026-11-01").length, 4);
+  assert.equal(jarBalls(restored, "2026-11-01").length, 3);
+});
+test("deleting a multi-ball or missed task hides only its balls from current and archived jars", () => {
+  const date = "2026-11-01";
+  let s = initial(now);
+  for (const id of ["repeat", "keep", "missed"])
+    s = saveTask(
+      s,
+      task({ id, repeat: "once", date, createdDate: "2026-11-01" }),
+      now,
+    );
+  s = recordAttempt(s, "repeat", date, "completed", now, "repeat-1");
+  s = recordAttempt(s, "repeat", date, "completed", now + 1, "repeat-2");
+  s = recordAttempt(s, "keep", date, "completed", now + 2, "keep-1");
+  s = recordAttempt(s, "missed", date, "missed", now + 3, "missed-1");
+  const coins = s.coins,
+    outcomeIds = s.outcomes.map((o) => o.id);
+  s = deleteTask(s, "repeat", now + 4);
+  assert.deepEqual(jarBalls(s, date).map((ball) => ball.taskId), ["keep", "missed"]);
+  assert.equal(s.coins, coins);
+  assert.deepEqual(s.outcomes.map((o) => o.id), outcomeIds);
+  s = deleteTask(s, "missed", now + 5);
+  const balls = jarBalls(s, date);
+  assert.equal(balls.length, 1);
+  assert.equal(balls[0].taskId, "keep");
+  const html = renderToStaticMarkup(
+    createElement(HistoricalJar, {
+      s,
+      date,
+      today: "2026-11-02",
+    }),
+  );
+  assert.ok(html.includes("1 completed"));
+  assert.ok(html.includes("0 missed"));
+  assert.equal((html.match(/data-ball-key=/g) || []).length, 1);
+  assert.equal(s.outcomes.length, outcomeIds.length);
+  assert.equal(s.coins, coins);
 });
 test("calendar preview never fabricates jars for today, future dates, or empty historical days", () => {
   const s = initial(now);

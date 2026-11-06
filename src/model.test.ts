@@ -1309,6 +1309,35 @@ test("Up Next legacy shared delay migrates without changing per-item delays", ()
     [25, 50],
   );
 });
+test("Pick Up Here notes persist while unfinished and clear only at the full target", () => {
+  const date = dateKey(now);
+  let s = saveTask(
+    initial(now),
+    task("resume", {
+      repeat: "once",
+      repetitions: "multiple",
+      dailyGoal: 2,
+      resumeNote: "Chapter 6, question 12.",
+      upNext: [
+        {
+          id: "after-resume",
+          name: "Review answers",
+          priority: "normal",
+          alarmMinutes: 10,
+          alarm: true,
+        },
+      ],
+    }),
+    now,
+  );
+  s = parseState(JSON.parse(JSON.stringify(s)), now)!;
+  assert.equal(s.tasks[0].resumeNote, "Chapter 6, question 12.");
+  s = recordTaskCompletion(s, "resume", date, now, "resume-partial");
+  assert.equal(s.tasks[0].resumeNote, "Chapter 6, question 12.");
+  s = recordTaskCompletion(s, "resume", date, now + 60000, "resume-final");
+  assert.equal(s.tasks[0].resumeNote, undefined);
+  assert.equal(s.tasks[1].resumeNote, undefined);
+});
 test("today task ordering keeps active work before Up Next and all missed work last", () => {
   const date = dateKey(now);
   let s = initial(now);

@@ -488,6 +488,85 @@
   margin-top: 4px;
   max-width: 100%;
 }
+.app .pick-up-trigger,
+.app .pick-up-note > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 4px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: #a994b4;
+  font-size: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+.app .pick-up-note > summary::-webkit-details-marker {
+  display: none;
+}
+.app .pick-up-note > p {
+  margin: 3px 0 6px;
+  padding-left: 9px;
+  border-left: 2px solid #594666;
+  color: #d2c4d7;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.app .pick-up-editor {
+  max-width: 100%;
+  margin: 5px 0;
+  padding: 8px;
+  border: 1px solid #594666;
+  border-radius: 9px;
+  background: #211b27;
+}
+.app .pick-up-editor > label {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 5px;
+  color: #d3bfdf;
+  font-size: 10px;
+}
+.app .pick-up-editor input {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border: 1px solid #493b52;
+  border-radius: 7px;
+  background: #151219;
+  color: #f3eefa;
+  font-size: 11px;
+}
+.app .pick-up-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 6px;
+}
+.app .pick-up-actions button {
+  min-height: 28px;
+  padding: 4px 9px;
+  border: 1px solid #594666;
+  border-radius: 7px;
+  background: #302637;
+  color: #ddcce8;
+  font-size: 10px;
+}
+.app .pick-up-actions button:disabled {
+  opacity: 0.5;
+}
+.app .jar-progress small {
+  display: block;
+  max-width: 220px;
+  margin: 3px auto 0;
+  color: #b9aabd;
+  font-size: 9px;
+  line-height: 1.35;
+}
 .up-next-editor {
   margin: 8px 0 14px;
   border: 1px solid #493b52;

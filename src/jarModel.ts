@@ -10,10 +10,11 @@ export const priorityBallColors = {
 };
 /** Read-only visual history: priority comes from the recorded task, never the live task. */
 export function jarBalls(s: State, date: string): JarBall[] {
+  const tracked = new Set(s.tasks.map((task) => task.id));
   const records = new Map(s.outcomes.map((o) => [rewardKey(o), o]));
   return [
     ...s.completions
-      .filter((c) => c.date === date)
+      .filter((c) => c.date === date && tracked.has(c.taskId))
       .map((c) => ({
         ...c,
         priority: records.get(rewardKey(c))?.task.priority,
@@ -22,6 +23,7 @@ export function jarBalls(s: State, date: string): JarBall[] {
       .filter(
         (o) =>
           o.date === date &&
+          tracked.has(o.taskId) &&
           o.status === "missed" &&
           !o.automatic &&
           !o.deleted,

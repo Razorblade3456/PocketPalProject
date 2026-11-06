@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Pause,
   Play,
+  Bookmark,
   Clock3,
   ListChecks,
   X,
@@ -355,6 +356,102 @@ export function TaskQuickActions({
           Pauses and skips have no automatic misses. Resume from Manage all
           tasks.
         </p>
+      </div>
+    </details>
+  );
+}
+
+export function PickUpHere({
+  task,
+  setS,
+}: {
+  task: Task;
+  setS: Setter;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.resumeNote || "");
+  const save = () => {
+    const note = draft.trim().slice(0, 160);
+    setS((s) => ({
+      ...s,
+      tasks: s.tasks.map((t) =>
+        t.id === task.id ? { ...t, resumeNote: note || undefined } : t,
+      ),
+    }));
+    setEditing(false);
+  };
+  const clear = () => {
+    setS((s) => ({
+      ...s,
+      tasks: s.tasks.map((t) =>
+        t.id === task.id ? { ...t, resumeNote: undefined } : t,
+      ),
+    }));
+    setDraft("");
+    setEditing(false);
+  };
+  if (editing)
+    return (
+      <div className="pick-up-editor">
+        <label>
+          <Bookmark size={13} /> Where did you leave off?
+          <input
+            autoFocus
+            value={draft}
+            maxLength={160}
+            placeholder="Continue from Chapter 6, question 12."
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                save();
+              }
+              if (e.key === "Escape") setEditing(false);
+            }}
+          />
+        </label>
+        <div className="pick-up-actions">
+          <button type="button" disabled={!draft.trim()} onClick={save}>
+            Save
+          </button>
+          <button type="button" onClick={() => setEditing(false)}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  if (!task.resumeNote)
+    return (
+      <button
+        type="button"
+        className="pick-up-trigger"
+        onClick={() => {
+          setDraft("");
+          setEditing(true);
+        }}
+      >
+        <Bookmark size={12} /> Pick Up Here
+      </button>
+    );
+  return (
+    <details className="pick-up-note">
+      <summary>
+        <Bookmark size={12} /> Pick Up Here <ChevronRight size={11} />
+      </summary>
+      <p>{task.resumeNote}</p>
+      <div className="pick-up-actions">
+        <button
+          type="button"
+          onClick={() => {
+            setDraft(task.resumeNote || "");
+            setEditing(true);
+          }}
+        >
+          Edit
+        </button>
+        <button type="button" onClick={clear}>
+          Clear
+        </button>
       </div>
     </details>
   );

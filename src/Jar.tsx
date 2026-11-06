@@ -14,6 +14,7 @@ export type RewardSource = { x: number; y: number };
 export type JarFlight = {
   token: string;
   key: string;
+  taskId: string;
   category: Category;
   priority?: JarBall["priority"];
   missed?: boolean;
