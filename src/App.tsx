@@ -108,29 +108,7 @@ import { Supplies } from "./Supplies";
 import { Boutique, Wardrobe } from "./Boutique";
 import { Inventory, type IncomingFood } from "./Inventory";
 import { favorites, itemName } from "./catalog";
-function tone(enabled: boolean, kind = 0) {
-  if (!enabled) return;
-  try {
-    const ctx = new AudioContext();
-    [0, 0.09, 0.18].slice(0, kind === 1 ? 3 : 2).forEach((delay, i) => {
-      const o = ctx.createOscillator(),
-        g = ctx.createGain();
-      o.type = "sine";
-      o.frequency.value = [523, 659, 784][i] + kind * 30;
-      g.gain.setValueAtTime(0, ctx.currentTime + delay);
-      g.gain.linearRampToValueAtTime(0.045, ctx.currentTime + delay + 0.015);
-      g.gain.exponentialRampToValueAtTime(
-        0.001,
-        ctx.currentTime + delay + 0.25,
-      );
-      o.connect(g);
-      g.connect(ctx.destination);
-      o.start(ctx.currentTime + delay);
-      o.stop(ctx.currentTime + delay + 0.3);
-    });
-    setTimeout(() => void ctx.close(), 700);
-  } catch {}
-}
+import { playUiSound } from "./audioFeedback";
 export default function App() {
   const [s, setS] = useState<State>(load);
   const [panel, setPanel] = useState<
@@ -170,7 +148,7 @@ export default function App() {
   const [demo, setDemo] = useState(true);
   const today = dateKey(now),
     level = stage(s),
-    night =
+    nightTheme =
       s.settings.theme === "night" ||
       (s.settings.theme === "auto" &&
         (new Date(now).getHours() < 7 || new Date(now).getHours() >= 19));
@@ -425,7 +403,10 @@ export default function App() {
           : "Completion tracked"
         : "−" + difference + " " + labels[entry.category],
     );
-    tone(s.settings.sound, status === "completed" ? 1 : -3);
+    playUiSound(
+      s.settings.sound && !importantAlarms.alarmActive,
+      status === "completed" ? 1 : -3,
+    );
     setMessage(
       status === "completed"
         ? next.debt
@@ -460,7 +441,6 @@ export default function App() {
     setFlights((prev) => prev.filter((f) => f.token !== flight.token));
     setLanded(flight.key);
     setJarPulse((p) => p + 1);
-    tone(s.settings.sound, 0);
   };
   useEffect(() => {
     setFlights((prev) => {
@@ -488,7 +468,7 @@ export default function App() {
       return;
     }
     setS((p) => buyItem(p, item, at, id));
-    tone(s.settings.sound, 0);
+    playUiSound(s.settings.sound && !importantAlarms.alarmActive, 0);
     setMessage(itemName(item) + " is yours. Find it in your inventory.");
   };
   const pat = () => {
@@ -503,7 +483,7 @@ export default function App() {
     setReaction(
       `♥ ${s.pet === "pippin" ? "Hehe!" : s.pet === "crumb" ? "Again!" : "YIPPEE!"} ${gain ? `+${gain} happiness` : "Happy as can be!"}`,
     );
-    tone(s.settings.sound, 2);
+    playUiSound(s.settings.sound && !importantAlarms.alarmActive, 2);
   };
   useEffect(() => {
     if (!feeding) return;
@@ -577,7 +557,7 @@ export default function App() {
         " " +
         labels[v.category],
     );
-    tone(s.settings.sound, 1);
+    playUiSound(s.settings.sound && !importantAlarms.alarmActive, 1);
     setMessage(
       (v.category === "happy"
         ? "Play session finished"
@@ -687,7 +667,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion={s.settings.motion ? "user" : "always"}>
       <div
-        className={`app ${night ? "night" : ""} ${!s.settings.motion ? "still" : ""}`}
+        className={`app ${nightTheme ? "night" : ""} ${!s.settings.motion ? "still" : ""}`}
       >
         <header>
           <a className="brand" href="#">
@@ -716,9 +696,9 @@ export default function App() {
             <button
               className="icon-button"
               aria-label="Toggle day or night"
-              onClick={() => setting("theme", night ? "day" : "night")}
+              onClick={() => setting("theme", nightTheme ? "day" : "night")}
             >
-              {night ? <Moon size={20} /> : <Sun size={20} />}
+              {nightTheme ? <Moon size={20} /> : <Sun size={20} />}
             </button>
             <button
               className="icon-button"
@@ -866,7 +846,7 @@ export default function App() {
               <div className="room-top">
                 <span className="room-label">
                   <span />
-                  {night ? "AFTER HOURS" : "PET ROOM"}
+                  {nightTheme ? "AFTER HOURS" : "PET ROOM"}
                 </span>
                 <span className="room-spark">✧</span>
               </div>
@@ -874,7 +854,7 @@ export default function App() {
                 <div className="wall-lines" />
                 <div className="window">
                   <div className="sky-orb" />
-                  {night && (
+                  {nightTheme && (
                     <span className="stars">
                       ✦ · ✧<br /> · ✦
                     </span>
@@ -1083,7 +1063,7 @@ export default function App() {
             <button
               onClick={() => {
                 setting("sound", !s.settings.sound);
-                tone(!s.settings.sound);
+                playUiSound(!s.settings.sound && !importantAlarms.alarmActive);
               }}
             >
               {s.settings.sound ? <Volume2 size={15} /> : <VolumeX size={15} />}{" "}
@@ -1167,7 +1147,7 @@ export default function App() {
                 onSave={(t) => {
                   setS((p) => saveTask(p, t));
                   close();
-                  tone(s.settings.sound);
+                  playUiSound(s.settings.sound && !importantAlarms.alarmActive);
                 }}
                 onDelete={
                   edit

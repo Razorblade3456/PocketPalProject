@@ -9,6 +9,7 @@ import {
 import { Bell } from "lucide-react";
 import type { State } from "./model";
 import { alarmQueue, dismissAlarm, quietNow, reconcileAlarms } from "./alarms";
+import { stopUiSounds } from "./audioFeedback";
 import "./alarms.css";
 
 export function useImportantAlarms(
@@ -85,6 +86,7 @@ export function useImportantAlarms(
       !master.current
     )
       return;
+    stopUiSounds();
     const ctx = audio.current,
       gain = master.current;
     const pulse = () => {
@@ -124,6 +126,9 @@ export function useImportantAlarms(
     volume,
     s.settings.alarmSound,
   ]);
+  useEffect(() => {
+    if (current) stopUiSounds();
+  }, [current?.id]);
   useEffect(
     () => () => {
       silence();
@@ -463,6 +468,7 @@ export function useImportantAlarms(
     setup,
     settings,
     popup,
+    alarmActive: !!current || testing,
     records: s.settings.alarmsEnabled === false ? [] : ready.alarms || [],
   };
 }

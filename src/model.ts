@@ -931,6 +931,8 @@ export function changeSettings(
   patch: Partial<Settings>,
   n = Date.now(),
 ): State {
+  if (Object.keys(patch).length === 1 && "theme" in patch)
+    return { ...s, settings: { ...s.settings, ...patch } };
   s = decay(s, n);
   const settings = { ...s.settings, ...patch };
   const changes =

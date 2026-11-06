@@ -566,6 +566,19 @@ test("sleep boundaries follow actual local time, independently of any theme sett
   }
   assert.equal(petRhythm(+new Date(2026, 9, 25, 19, 30)).calm, true);
 });
+test("changing only the website theme does not settle or alter pet care", () => {
+  const before = initial(now);
+  const after = changeSettings(
+    before,
+    { theme: "night" },
+    now + 3 * 86400000,
+  );
+  assert.equal(after.settings.theme, "night");
+  assert.deepEqual(after.care, before.care);
+  assert.deepEqual(after.careEvents, before.careEvents);
+  assert.deepEqual(after.outcomes, before.outcomes);
+  assert.equal(stage(after), stage(before));
+});
 test("migration from version 2 preserves existing capped care and grants one coin reward per old completion", () => {
   const base = setup();
   base.baseline.care.water = base.care.water = 97;
