@@ -8,6 +8,7 @@ import {
   categories,
   labels,
   parseState,
+  initial,
   petRhythm,
   stage,
   type PetKind,
@@ -18,11 +19,21 @@ import "./careVisuals.css";
 import "./miniMochi.css";
 import "./countdown.css";
 import "./desktopPet.css";
-type DesktopSettings = { kind?: PetKind; snapshot?: string };
+type LiveDisplay = {
+  protocol: 1; revision: number; syncedAt: number;
+  pet: { kind: PetKind; name: string; level: number; care: State["care"]; equipped?: State["equipped"] };
+  petCare: boolean; motion: boolean; alarmsEnabled: boolean;
+  alarm: (import("./alarms").AlarmRecord & { name: string; priority: "low" | "normal" | "high" }) | null;
+};
+type DesktopSettings = { kind?: PetKind; snapshot?: string; liveSync?: LiveDisplay };
+type SyncStatus = { paired: boolean; pairReady: boolean; connected: boolean; lastSyncAt: number | null; error?: string };
 declare global {
   interface Window {
     desktopPet: {
       settings(): Promise<DesktopSettings>;
+      syncStatus(): Promise<SyncStatus>;
+      beginPairing(): Promise<{ code: string; expiresAt: number } | null>;
+      forgetPairing(): Promise<void>;
       select(kind: PetKind): Promise<void>;
       importBackup(): Promise<string | { error: string } | null>;
       snapshot(value: string): Promise<void>;
@@ -39,6 +50,9 @@ function DesktopPet() {
   const [settings, setSettings] = useState<DesktopSettings>({});
   const [saved, setSaved] = useState<State | null>(null);
   const [error, setError] = useState("");
+  const [sync, setSync] = useState<SyncStatus>({ paired: false, pairReady: false, connected: false, lastSyncAt: null });
+  const [pairCode, setPairCode] = useState("");
+  const [pairExpiry, setPairExpiry] = useState(0);
   const [rhythm, setRhythm] = useState(petRhythm());
   const pointer = useRef<{ x: number; y: number; dragging: boolean } | null>(
     null,
@@ -48,6 +62,8 @@ function DesktopPet() {
     const load = async () => {
       const next = await window.desktopPet.settings();
       setSettings(next);
+      const status = await window.desktopPet.syncStatus();
+      if (status) setSync(status);
       try {
         const data = next.snapshot ? JSON.parse(next.snapshot) : null;
         setSaved(data ? parseState(data, data.updated) : null);
@@ -58,40 +74,60 @@ function DesktopPet() {
     void load();
     const remove = window.desktopPet.onChange(() => void load());
     const timer = window.setInterval(() => setRhythm(petRhythm()), 60000);
+    const syncTimer = window.setInterval(() => void window.desktopPet.syncStatus().then(setSync), 12000);
     return () => {
       remove();
       clearInterval(timer);
+      clearInterval(syncTimer);
     };
   }, []);
-  const kind = settings.kind || saved?.pet || "mochi";
+  const kind = settings.liveSync?.pet.kind || settings.kind || saved?.pet || "mochi";
   const alarm =
     saved?.settings.alarmsEnabled === false
       ? undefined
       : nearestAlarm(saved?.alarms);
   const alarmName =
     saved?.tasks.find((t) => t.id === alarm?.taskId)?.name || "";
+  const live = settings.liveSync;
+  const displayState: State | null = live ? (() => {
+    const base = saved || initial(live.syncedAt);
+    return {
+      ...base,
+      name: live.pet.name,
+      pet: live.pet.kind,
+      care: live.pet.care,
+      equipped: live.pet.equipped || {},
+      tasks: live.alarm ? [{ id: live.alarm.taskId, name: live.alarm.name, description: "", time: "00:00", repeat: "once", date: "2000-01-01", days: [], category: "happy" as const }] : [],
+      alarms: live.alarm ? [{ ...live.alarm }] : [],
+      settings: { ...base.settings, petCare: live.petCare, motion: live.motion, alarmsEnabled: live.alarmsEnabled },
+      updated: live.syncedAt,
+    };
+  })() : saved;
+  const displayAlarm = live ? (live.alarmsEnabled ? live.alarm : null) : alarm;
+  const liveAlarmName = live ? (live.alarm?.name || "") : alarmName;
+  const liveAlarmPriority = live ? (live.alarm?.priority || "normal") : (saved?.tasks.find(t => t.id === alarm?.taskId)?.priority || "normal");
   useEffect(() => {
-    if (!popup) window.desktopPet.timerVisible(!!alarm);
-  }, [popup, !!alarm]);
+    if (!popup) window.desktopPet.timerVisible(!!displayAlarm);
+  }, [popup, !!displayAlarm]);
   if (popup)
     return (
       <main className="desktop-popup">
-        <h1>{saved?.name || pets[kind].name}</h1>
-        {saved ? (
+        <h1>{displayState?.name || pets[kind].name}</h1>
+        {displayState ? (
           <>
             <small>
-              Saved snapshot · {new Date(saved.updated).toLocaleString()}
+              {live ? `Last synced · ${new Date(live.syncedAt).toLocaleString()}` : `Imported snapshot · ${new Date(saved!.updated).toLocaleString()}`}
             </small>
-            {saved.settings.petCare !== false &&
+            {displayState.settings.petCare !== false &&
               categories.map((key) => (
                 <div className="desktop-stat" key={key}>
                   <label htmlFor={key}>
-                    {labels[key]} <b>{Math.round(saved.care[key])}%</b>
+                    {labels[key]} <b>{Math.round(displayState.care[key])}%</b>
                   </label>
-                  <progress id={key} max="100" value={saved.care[key]} />
+                  <progress id={key} max="100" value={displayState.care[key]} />
                 </div>
               ))}
-            <small>Not live. Load a fresh export to update.</small>
+            <small>{live ? (sync.connected ? "Connected · updates arrive automatically" : "Disconnected · showing the last synced pet") : "Not live. Load a fresh export to update."}</small>
           </>
         ) : (
           <>
@@ -113,7 +149,7 @@ function DesktopPet() {
             </label>
           </>
         )}
-        <button
+        {!live && <button
           onClick={async () => {
             const raw = await window.desktopPet.importBackup();
             if (!raw) return;
@@ -132,11 +168,19 @@ function DesktopPet() {
           }}
         >
           Load saved stats…
-        </button>
+        </button>}
+        <section className="desktop-sync-settings" aria-label="PocketPal connection">
+          <h2>Desktop sync</h2>
+          <small>{sync.error || (sync.paired ? "Paired · waiting for PocketPal website" : "Not paired")}</small>
+          {sync.lastSyncAt && <small>Last sync · {new Date(sync.lastSyncAt).toLocaleString()}</small>}
+          {!sync.paired && <button onClick={async () => { const result = await window.desktopPet.beginPairing(); if (result) { setPairCode(result.code); setPairExpiry(result.expiresAt); setSync(await window.desktopPet.syncStatus()); } }}>{pairCode ? "Generate new code" : "Connect to PocketPal"}</button>}
+          {pairCode && pairExpiry > Date.now() && <div className="desktop-pair-code"><b>{pairCode}</b><small>Enter this code on PocketPal · expires in 5 minutes</small></div>}
+          {sync.paired && <button onClick={async () => { await window.desktopPet.forgetPairing(); setPairCode(""); setSync(await window.desktopPet.syncStatus()); }}>Forget connection</button>}
+        </section>
         {error && <small role="alert">{error}</small>}
       </main>
     );
-  const level = saved ? stage(saved) : 0;
+  const level = displayState ? (live?.pet.level ?? stage(displayState)) : 0;
   return (
     <div
       className="desktop-pet"
@@ -176,15 +220,15 @@ function DesktopPet() {
       }}
     >
       <div className="desktop-pet-stage">
-        {saved ? (
+        {displayState ? (
           <MiniPet
-            s={{ ...saved, pet: kind }}
+            s={displayState}
             level={level}
             sleep={rhythm.sleeping && level < 3}
             calm={rhythm.calm}
             host={window}
             interactiveStats={false}
-            alarms={saved.settings.alarmsEnabled === false ? [] : saved.alarms}
+            alarms={displayState.settings.alarmsEnabled === false ? [] : displayState.alarms}
             showCountdown={false}
           />
         ) : (
@@ -199,14 +243,14 @@ function DesktopPet() {
           />
         )}
       </div>
-      {alarm && (
+      {displayAlarm && (
         <div className="desktop-timer" aria-label="Task countdown">
-          {alarmName && (
-            <span className="desktop-timer-name" title={alarmName}>
-              {alarmName}
+          {liveAlarmName && (
+            <span className={`desktop-timer-name priority-${liveAlarmPriority}`} title={`${liveAlarmPriority} priority · ${liveAlarmName}`}>
+              {liveAlarmName}
             </span>
           )}
-          <AlarmCountdown compact alarm={alarm} name={alarmName} />
+          <AlarmCountdown compact alarm={displayAlarm} name={liveAlarmName} />
         </div>
       )}
       <button

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Monitor } from "lucide-react";
 import { MiniPet } from "./MiniPet";
+import { DesktopSync } from "./DesktopSync";
 import type { State, Supply } from "./model";
 import "./miniMochi.css";
 
@@ -126,6 +127,7 @@ export function MiniMochi({
         </small>
         {message && <small role="status">{message}</small>}
       </div>
+      <DesktopSync s={s} level={level} alarms={alarms || []} />
       {target &&
         createPortal(
           <main

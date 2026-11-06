@@ -14,7 +14,7 @@ app.whenReady().then(async () => {
     const pet = BrowserWindow.getAllWindows()[0];
     await until(() => pet.webContents.executeJavaScript('!!document.querySelector(".pet-art")'));
     assert.equal(pet.isAlwaysOnTop(), true);
-    assert.deepEqual(pet.getSize(), [100,100]);
+    assert.deepEqual(pet.getSize(), [160,168]);
     assert.equal(pet.getBackgroundColor(), '#00000000');
     for (const kind of ['mochi','pippin','crumb']) {
       await pet.webContents.executeJavaScript(`window.desktopPet.select('${kind}')`);

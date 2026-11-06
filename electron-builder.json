@@ -10,6 +10,7 @@
   "files": [
     "desktop/main.cjs",
     "desktop/preload.cjs",
+    "desktop/syncBridge.cjs",
     "dist-desktop/**/*",
     "package.json",
     "!node_modules/**/*"

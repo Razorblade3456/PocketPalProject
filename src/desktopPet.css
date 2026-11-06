@@ -99,6 +99,17 @@ body {
   color: #baabc8;
   margin-bottom: 3px;
 }
+.desktop-timer-name::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin: 0 5px 1px 0;
+  border-radius: 50%;
+  background: #e5a35d;
+}
+.desktop-timer-name.priority-high::before { background: #c46b80; }
+.desktop-timer-name.priority-low::before { background: #9cb58b; }
 .desktop-timer .alarm-countdown {
   width: 100%;
   padding: 0;
@@ -193,6 +204,26 @@ body {
   border-radius: 6px;
   font: inherit;
 }
+.desktop-sync-settings {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #51445d;
+}
+.desktop-sync-settings h2 {
+  margin: 0 0 5px;
+  color: #decfea;
+  font: 600 12px system-ui;
+}
+.desktop-sync-settings small { margin-top: 4px; }
+.desktop-pair-code {
+  margin-top: 10px;
+  padding: 10px 6px;
+  border: 1px solid #765c87;
+  border-radius: 9px;
+  background: #19151f;
+  text-align: center;
+}
+.desktop-pair-code b { display: block; color: #eadcf3; font: 700 19px ui-monospace, monospace; letter-spacing: .16em; }
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
