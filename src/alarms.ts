@@ -277,3 +277,18 @@ export function countdownProgress(alarm: AlarmRecord, now: number) {
     ")";
   return { percent: remaining * 100, color };
 }
+
+/** Validate only a newly configured alarm; unchanged historical schedules stay editable. */
+export function taskAlarmWarning(
+  task: Task,
+  original: Task | null,
+  changed: boolean,
+  n = Date.now(),
+): string {
+  if (!task.importantAlarm || (original && !changed)) return "";
+  const at =
+    task.relativeAlarmAt ?? +new Date(task.date + "T" + task.time + ":00");
+  return !Number.isFinite(at) || at <= n + 30000
+    ? "Choose a future date and time at least 30 seconds from now for the alarm."
+    : "";
+}

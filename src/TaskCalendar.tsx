@@ -1,3 +1,5 @@
+import { Jar } from "./Jar";
+import { jarBalls } from "./jarModel";
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import { dateKey, localDate, type State, type Task } from "./model";
@@ -242,7 +244,39 @@ export function TaskCalendar({
             ))}
           </ul>
         )}
+        {expanded && <HistoricalJar s={s} date={selected} today={today} />}
       </details>
+    </section>
+  );
+}
+
+/** Calendar-only read-only preview; never schedule or mutate state while viewing. */
+export function HistoricalJar({
+  s,
+  date,
+  today,
+}: {
+  s: State;
+  date: string;
+  today: string;
+}) {
+  if (date >= today) return null;
+  const balls = jarBalls(s, date);
+  if (!balls.length)
+    return <p className="historical-jar-empty">No recorded activity</p>;
+  const missed = balls.filter((b) => b.missed).length;
+  return (
+    <section
+      className="historical-jar"
+      aria-label={"Historical progress jar for " + dayLabel(date)}
+    >
+      <h3>Historical progress jar</h3>
+      <time dateTime={date}>{dayLabel(date)}</time>
+      <p>
+        {balls.length - missed} completed <span aria-hidden="true">·</span>{" "}
+        {missed} missed
+      </p>
+      <Jar balls={balls} small staticPreview />
     </section>
   );
 }

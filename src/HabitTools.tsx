@@ -354,23 +354,6 @@ export function TaskAdvancedFields({
     });
   return (
     <div className="task-advanced">
-      <div className="field-row">
-        <label
-          className={`priority-select priority-${task.priority || "normal"}`}
-        >
-          Priority
-          <select
-            value={task.priority || "normal"}
-            onChange={(e) =>
-              update({ priority: e.target.value as Task["priority"] })
-            }
-          >
-            <option value="low">Low — Whenever</option>
-            <option value="normal">Normal — Standard</option>
-            <option value="high">High — Important</option>
-          </select>
-        </label>
-      </div>
       {!task.importantAlarm && (
         <label className="habit-check">
           <input
@@ -463,5 +446,40 @@ export function TaskRewardNote({
       {paid}/{rewardLimitFor(s, task)} rewarded today · extra entries still
       count
     </span>
+  );
+}
+
+export function TaskPriority({
+  task,
+  update,
+}: {
+  task: Task;
+  update: (patch: Partial<Task>) => void;
+}) {
+  return (
+    <fieldset className="task-priority-picker">
+      <legend>Priority</legend>
+      <div role="group" aria-label="Task priority">
+        {(
+          [
+            ["high", "High"],
+            ["normal", "Normal"],
+            ["low", "Low"],
+          ] as const
+        ).map(([priority, label]) => (
+          <button
+            key={priority}
+            type="button"
+            className={"priority-" + priority}
+            aria-label={label + " priority"}
+            aria-pressed={(task.priority || "normal") === priority}
+            onClick={() => update({ priority })}
+          >
+            <span aria-hidden="true" />
+            {label}
+          </button>
+        ))}
+      </div>
+    </fieldset>
   );
 }

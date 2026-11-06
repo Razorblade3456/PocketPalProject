@@ -1,23 +1,36 @@
 import { useEffect, useLayoutEffect, useRef, useState, type Ref } from "react";
 import { motion, useAnimationControls, useReducedMotion } from "motion/react";
-import { rewardKey, type Category, type Completion } from "./model";
+import { rewardKey, type Category } from "./model";
+import { Skull } from "lucide-react";
+import { jarBalls, priorityBallColors, type JarBall } from "./jarModel";
+export { jarBalls };
+const ballStyle = (b: Pick<JarBall, "priority" | "missed">) =>
+  b.missed
+    ? { background: "#25232a", border: "1px solid #79747f", color: "#eee7db" }
+    : b.priority
+      ? { background: priorityBallColors[b.priority] }
+      : undefined;
 export type RewardSource = { x: number; y: number };
 export type JarFlight = {
   token: string;
   key: string;
   category: Category;
+  priority?: JarBall["priority"];
+  missed?: boolean;
   source: RewardSource;
 };
 export function Jar({
   balls,
   small = false,
+  staticPreview = false,
   jarRef,
   incoming = [],
   landed,
   pulse = 0,
 }: {
-  balls: Completion[];
+  balls: JarBall[];
   small?: boolean;
+  staticPreview?: boolean;
   jarRef?: Ref<HTMLDivElement>;
   incoming?: string[];
   landed?: string;
@@ -26,13 +39,13 @@ export function Jar({
   const controls = useAnimationControls();
   const reduce = useReducedMotion();
   useEffect(() => {
-    if (pulse && !small && !reduce)
+    if (pulse && !small && !reduce && !staticPreview)
       void controls.start({
         rotate: [0, -3, 2, -1, 0],
         y: [0, 2, 0],
         transition: { duration: 0.55 },
       });
-  }, [pulse, small, reduce, controls]);
+  }, [pulse, small, reduce, controls, staticPreview]);
   return (
     <motion.div
       style={
@@ -53,15 +66,18 @@ export function Jar({
         } as import("react").CSSProperties
       }
       ref={jarRef}
-      animate={controls}
-      className={`jar ${small ? "mini" : ""}`}
+      animate={staticPreview ? undefined : controls}
+      className={`jar ${small ? "mini" : ""} ${staticPreview ? "static-jar" : ""}`}
     >
       <motion.div
         className="jar-lid"
+        initial={staticPreview ? false : undefined}
         animate={
-          !small && incoming.length && !reduce
-            ? { x: 48, y: -28, rotate: 18 }
-            : { x: 0, y: 0, rotate: 0 }
+          staticPreview
+            ? undefined
+            : !small && incoming.length && !reduce
+              ? { x: 48, y: -28, rotate: 18 }
+              : { x: 0, y: 0, rotate: 0 }
         }
         transition={{ duration: 0.25 }}
       />
@@ -74,19 +90,33 @@ export function Jar({
               hidden = incoming.includes(key);
             return (
               <motion.span
+                style={ballStyle(b)}
+                title={
+                  b.missed
+                    ? "Missed: " + b.name
+                    : (b.priority || "Recorded") + ": " + b.name
+                }
                 data-ball-key={key}
                 key={key}
                 className={`ball ${b.category} ${hidden ? "incoming-ball" : ""}`}
                 initial={false}
                 animate={
-                  landed === key && !small ? { y: [-10, 0, -5, 0] } : { y: 0 }
+                  staticPreview
+                    ? undefined
+                    : landed === key && !small
+                      ? { y: [-10, 0, -5, 0] }
+                      : { y: 0 }
                 }
                 transition={{ duration: 0.45, ease: "easeOut" }}
-              />
+              >
+                {b.missed && <Skull className="jar-skull" aria-hidden="true" />}
+              </motion.span>
             );
           })}
         </div>
-        <span className="jar-label">completed</span>
+        <span className="jar-label">
+          {balls.some((b) => b.missed) ? "recorded" : "completed"}
+        </span>
       </div>
     </motion.div>
   );
@@ -148,6 +178,7 @@ function Flight({
   return (
     <motion.span
       aria-hidden="true"
+      style={ballStyle(flight)}
       data-reward-flight={flight.key}
       className={`reward-ball-flight ball ${flight.category}`}
       initial={{ x: points.x[0], y: points.y[0], scale: 0.7, opacity: 0 }}
@@ -163,7 +194,9 @@ function Flight({
         ease: "easeInOut",
       }}
       onAnimationComplete={() => completeOnce()}
-    />
+    >
+      {flight.missed && <Skull className="jar-skull" />}
+    </motion.span>
   );
 }
 export function RewardFlights({

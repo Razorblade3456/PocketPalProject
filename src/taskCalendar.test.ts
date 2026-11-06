@@ -316,3 +316,123 @@ test("future calendar creation uses existing save path and does not become due t
   );
   assert.ok(html.includes("+ Add Task"));
 });
+
+import { jarBalls, priorityBallColors } from "./jarModel";
+import { deleteAttempt } from "./model";
+import { Jar } from "./Jar";
+test("jar colors use immutable recorded priority and legacy records retain default styling", () => {
+  for (const priority of ["high", "normal", "low"] as const) {
+    let s = saveTask(initial(now), task({ priority }), now);
+    s = recordAttempt(s, "a", "2026-11-01", "completed", now, "color");
+    s = saveTask(
+      s,
+      { ...s.tasks[0], priority: priority === "low" ? "high" : "low" },
+      now,
+    );
+    const ball = jarBalls(s, "2026-11-01")[0];
+    assert.equal(ball.priority, priority);
+    const html = renderToStaticMarkup(createElement(Jar, { balls: [ball] }));
+    assert.ok(html.includes(priorityBallColors[priority]));
+    const before = JSON.stringify(s);
+    jarBalls(s, "2026-11-01");
+    assert.equal(JSON.stringify(s), before);
+    delete s.outcomes[0].task.priority;
+    assert.equal(jarBalls(s, "2026-11-01")[0].priority, undefined);
+  }
+});
+test("manual skull balls preserve success totals, coins and care; undo removes them; automatic misses excluded", () => {
+  let s = saveTask(initial(now), task({ priority: "high" }), now);
+  s = recordAttempt(s, "a", "2026-11-01", "missed", now, "miss");
+  const coins = s.coins,
+    care = JSON.stringify(s.care),
+    completions = s.completions.length;
+  const balls = jarBalls(s, "2026-11-01");
+  assert.equal(balls.length, 1);
+  assert.equal(balls[0].missed, true);
+  assert.ok(
+    renderToStaticMarkup(createElement(Jar, { balls })).includes("jar-skull"),
+  );
+  assert.equal(s.coins, coins);
+  assert.equal(JSON.stringify(s.care), care);
+  assert.equal(s.completions.length, completions);
+  assert.equal(
+    jarBalls(
+      { ...s, outcomes: s.outcomes.map((o) => ({ ...o, automatic: true })) },
+      "2026-11-01",
+    ).length,
+    0,
+  );
+  assert.equal(jarBalls(deleteAttempt(s, "miss", now), "2026-11-01").length, 0);
+  s = correctAttempt(s, "miss", "completed", now);
+  assert.equal(jarBalls(s, "2026-11-01")[0].missed, undefined);
+});
+
+import { HistoricalJar } from "./TaskCalendar";
+import { parseState } from "./model";
+test("past calendar jar reconstructs recorded colors and skulls without changing saved state", () => {
+  let s = initial(now);
+  for (const priority of ["high", "normal", "low"] as const) {
+    s = saveTask(s, task({ id: priority, priority }), now);
+    s = recordAttempt(
+      s,
+      priority,
+      "2026-11-01",
+      "completed",
+      now,
+      "done-" + priority,
+    );
+  }
+  s = recordAttempt(s, "high", "2026-11-01", "missed", now + 1, "miss-one");
+  s = recordAttempt(s, "low", "2026-11-01", "missed", now + 2, "miss-two");
+  s = saveTask(s, { ...s.tasks[0], priority: "low" }, now + 3);
+  s = deleteTask(s, "normal", now + 3);
+  const before = JSON.stringify(s);
+  const html = renderToStaticMarkup(
+    createElement(HistoricalJar, {
+      s,
+      date: "2026-11-01",
+      today: "2026-11-02",
+    }),
+  );
+  assert.ok(html.includes("3 completed"));
+  assert.ok(html.includes("2 missed"));
+  assert.equal((html.match(/data-ball-key=/g) || []).length, 5);
+  assert.equal((html.match(/jar-skull/g) || []).length, 2);
+  for (const color of Object.values(priorityBallColors))
+    assert.ok(html.includes(color));
+  assert.ok(html.includes("static-jar"));
+  assert.equal(JSON.stringify(s), before);
+  s = deleteAttempt(s, "miss-one", now + 4);
+  const updated = renderToStaticMarkup(
+    createElement(HistoricalJar, {
+      s,
+      date: "2026-11-01",
+      today: "2026-11-02",
+    }),
+  );
+  assert.equal((updated.match(/data-ball-key=/g) || []).length, 4);
+  assert.ok(updated.includes("1 missed"));
+  const restored = parseState(JSON.parse(JSON.stringify(s)))!;
+  assert.ok(restored);
+  assert.equal(jarBalls(restored, "2026-11-01").length, 4);
+});
+test("calendar preview never fabricates jars for today, future dates, or empty historical days", () => {
+  const s = initial(now);
+  for (const date of ["2026-11-02", "2026-11-03"]) {
+    assert.equal(
+      renderToStaticMarkup(
+        createElement(HistoricalJar, { s, date, today: "2026-11-02" }),
+      ),
+      "",
+    );
+  }
+  const html = renderToStaticMarkup(
+    createElement(HistoricalJar, {
+      s,
+      date: "2026-10-31",
+      today: "2026-11-02",
+    }),
+  );
+  assert.ok(html.includes("No recorded activity"));
+  assert.ok(!html.includes("jar-glass"));
+});

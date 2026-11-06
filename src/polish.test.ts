@@ -5,7 +5,7 @@ import {
   correctAttempt,
   buyAndUseBasic,
 } from "./model";
-import { TaskAdvancedFields } from "./HabitTools";
+import { TaskAdvancedFields, TaskPriority } from "./HabitTools";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
@@ -241,8 +241,29 @@ test("compact task editor preserves hidden legacy caps and duration while showin
   );
   assert.ok(!html.includes("Duration (minutes)"));
   assert.ok(!html.includes("Daily rewarded completions"));
-  assert.ok(html.includes("High — Important"));
-  assert.ok(html.includes("Normal — Standard"));
-  assert.ok(html.includes("Low — Whenever"));
+  assert.ok(!html.includes("priority-select"));
+  const picker = renderToStaticMarkup(
+    createElement(TaskPriority, { task: t, update: () => {} }),
+  );
+  for (const label of ["High", "Normal", "Low"])
+    assert.ok(picker.includes(label + " priority"));
+  assert.equal((picker.match(/aria-pressed="true"/g) || []).length, 1);
   assert.equal(JSON.stringify(t), before);
+});
+
+test("priority picker preserves saved selection and defaults missing priorities to Normal", () => {
+  for (const priority of [undefined, "high", "normal", "low"] as const) {
+    const t = task({ priority });
+    const before = JSON.stringify(t);
+    const html = renderToStaticMarkup(
+      createElement(TaskPriority, { task: t, update: () => {} }),
+    );
+    const label =
+      priority === "high" ? "High" : priority === "low" ? "Low" : "Normal";
+    assert.ok(
+      html.includes('aria-label="' + label + ' priority" aria-pressed="true"'),
+    );
+    assert.equal((html.match(/<button/g) || []).length, 3);
+    assert.equal(JSON.stringify(t), before);
+  }
 });

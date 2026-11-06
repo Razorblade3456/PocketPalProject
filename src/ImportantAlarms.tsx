@@ -396,7 +396,67 @@ export function useImportantAlarms(
         <small>Stopping does not complete your task.</small>
       </section>
     ) : null;
+  const setup = (
+    <div className="task-alarm-setup">
+      <p className="fine">
+        Sound:{" "}
+        {s.settings.alarmSound === false || volume === 0
+          ? "Off in Settings"
+          : enabled
+            ? "Enabled"
+            : "Needs activation"}
+        {s.settings.alarmsEnabled === false
+          ? " · Alarms disabled in Settings"
+          : ""}
+        . Keep PocketPal open.
+      </p>
+      {permission !== "granted" && (
+        <p className="fine">
+          {permission === "unsupported"
+            ? "Browser notifications unavailable."
+            : permission === "denied"
+              ? "Notifications blocked; allow in browser settings."
+              : "Notification permission needed."}
+        </p>
+      )}
+      <div className="button-row">
+        {permission === "default" && (
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => {
+              void Notification.requestPermission()
+                .then(setPermission)
+                .catch(() => setPermission("denied"));
+            }}
+          >
+            Set Up Notifications
+          </button>
+        )}
+        {!enabled && s.settings.alarmSound !== false && (
+          <button
+            type="button"
+            className="secondary"
+            onClick={() => void enable()}
+          >
+            Enable Alarm Sound
+          </button>
+        )}
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            void enable();
+            setTesting(true);
+          }}
+        >
+          Test Alarm
+        </button>
+      </div>
+    </div>
+  );
   return {
+    setup,
     settings,
     popup,
     records: s.settings.alarmsEnabled === false ? [] : ready.alarms || [],

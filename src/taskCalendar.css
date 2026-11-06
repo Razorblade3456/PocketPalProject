@@ -422,3 +422,29 @@
     min-height: 44px;
   }
 }
+.historical-jar {
+  text-align: center;
+  padding: 12px 0 4px;
+  border-top: 1px solid #493b52;
+  margin-top: 12px;
+  min-width: 0;
+}
+.app .historical-jar h3 {
+  font-size: 12px;
+  margin: 0 0 6px;
+}
+.historical-jar p,
+.historical-jar-empty {
+  color: #b9aabd;
+  font-size: 11px;
+  text-align: center;
+}
+.app .historical-jar .jar {
+  margin: 10px auto;
+  transform: none;
+}
+.static-jar,
+.static-jar * {
+  animation: none !important;
+  transition: none !important;
+}

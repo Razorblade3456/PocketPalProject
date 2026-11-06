@@ -617,3 +617,17 @@ test("new users get 70 percent alarm volume while stored sound choices survive l
   assert.equal(loaded.settings.alarmSound, false);
   assert.equal(loaded.settings.alarmVolume, 0.12);
 });
+
+test("editor rejects newly scheduled past or near alarms but preserves unchanged saved schedules", async () => {
+  const { taskAlarmWarning } = await import("./alarms");
+  const t = setup().tasks[0];
+  assert.ok(taskAlarmWarning(t, null, false, evening));
+  assert.ok(taskAlarmWarning(t, null, false, evening - 20000));
+  assert.equal(taskAlarmWarning(t, null, false, noon), "");
+  assert.equal(taskAlarmWarning(t, t, false, evening), "");
+  assert.ok(taskAlarmWarning(t, t, true, evening));
+  assert.equal(
+    taskAlarmWarning({ ...t, importantAlarm: false }, null, true, evening),
+    "",
+  );
+});

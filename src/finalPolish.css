@@ -342,3 +342,140 @@
     flex-wrap: wrap;
   }
 }
+.app .task-date-time {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.app .task-date-time label,
+.app .task-date-time input {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.app .task-alarm-toggle {
+  color: #e5a35d;
+  margin-bottom: 0;
+}
+.app .task-alarm-toggle input {
+  accent-color: #e5a35d;
+}
+.app .task-alarm-setup .button-row {
+  gap: 6px;
+}
+.app .task-alarm-setup button {
+  font-size: 11px;
+  padding: 7px 9px;
+}
+.app .task-alarm-warning {
+  color: #edb7a2;
+  font-size: 12px;
+}
+.app .more-options {
+  margin: 14px 0;
+  padding: 8px 12px;
+  color: #d3bfdf;
+  border: 1px solid #65536e;
+  border-radius: 8px;
+  background: #31283a;
+}
+@media (max-width: 380px) {
+  .app .task-date-time {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+.ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ball .jar-skull {
+  width: 70%;
+  height: 70%;
+  stroke-width: 1.8;
+}
+.jar-priority-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 10px;
+  color: #b9aabd;
+  font-size: 10px;
+  margin: 8px 0;
+}
+.jar-priority-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.jar-priority-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.jar-priority-legend .legend-skull {
+  width: 14px;
+  height: 14px;
+  background: #25232a;
+  color: #eee7db;
+  border: 1px solid #79747f;
+  font-style: normal;
+  text-align: center;
+  line-height: 12px;
+}
+.app .task-priority-picker {
+  border: 0;
+  padding: 0;
+  margin: 12px 0 18px;
+  min-width: 0;
+}
+.app .task-priority-picker legend {
+  font-size: 12px;
+  color: #b9aabd;
+  padding: 0;
+  margin-bottom: 8px;
+}
+.app .task-priority-picker > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.app .task-priority-picker button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 3px;
+  border: 1px solid #493b52;
+  border-radius: 9px;
+  background: #25202d;
+  color: #e4dce8;
+  font-size: 12px;
+  cursor: pointer;
+}
+.app .task-priority-picker button span {
+  background: var(--priority-color);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.app .task-priority-picker button[aria-pressed="true"] {
+  border-color: var(--priority-color);
+  box-shadow: inset 0 0 0 1px var(--priority-color);
+}
+.app .task-priority-picker button:focus-visible {
+  outline: 2px solid var(--priority-color);
+  outline-offset: 3px;
+}
+.historical-jar time {
+  font-size: 11px;
+  color: #b9aabd;
+  display: block;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}

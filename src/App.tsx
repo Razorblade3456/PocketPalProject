@@ -1,3 +1,4 @@
+import { jarBalls } from "./jarModel";
 import { TaskCalendar } from "./TaskCalendar";
 import {
   dailyCareBonus,
@@ -91,6 +92,7 @@ import {
   TinySteps,
   TaskQuickActions,
   TaskAdvancedFields,
+  TaskPriority,
   TaskRewardNote,
 } from "./HabitTools";
 import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
@@ -98,7 +100,12 @@ import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
 import { LocalClock } from "./LocalClock";
 import { PetNeeds } from "./PetNeeds";
 import { useImportantAlarms } from "./ImportantAlarms";
-import { quietNow, nearestAlarm, setAlarmDeadline } from "./alarms";
+import {
+  quietNow,
+  nearestAlarm,
+  setAlarmDeadline,
+  taskAlarmWarning,
+} from "./alarms";
 import { MiniMochi } from "./MiniMochi";
 import { Supplies } from "./Supplies";
 import { Boutique, Wardrobe } from "./Boutique";
@@ -383,8 +390,7 @@ export default function App() {
     if (!entry) return;
     setS((p) => recordAttempt(p, t.id, date, status, at, id));
     if (
-      status === "completed" &&
-      entry.rewardCoins > 0 &&
+      (status === "missed" || entry.rewardCoins > 0) &&
       date === today &&
       !panel
     )
@@ -394,6 +400,8 @@ export default function App() {
           key: entry.ballId,
           token: id,
           category: entry.category,
+          priority: entry.task.priority,
+          missed: status === "missed",
           source: source || {
             x: window.innerWidth / 2,
             y: window.innerHeight / 2,
@@ -454,7 +462,10 @@ export default function App() {
       const next = prev.filter((f) =>
         s.outcomes.some(
           (o) =>
-            rewardKey(o) === f.key && o.status === "completed" && !o.deleted,
+            rewardKey(o) === f.key &&
+            (o.status === "completed" ||
+              (o.status === "missed" && !o.automatic)) &&
+            !o.deleted,
         ),
       );
       return next.length === prev.length ? prev : next;
@@ -986,14 +997,14 @@ export default function App() {
                   <h2>Progress Jar</h2>
                   <span>✧</span>
                 </div>
-                <p className="section-note">Today's rewarded completions.</p>
+                <p className="section-note">Today's recorded entries.</p>
                 <button
                   className="jar-button"
                   onClick={() => setPanel("rewards")}
                   aria-label="Inspect today's earned rewards"
                 >
                   <Jar
-                    balls={earned}
+                    balls={jarBalls(s, today)}
                     jarRef={jarRef}
                     incoming={flights.map((f) => f.key)}
                     landed={landed}
@@ -1014,6 +1025,26 @@ export default function App() {
                 >
                   <History size={16} /> History <ChevronRight size={16} />
                 </button>
+                <div
+                  className="jar-priority-legend"
+                  aria-label="Jar ball colors"
+                >
+                  <span>
+                    <i style={{ background: "#C46B80" }} />
+                    High
+                  </span>
+                  <span>
+                    <i style={{ background: "#E5A35D" }} />
+                    Normal
+                  </span>
+                  <span>
+                    <i style={{ background: "#9CB58B" }} />
+                    Low
+                  </span>
+                  <span>
+                    <i className="legend-skull">☠</i>Missed
+                  </span>
+                </div>
                 <div className="jar-legend">
                   <span>
                     <Coins size={13} /> Rewarded completions earn{" "}
@@ -1117,6 +1148,7 @@ export default function App() {
               <TaskEditor
                 task={edit}
                 startDate={calendarStart}
+                alarmSetup={importantAlarms.setup}
                 onSave={(t) => {
                   setS((p) => saveTask(p, t));
                   close();
@@ -1456,10 +1488,7 @@ export default function App() {
                     .reverse()
                     .map((d) => (
                       <div key={d}>
-                        <Jar
-                          small
-                          balls={s.completions.filter((c) => c.date === d)}
-                        />
+                        <Jar small balls={jarBalls(s, d)} />
                         <b>
                           {new Date(d + "T12:00:00").toLocaleDateString(
                             undefined,
@@ -1515,11 +1544,13 @@ export default function App() {
 function TaskEditor({
   task,
   startDate,
+  alarmSetup,
   onSave,
   onDelete,
 }: {
   task: Task | null;
   startDate?: string;
+  alarmSetup?: React.ReactNode;
   onSave: (t: Task) => void;
   onDelete?: () => void;
 }) {
@@ -1543,13 +1574,16 @@ function TaskEditor({
       dailyGoal: 1,
       priority: "normal",
       reminderEnabled: true,
-      importantAlarm: false,
+      importantAlarm: true,
+      alarmEnabledAt: +opened,
     };
   });
   const [alarmMinutes, setAlarmMinutes] = useState(20);
   const [relativeChanged, setRelativeChanged] = useState(false);
   const [customMinutes, setCustomMinutes] = useState(false);
   const [advanced, setAdvanced] = useState(false);
+  const [scheduleChanged, setScheduleChanged] = useState(false);
+  const [warning, setWarning] = useState("");
   const update = (p: Partial<Task>) => setT((v) => ({ ...v, ...p }));
   return (
     <form
@@ -1557,12 +1591,15 @@ function TaskEditor({
       onSubmit={(e) => {
         e.preventDefault();
         if (t.repeat === "selected" && !t.days.length) return;
+        const message = taskAlarmWarning(t, task, scheduleChanged);
+        if (message) {
+          setWarning(message);
+          return;
+        }
         onSave({
           ...setAlarmDeadline(
             t,
-            task?.importantAlarm && !task.relativeAlarmAt && !relativeChanged
-              ? "time"
-              : "relative",
+            task?.relativeAlarmAt && !scheduleChanged ? "relative" : "time",
             alarmMinutes,
             relativeChanged,
           ),
@@ -1575,16 +1612,6 @@ function TaskEditor({
     >
       <span className="eyebrow">TASK DETAILS</span>
       <h2>{task ? "Edit Task" : "Add Task"}</h2>
-      <button
-        type="button"
-        className="advanced-toggle"
-        aria-label="Advanced Settings"
-        aria-expanded={advanced}
-        aria-controls="task-advanced"
-        onClick={() => setAdvanced((v) => !v)}
-      >
-        <Settings size={18} />
-      </button>
       <label>
         What will you do?
         <input
@@ -1599,78 +1626,203 @@ function TaskEditor({
           }}
         />
       </label>
-      {t.importantAlarm && (
-        <p className="task-alarm-mode">
-          🔔 Important Alarm · normal reminder off
-        </p>
-      )}
-      <div className="button-row">
-        <label hidden={!!t.importantAlarm}>
-          Reminder
+      <TaskPriority task={t} update={update} />
+      <div className="task-date-time">
+        <label>
+          Date
+          <input
+            required
+            type="date"
+            value={t.date}
+            onChange={(e) => {
+              setScheduleChanged(true);
+              update({ date: e.target.value, relativeAlarmAt: undefined });
+            }}
+          />
+        </label>
+        <label>
+          Time
           <input
             required
             type="time"
             value={t.time}
-            onChange={(e) => update({ time: e.target.value })}
+            onChange={(e) => {
+              setScheduleChanged(true);
+              update({ time: e.target.value, relativeAlarmAt: undefined });
+            }}
           />
-        </label>
-        <label>
-          Repeat
-          <select
-            value={t.repeat}
-            onChange={(e) =>
-              update({ repeat: e.target.value as Task["repeat"] })
-            }
-          >
-            <option value="daily">Every day</option>
-            <option value="weekly">Every week</option>
-            <option value="selected">Selected days</option>
-            <option value="once">Just once</option>
-            <option value="interval">Every X days</option>
-            <option value="afterCompletion">
-              Every X days after completion
-            </option>
-          </select>
         </label>
       </div>
-      {(t.repeat === "interval" || t.repeat === "afterCompletion") && (
-        <label>
-          Interval in calendar days
-          <input
-            type="number"
-            min={1}
-            max={365}
-            required
-            value={t.intervalDays || 1}
-            onChange={(e) => update({ intervalDays: Number(e.target.value) })}
-          />
-        </label>
+      <label className="toggle task-alarm-toggle">
+        <input
+          type="checkbox"
+          checked={!!t.importantAlarm}
+          onChange={(e) => {
+            setScheduleChanged(true);
+            update({
+              importantAlarm: e.target.checked,
+              reminderEnabled: e.target.checked,
+              alarmEnabledAt: Date.now(),
+            });
+          }}
+        />
+        Alarm · {t.importantAlarm ? "ON" : "OFF"}
+      </label>
+      <p className="fine">
+        Remind me at the scheduled time.
+        {t.importantAlarm
+          ? " Repeats until snoozed or stopped."
+          : t.reminderEnabled !== false && !t.importantAlarm && task
+            ? " Existing regular reminder kept."
+            : ""}
+      </p>
+      {t.importantAlarm && alarmSetup}
+      {warning && (
+        <p className="task-alarm-warning" role="alert">
+          {warning}
+        </p>
       )}
-      {t.repeat === "selected" && (
-        <fieldset>
-          <legend>Choose at least one day</legend>
-          <div className="days">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
-              <label key={d}>
-                <input
-                  type="checkbox"
-                  checked={t.days.includes(i)}
-                  onChange={(e) =>
-                    update({
-                      days: e.target.checked
-                        ? [...t.days, i]
-                        : t.days.filter((x) => x !== i),
-                    })
-                  }
-                />
-                {d}
-              </label>
+      <label>
+        Repeat
+        <select
+          value={t.repeat}
+          onChange={(e) => {
+            setScheduleChanged(true);
+            update({ repeat: e.target.value as Task["repeat"] });
+          }}
+        >
+          <option value="daily">Every day</option>
+          <option value="weekly">Every week</option>
+          <option value="selected">Selected days</option>
+          <option value="once">Just once</option>
+          <option value="interval">Every X days</option>
+          <option value="afterCompletion">Every X days after completion</option>
+        </select>
+      </label>
+
+      {t.importantAlarm && task?.relativeAlarmAt && !scheduleChanged && (
+        <div className="relative-alarm-settings">
+          <span className="alarm-duration-label">Remind me in:</span>
+          {task?.importantAlarm &&
+            !task.relativeAlarmAt &&
+            !relativeChanged && (
+              <p className="fine">
+                Existing scheduled alarm kept. Choose a duration to replace it.
+              </p>
+            )}
+          {t.relativeAlarmAt && !relativeChanged && (
+            <p className="fine">
+              Current alarm:{" "}
+              {new Date(t.relativeAlarmAt).toLocaleString([], {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })}
+              . Choose a duration to restart.
+            </p>
+          )}
+          <div
+            className="alarm-presets"
+            role="group"
+            aria-label="Alarm duration"
+          >
+            {[5, 10, 20, 30, 50].map((minutes) => (
+              <button
+                key={minutes}
+                type="button"
+                aria-pressed={
+                  !customMinutes &&
+                  alarmMinutes === minutes &&
+                  (!task?.importantAlarm || relativeChanged)
+                }
+                onClick={() => {
+                  setAlarmMinutes(minutes);
+                  setRelativeChanged(true);
+                  setCustomMinutes(false);
+                }}
+              >
+                {minutes} min
+              </button>
             ))}
+            <button
+              type="button"
+              aria-pressed={customMinutes}
+              onClick={() => {
+                setCustomMinutes(true);
+                setRelativeChanged(true);
+              }}
+            >
+              Custom
+            </button>
           </div>
-        </fieldset>
+          {customMinutes && (
+            <label>
+              Minutes from now
+              <input
+                type="number"
+                min={1}
+                max={525600}
+                required
+                value={alarmMinutes}
+                onChange={(e) => {
+                  setAlarmMinutes(Number(e.target.value));
+                  setRelativeChanged(true);
+                }}
+              />
+            </label>
+          )}
+        </div>
       )}
+
+      <button
+        type="button"
+        className="more-options"
+        aria-expanded={advanced}
+        aria-controls="task-advanced"
+        onClick={() => setAdvanced((v) => !v)}
+      >
+        More Options
+      </button>
       <section id="task-advanced" hidden={!advanced}>
-        <h3>Advanced Settings</h3>
+        <h3>More Options</h3>
+        {(t.repeat === "interval" || t.repeat === "afterCompletion") && (
+          <label>
+            Interval in calendar days
+            <input
+              type="number"
+              min={1}
+              max={365}
+              required
+              value={t.intervalDays || 1}
+              onChange={(e) => update({ intervalDays: Number(e.target.value) })}
+            />
+          </label>
+        )}
+        {t.repeat === "selected" && (
+          <fieldset>
+            <legend>Choose at least one day</legend>
+            <div className="days">
+              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
+                <label key={d}>
+                  <input
+                    type="checkbox"
+                    checked={t.days.includes(i)}
+                    onChange={(e) =>
+                      update({
+                        days: e.target.checked
+                          ? [...t.days, i]
+                          : t.days.filter((x) => x !== i),
+                      })
+                    }
+                  />
+                  {d}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
         <label>
           Notes (optional)
           <textarea
@@ -1679,97 +1831,6 @@ function TaskEditor({
             onChange={(e) => update({ description: e.target.value })}
           />
         </label>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={!!t.importantAlarm}
-            onChange={(e) => {
-              if (e.target.checked) setRelativeChanged(true);
-              update({
-                importantAlarm: e.target.checked,
-                ...(e.target.checked
-                  ? { reminderEnabled: true, alarmEnabledAt: Date.now() }
-                  : {}),
-              });
-            }}
-          />
-          Important Alarm 🔔
-        </label>
-        {t.importantAlarm && (
-          <div className="relative-alarm-settings">
-            <span className="alarm-duration-label">Remind me in:</span>
-            {task?.importantAlarm &&
-              !task.relativeAlarmAt &&
-              !relativeChanged && (
-                <p className="fine">
-                  Existing scheduled alarm kept. Choose a duration to replace
-                  it.
-                </p>
-              )}
-            {t.relativeAlarmAt && !relativeChanged && (
-              <p className="fine">
-                Current alarm:{" "}
-                {new Date(t.relativeAlarmAt).toLocaleString([], {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
-                . Choose a duration to restart.
-              </p>
-            )}
-            <div
-              className="alarm-presets"
-              role="group"
-              aria-label="Alarm duration"
-            >
-              {[5, 10, 20, 30, 50].map((minutes) => (
-                <button
-                  key={minutes}
-                  type="button"
-                  aria-pressed={
-                    !customMinutes &&
-                    alarmMinutes === minutes &&
-                    (!task?.importantAlarm || relativeChanged)
-                  }
-                  onClick={() => {
-                    setAlarmMinutes(minutes);
-                    setRelativeChanged(true);
-                    setCustomMinutes(false);
-                  }}
-                >
-                  {minutes} min
-                </button>
-              ))}
-              <button
-                type="button"
-                aria-pressed={customMinutes}
-                onClick={() => {
-                  setCustomMinutes(true);
-                  setRelativeChanged(true);
-                }}
-              >
-                Custom
-              </button>
-            </div>
-            {customMinutes && (
-              <label>
-                Minutes from now
-                <input
-                  type="number"
-                  min={1}
-                  max={525600}
-                  required
-                  value={alarmMinutes}
-                  onChange={(e) => {
-                    setAlarmMinutes(Number(e.target.value));
-                    setRelativeChanged(true);
-                  }}
-                />
-              </label>
-            )}
-          </div>
-        )}
         {t.importantAlarm && (
           <label className="toggle">
             <input
@@ -1780,15 +1841,6 @@ function TaskEditor({
             Sound & notifications during quiet hours
           </label>
         )}
-        <label>
-          Start Date
-          <input
-            required
-            type="date"
-            value={t.date}
-            onChange={(e) => update({ date: e.target.value })}
-          />
-        </label>
         <label>
           Daily entries
           <select
@@ -1833,7 +1885,9 @@ function TaskEditor({
           }
         >
           <Check size={17} />
-          {task ? "Save changes" : "Add Task"}
+          {t.importantAlarm && !taskAlarmWarning(t, task, scheduleChanged)
+            ? "Save Task & Alarm"
+            : "Save Task"}
         </button>
         {onDelete && (
           <button
