@@ -1623,9 +1623,6 @@ function TaskEditor({
             relativeChanged,
           ),
           name: t.name.trim(),
-          steps: t.steps
-            ?.filter((step) => step.name.trim())
-            .map((step) => ({ ...step, name: step.name.trim() })),
         });
       }}
     >
@@ -1719,6 +1716,8 @@ function TaskEditor({
         </select>
       </label>
 
+      <TaskAdvancedFields task={t} update={update} />
+
       {t.importantAlarm && task?.relativeAlarmAt && !scheduleChanged && (
         <div className="relative-alarm-settings">
           <span className="alarm-duration-label">Remind me in:</span>
@@ -1804,7 +1803,31 @@ function TaskEditor({
         More Options
       </button>
       <section id="task-advanced" hidden={!advanced}>
-        <h3>More Options</h3>
+        {!t.importantAlarm && (
+          <label className="habit-check">
+            <input
+              type="checkbox"
+              checked={t.reminderEnabled !== false}
+              onChange={(e) => update({ reminderEnabled: e.target.checked })}
+            />
+            Normal reminder
+          </label>
+        )}
+        {t.steps?.length ? (
+          <details className="saved-task-steps">
+            <summary>
+              Existing checklist · {t.steps.length} steps
+            </summary>
+            <ul>
+              {t.steps.map((step) => (
+                <li key={step.id}>{step.name}</li>
+              ))}
+            </ul>
+            <p className="fine">
+              Checklist progress is available on the task card.
+            </p>
+          </details>
+        ) : null}
         {(t.repeat === "interval" || t.repeat === "afterCompletion") && (
           <label>
             Interval in calendar days
@@ -1894,7 +1917,6 @@ function TaskEditor({
           Entries beyond your goal still count. Unlimited tasks have no
           automatic misses.
         </p>
-        <TaskAdvancedFields task={t} update={update} />
       </section>
       <div className="button-row">
         <button

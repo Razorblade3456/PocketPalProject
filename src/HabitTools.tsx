@@ -9,7 +9,6 @@ import {
   Play,
   Clock3,
   ListChecks,
-  Plus,
   X,
 } from "lucide-react";
 import {
@@ -367,231 +366,127 @@ export function TaskAdvancedFields({
   task: Task;
   update: (patch: Partial<Task>) => void;
 }) {
-  const [stepsOpen, setStepsOpen] = useState(false);
   const generated = task.id.startsWith("up-next:");
-  const addStep = () =>
-    update({
-      steps: [...(task.steps || []), { id: crypto.randomUUID(), name: "" }],
-    });
   return (
-    <div className="task-advanced">
-      <details className="up-next-editor" hidden={generated}>
-        <summary>
-          Up Next{task.upNext?.length ? " · " + task.upNext.length : ""}
-        </summary>
-        {(task.upNext || []).map((item, index) => (
-          <fieldset className="up-next-card" key={item.id}>
-            <legend>{index + 1}</legend>
-            <label>
-              Task Name
-              <input
-                maxLength={100}
-                value={item.name}
-                onChange={(e) =>
-                  update({
-                    upNext: task.upNext!.map((x) =>
-                      x.id === item.id ? { ...x, name: e.target.value } : x,
-                    ),
-                  })
-                }
-              />
-            </label>
-            <div className="up-next-fields">
-              <label>
-                Priority
-                <select
-                  value={item.priority}
-                  onChange={(e) =>
-                    update({
-                      upNext: task.upNext!.map((x) =>
-                        x.id === item.id
-                          ? {
-                              ...x,
-                              priority: e.target.value as typeof x.priority,
-                            }
-                          : x,
-                      ),
-                    })
-                  }
-                >
-                  <option value="high">High</option>
-                  <option value="normal">Normal</option>
-                  <option value="low">Low</option>
-                </select>
-              </label>
-              <label>
-                Alarm after · minutes
-                <input
-                  type="number"
-                  min={1}
-                  max={525600}
-                  value={item.alarmMinutes}
-                  onChange={(e) =>
-                    update({
-                      upNext: task.upNext!.map((x) =>
-                        x.id === item.id
-                          ? { ...x, alarmMinutes: Number(e.target.value) }
-                          : x,
-                      ),
-                    })
-                  }
-                />
-              </label>
-              <label className="toggle">
-                <input
-                  type="checkbox"
-                  checked={item.alarm}
-                  onChange={(e) =>
-                    update({
-                      upNext: task.upNext!.map((x) =>
-                        x.id === item.id
-                          ? { ...x, alarm: e.target.checked }
-                          : x,
-                      ),
-                    })
-                  }
-                />
-                Alarm
-              </label>
-            </div>
-            <button
-              type="button"
-              className="remove-step"
-              aria-label={"Remove next task " + (index + 1)}
-              onClick={() =>
-                update({ upNext: task.upNext!.filter((x) => x.id !== item.id) })
-              }
-            >
-              <X size={14} />
-            </button>
-          </fieldset>
-        ))}
-        <button
-          type="button"
-          className="add-step"
-          disabled={task.repeat !== "once" || (task.upNext?.length || 0) >= 5}
-          onClick={() =>
-            update({
-              upNext: [
-                ...(task.upNext || []),
-                {
-                  id: crypto.randomUUID(),
-                  name: "",
-                  priority: "normal",
-                  alarmMinutes: 45,
-                  alarm: true,
-                },
-              ],
-            })
-          }
-        >
-          + Add Next Task
-        </button>
-        {task.repeat !== "once" && (
-          <p className="fine">Up Next is available for Just Once tasks.</p>
-        )}
-      </details>
-      {!task.importantAlarm && (
-        <label className="habit-check">
-          <input
-            type="checkbox"
-            checked={task.reminderEnabled !== false}
-            onChange={(e) => update({ reminderEnabled: e.target.checked })}
-          />
-          Normal reminder
-        </label>
-      )}
-      <div className="step-row-editor" hidden={generated}>
-        <button
-          type="button"
-          className="break-steps-toggle"
-          aria-expanded={stepsOpen}
-          aria-controls="step-rows"
-          onClick={() => {
-            if (!stepsOpen && !task.steps?.length) addStep();
-            setStepsOpen((v) => !v);
-          }}
-        >
-          <Plus size={14} /> Steps & Timers
-          {task.steps?.filter((step) => step.name.trim()).length
-            ? " (" + task.steps.filter((step) => step.name.trim()).length + ")"
-            : ""}
-        </button>
-        <div id="step-rows" hidden={!stepsOpen}>
-          <label className="habit-check">
+    <details className="up-next-editor" hidden={generated}>
+      <summary>
+        <span className="up-next-title">
+          Up Next <span className="up-next-optional">Optional</span>
+        </span>
+        <span className="up-next-description">
+          Automatically start the next task when this one is completed.
+        </span>
+      </summary>
+      {(task.upNext || []).map((item, index) => (
+        <fieldset className="up-next-card" key={item.id}>
+          <legend>{index + 1}</legend>
+          <label>
+            Task Name
             <input
-              type="checkbox"
-              disabled={task.repeat !== "once"}
-              checked={task.repeat === "once" && !!task.stepReminderMinutes}
+              maxLength={100}
+              value={item.name}
               onChange={(e) =>
                 update({
-                  stepReminderMinutes: e.target.checked ? 45 : undefined,
+                  upNext: task.upNext!.map((x) =>
+                    x.id === item.id ? { ...x, name: e.target.value } : x,
+                  ),
                 })
               }
             />
-            Remind me about the next step
           </label>
-          {task.repeat !== "once" && (
-            <p className="fine">
-              Step timers are available for Just Once tasks.
-            </p>
-          )}
-          {task.repeat === "once" && task.stepReminderMinutes !== undefined && (
+          <div className="up-next-fields">
             <label>
-              After (minutes)
+              Priority
+              <select
+                value={item.priority}
+                onChange={(e) =>
+                  update({
+                    upNext: task.upNext!.map((x) =>
+                      x.id === item.id
+                        ? {
+                            ...x,
+                            priority: e.target.value as typeof x.priority,
+                          }
+                        : x,
+                    ),
+                  })
+                }
+              >
+                <option value="high">High</option>
+                <option value="normal">Normal</option>
+                <option value="low">Low</option>
+              </select>
+            </label>
+            <label>
+              Alarm after · minutes
               <input
-                required
                 type="number"
                 min={1}
                 max={525600}
-                value={task.stepReminderMinutes}
-                onChange={(e) =>
-                  update({ stepReminderMinutes: Number(e.target.value) })
-                }
-              />
-            </label>
-          )}
-          {(task.steps || []).map((step, index) => (
-            <div className="step-edit-row" key={step.id}>
-              <span className="step-box" aria-hidden="true">
-                □
-              </span>
-              <input
-                aria-label={"Step " + (index + 1)}
-                type="text"
-                maxLength={120}
-                placeholder="Step name"
-                value={step.name}
+                value={item.alarmMinutes}
                 onChange={(e) =>
                   update({
-                    steps: task.steps!.map((row) =>
-                      row.id === step.id
-                        ? { ...row, name: e.target.value }
-                        : row,
+                    upNext: task.upNext!.map((x) =>
+                      x.id === item.id
+                        ? { ...x, alarmMinutes: Number(e.target.value) }
+                        : x,
                     ),
                   })
                 }
               />
-              <button
-                type="button"
-                className="remove-step"
-                aria-label={"Remove step " + (index + 1)}
-                onClick={() =>
+            </label>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={item.alarm}
+                onChange={(e) =>
                   update({
-                    steps: task.steps!.filter((row) => row.id !== step.id),
+                    upNext: task.upNext!.map((x) =>
+                      x.id === item.id ? { ...x, alarm: e.target.checked } : x,
+                    ),
                   })
                 }
-              >
-                <X size={14} />
-              </button>
-            </div>
-          ))}
-          <button type="button" className="add-step" onClick={addStep}>
-            <Plus size={14} /> Add Step
+              />
+              Alarm
+            </label>
+          </div>
+          <button
+            type="button"
+            className="remove-step"
+            aria-label={"Remove next task " + (index + 1)}
+            onClick={() =>
+              update({ upNext: task.upNext!.filter((x) => x.id !== item.id) })
+            }
+          >
+            <X size={14} />
           </button>
-        </div>
-      </div>
-    </div>
+        </fieldset>
+      ))}
+      <button
+        type="button"
+        className="add-step"
+        disabled={task.repeat !== "once" || (task.upNext?.length || 0) >= 5}
+        onClick={() =>
+          update({
+            upNext: [
+              ...(task.upNext || []),
+              {
+                id: crypto.randomUUID(),
+                name: "",
+                priority: "normal",
+                alarmMinutes: 45,
+                alarm: true,
+              },
+            ],
+          })
+        }
+      >
+        + Add Next Task
+      </button>
+      {task.repeat !== "once" && (
+        <p className="fine">Up Next is available for Just Once tasks.</p>
+      )}
+    </details>
   );
 }
 export function TaskRewardNote({
