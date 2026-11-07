@@ -21,9 +21,21 @@ Manual backup import remains available as a fallback when no website is paired. 
 
 **Open PocketPal** opens `https://pocketpaltracker.netlify.app/` in the packaged companion. In development it opens `http://127.0.0.1:5173/` (override with `POCKETPAL_DEV_URL`). Normal Windows applications such as Chrome and Excel stay below the pet; Windows secure desktop and system security dialogs cannot be covered.
 
-The checked-in portable executable may predate live sync. Rebuild it from Windows with `npm run build:desktop`; output is `release-desktop/PocketPal Desktop.exe`. The website's download control is enabled only when `VITE_DESKTOP_DOWNLOAD_URL` points to an actual published portable release; no hosted release URL is configured in this project yet. Publish that artifact and set the environment variable before offering an in-site download. Receiving PCs need no Node.js or project files.
+The portable executable is a single-file x64 Windows build. Build it from Windows with `npm run build:desktop`; output is `release-desktop/PocketPal Desktop.exe`. It includes Electron, ICU data, locales, and the app bundle; receiving PCs need no Node.js or project files. Electron 45 requires 64-bit Windows 10 or later. This project does not currently publish the EXE to a hosted release, so the website's **Download Desktop Pet** remains disabled until `VITE_DESKTOP_DOWNLOAD_URL` points to a real published asset.
 
-Checks: `npm test`, `npm run build`, `npm run desktop:build`, and `npm run build:desktop`. Manual browser/Windows checks: all pets, idle motion, drag versus click, real window transparency, pairing and Local Network permission, reconnect after refresh/restart/sleep, live pet and alarm edits/snooze/stop/Up Next, popup dismissal, right-click actions, position after restart, and backup fallback. No cloud service, separate server process, installer, or startup registration is added.
+Checks: `npm test`, `npm run build`, `npm run desktop:build`, and `npm run build:desktop`. The rebuilt portable EXE was copied outside the project and launched from its temporary extraction directory; its pet renderer and local sync status endpoint loaded without using the source tree or project `node_modules`. This was tested on the development PC, which has Node.js installed, not on a clean no-Node PC. The exact earlier ~238 MB failing executable was not available to inspect or hash, so its specific ICU startup failure cannot be attributed conclusively. The new package includes the Electron distribution's root `icudtl.dat` and has been independently launched; the old file may have been incomplete/corrupted during packaging or transfer, but that remains an inference until its hash or a copy is available. Pairing against the deployed Netlify site and testing on a second physical Windows PC remain manual checks. No cloud service, separate server process, installer, or startup registration is added.
+
+## Transfer and startup diagnostics
+
+Transfer `release-desktop/PocketPal Desktop.exe` itself. On the receiving PC, save it locally (for example in Downloads) and verify the transfer before running:
+
+```powershell
+Get-FileHash '.\PocketPal Desktop.exe' -Algorithm SHA256
+```
+
+Compare that SHA-256 value with the original laptop's `Get-FileHash` output. Copy the EXE out of Google Drive's browser preview or sync placeholder to a normal local folder before launching. Do not rename, extract, or move any `win-unpacked` file; that is not the portable artifact.
+
+After Electron JavaScript starts, PocketPal writes milestones/errors to `%APPDATA%\pocketpal\startup.log` (Electron version, architecture, Windows version, renderer load, and local bridge start). This log cannot exist if Windows/Electron fails before `desktop/main.cjs` executes. For a repeated ICU error or no startup log, verify the hash first, then check **Event Viewer → Windows Logs → Application** for the matching `PocketPal Desktop.exe` crash and faulting module. Also check **Windows Security → Protection history** for a specific quarantine/block. An unsigned EXE may show a SmartScreen reputation warning; that is separate from an ICU startup crash. Do not disable Defender or SmartScreen.
 
 ## If the Windows launcher fails
 
@@ -41,7 +53,7 @@ Get-Content .\desktop-launch.log
 
 If Node/npm is missing, install or repair Node.js 22.12 or newer and reopen PowerShell. If dependencies are missing, run `npm install --include=dev` once, then retry the launcher. No project deletion or reinstall is needed.
 
-If the log shows a native crash before any PocketPal startup message, test Electron itself:
+For the development launcher only, if its project log shows a native crash before any PocketPal startup message, test Electron itself:
 
 ```powershell
 Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
@@ -51,4 +63,3 @@ $LASTEXITCODE
 
 If this also crashes, PocketPal's entry file has not run. Check Windows Event Viewer → Windows Logs → Application for the corresponding `electron.exe` error and faulting module, and check Windows Security → Protection history for a specific block. Keep those details and `desktop-launch.log` for diagnosis rather than disabling security or deleting the project.
 
-Verification in the managed development environment: both builds and JavaScript syntax checks passed. Electron itself exited before app startup with `0x80000003`; transparency, dragging, hover-close and restart position still require testing outside that environment.

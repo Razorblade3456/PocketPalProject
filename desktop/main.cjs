@@ -2,9 +2,30 @@ console.log('[PocketPal desktop] main entry reached');
 const { app, BrowserWindow, ipcMain, Menu, shell, screen, dialog } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
+const os = require('node:os');
+const runtime = require('node:process');
 const { createSyncBridge } = require('./syncBridge.cjs');
 let pet, popup, settings = {}, settingsPath;
 let syncBridge, syncError = '';
+function startupLog(event) {
+  const line = `${new Date().toISOString()} ${event}`;
+  console.log(`[PocketPal] ${line}`);
+  try {
+    const logPath = path.join(app.getPath('userData'), 'startup.log');
+    fs.mkdirSync(path.dirname(logPath), { recursive: true });
+    fs.appendFileSync(logPath, line + '\n');
+  } catch (error) { console.error('[PocketPal] Could not write startup log:', error.message); }
+}
+startupLog(`main entry · Electron ${runtime.versions.electron || 'unknown'} · ${runtime.arch} · Windows ${os.release()}`);
+runtime.on('uncaughtException', error => {
+  startupLog(`uncaught main-process error · ${error.name}: ${error.message}`);
+  dialog.showErrorBox('PocketPal Desktop Pet', `Startup failed. See startup.log in ${app.getPath('userData')}.`);
+  app.exit(1);
+});
+runtime.on('unhandledRejection', reason => {
+  const error = reason instanceof Error ? `${reason.name}: ${reason.message}` : String(reason);
+  startupLog(`unhandled main-process rejection · ${error}`);
+});
 const PET_NAMES = { mochi: "Mochi", pippin: "Pippin", crumb: "Crumb", rattle: "Rattle" };
 const PET_SIZE = 160;
 const PET_HEIGHT = 168;
@@ -26,6 +47,7 @@ function showPopup() {
   popup = new BrowserWindow({ width: 250, height: 330, x: Math.max(area.x, Math.min(bounds.x, area.x + area.width - 250)), y: bounds.y >= area.y + 330 ? bounds.y - 330 : Math.min(bounds.y + bounds.height, area.y + area.height - 330), frame: false, resizable: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   popup.setAlwaysOnTop(true, 'screen-saver');
   popup.loadFile(page, { query: { popup: '1' } });
+  popup.webContents.on('did-fail-load', (_event, code, description) => startupLog(`popup renderer failed to load · ${code} / ${description}`));
   popup.on('blur', closePopup);
   popup.on('closed', () => { popup = null; });
   popup.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
@@ -36,14 +58,15 @@ else {
 app.on('second-instance', () => { pet?.show(); });
 app.whenReady().then(async () => {
   settingsPath = path.join(app.getPath('userData'), 'desktop-pet.json');
+  startupLog(`Electron ready · app ${app.getVersion()} · ${runtime.arch} · Windows ${os.release()}`);
   // The development launcher used Electron's default profile. Read its existing
   // companion settings on the first packaged launch; never move/delete that file.
   const source = app.isPackaged && !fs.existsSync(settingsPath)
     ? path.join(app.getPath('appData'), 'Electron', 'desktop-pet.json') : settingsPath;
   try { settings = JSON.parse(fs.readFileSync(source, 'utf8')); } catch {}
   syncBridge = createSyncBridge({ settings, persist: () => { save(); for (const w of [pet, popup]) if (w && !w.isDestroyed()) w.webContents.send('pet:changed'); } });
-  try { await syncBridge.start(); }
-  catch (error) { syncError = `Local sync could not start (${error.code || error.message}). Close any second companion and restart PocketPal Desktop.`; console.error('[PocketPal desktop] local sync bridge failed:', error.message); }
+  try { const port = await syncBridge.start(); startupLog(`loopback sync bridge listening · 127.0.0.1:${port}`); }
+  catch (error) { syncError = `Local sync could not start (${error.code || error.message}). Close any second companion and restart PocketPal Desktop.`; startupLog(`loopback sync bridge failed · ${error.code || error.message}`); }
   const area = screen.getPrimaryDisplay().workArea;
   const initial = position(Number.isFinite(settings.x) ? settings.x : area.x + area.width - 120, Number.isFinite(settings.y) ? settings.y : area.y + area.height - 120);
   pet = new BrowserWindow({ ...initial, width: PET_SIZE, height: PET_HEIGHT, transparent: true, backgroundColor: '#00000000', frame: false, resizable: false, maximizable: false, fullscreenable: false, hasShadow: false, alwaysOnTop: true, skipTaskbar: true, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
@@ -52,15 +75,19 @@ app.whenReady().then(async () => {
   pet.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   pet.webContents.on('will-navigate', event => event.preventDefault());
   pet.webContents.on('render-process-gone', (_event, details) => {
+    startupLog(`pet renderer exited · ${details.reason} / ${details.exitCode}`);
     console.error('Desktop pet renderer stopped:', details);
-    dialog.showErrorBox('PocketPal Desktop Pet', `The pet renderer stopped: ${details.reason} (${details.exitCode}). See desktop-launch.log.`);
+    dialog.showErrorBox('PocketPal Desktop Pet', `The pet renderer stopped: ${details.reason} (${details.exitCode}). See startup.log in ${app.getPath('userData')}.`);
     app.exit(1);
   });
+  pet.webContents.on('did-fail-load', (_event, code, description) => startupLog(`pet renderer failed to load · ${code} / ${description}`));
   await pet.loadFile(page);
+  startupLog('pet renderer loaded');
   pet.on('moved', () => { Object.assign(settings, pet.getPosition().reduce((p, v, i) => ({ ...p, [i ? 'y' : 'x']: v }), {})); });
   pet.on('close', save);
   screen.on('display-removed', () => { const p = position(...pet.getPosition()); pet.setPosition(p.x, p.y); });
 }).catch(error => {
+  startupLog(`application initialization failed · ${error.name}: ${error.message}`);
   console.error('Desktop pet startup failed:', error);
   dialog.showErrorBox('PocketPal Desktop Pet could not start', error.stack || error.message);
   app.exit(1);
@@ -120,6 +147,7 @@ ipcMain.on('pet:menu', event => {
   closePopup();
   Menu.buildFromTemplate([{ label: 'Change Pet', submenu: Object.entries(PET_NAMES).map(([kind,label]) => ({ label, type:'radio', checked:kind === (settings.kind || (()=>{try{return JSON.parse(settings.snapshot || '{}').pet;}catch{return undefined;}})() || 'mochi'), click:()=>selectPet(kind) })) }, { type:'separator' }, { label: 'Open PocketPal', click: () => shell.openExternal(app.isPackaged ? 'https://pocketpaltracker.netlify.app/' : (process.env.POCKETPAL_DEV_URL || 'http://127.0.0.1:5173/')) }, { label: 'Close Pet', click: () => app.quit() }]).popup({ window: pet });
 });
+app.on('child-process-gone', (_event, details) => startupLog(`Electron child process stopped · ${details.type} / ${details.reason} / ${details.exitCode}`));
 app.on('window-all-closed', () => app.quit());
-app.on('before-quit', () => { syncBridge?.stop(); });
+app.on('before-quit', () => { startupLog('application is closing'); syncBridge?.stop(); });
 }
