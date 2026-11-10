@@ -7,6 +7,7 @@ import {
   COLLECTION_ICONS,
   initial,
   recordTaskCompletion,
+  deleteAttempt,
   saveTask,
   type Task,
 } from "./model";
@@ -30,7 +31,7 @@ const task = (id: string, patch: Partial<Task> = {}): Task => ({
   ...patch,
 });
 
-test("collection panel counts unique tasks scheduled today and opens normal task editing", () => {
+test("collection progress counts unique assigned tasks completed this month", () => {
   let s = addCollection(initial(now), {
     id: "school",
     name: "College",
@@ -67,11 +68,11 @@ test("collection panel counts unique tasks scheduled today and opens normal task
   );
   s = recordTaskCompletion(s, "accounting", today, now, "accounting-1");
   s = recordTaskCompletion(s, "accounting", today, now + 60_000, "accounting-2");
+  s = recordTaskCompletion(s, "chapter", today, now + 120_000, "chapter-1");
 
   const html = renderToStaticMarkup(
     createElement(CollectionsPanel, {
       s,
-      today,
       now,
       onEditTask: () => {},
       onCreate: () => "new",
@@ -80,13 +81,38 @@ test("collection panel counts unique tasks scheduled today and opens normal task
     }),
   );
   assert.ok(html.includes("College"));
-  assert.ok(html.includes("1/2 completed"));
+  assert.ok(html.includes("2/3 completed this month"));
   assert.ok(html.includes("Study accounting"));
   assert.ok(html.includes("Read chapter"));
-  assert.ok(!html.includes("Future assignment"));
-  assert.equal((html.match(/class="collection-task"/g) || []).length, 2);
+  assert.ok(html.includes("Future assignment"));
+  assert.equal((html.match(/class="collection-task"/g) || []).length, 3);
   assert.ok(html.includes('data-mobile-open="false"'));
   assert.ok(!html.includes('class="collection-row" open'));
+
+  s = deleteAttempt(s, "accounting-1", now + 180_000);
+  s = deleteAttempt(s, "accounting-2", now + 180_000);
+  const undone = renderToStaticMarkup(
+    createElement(CollectionsPanel, {
+      s,
+      now: now + 180_000,
+      onEditTask: () => {},
+      onCreate: () => "new",
+      onUpdate: () => {},
+      onDelete: () => {},
+    }),
+  );
+  assert.ok(undone.includes("1/3 completed this month"));
+  const nextMonth = renderToStaticMarkup(
+    createElement(CollectionsPanel, {
+      s,
+      now: +new Date(2026, 10, 1, 12),
+      onEditTask: () => {},
+      onCreate: () => "new",
+      onUpdate: () => {},
+      onDelete: () => {},
+    }),
+  );
+  assert.ok(nextMonth.includes("0/3 completed this month"));
 });
 
 test("task editor collection picker offers None and a compact create option", () => {
@@ -135,7 +161,6 @@ test("collection section starts collapsed on mobile and rows remain individually
   const html = renderToStaticMarkup(
     createElement(CollectionsPanel, {
       s,
-      today,
       now,
       onEditTask: () => {},
       onCreate: () => "new",
@@ -144,7 +169,7 @@ test("collection section starts collapsed on mobile and rows remain individually
     }),
   );
   assert.ok(html.includes('aria-expanded="false"'));
-  assert.ok(html.includes("No tasks scheduled today."));
+  assert.ok(html.includes("No tasks in this collection yet."));
   assert.ok(!html.includes('class="collection-row" open'));
 });
 

@@ -459,13 +459,20 @@ export function PickUpHere({
 export function TaskAdvancedFields({
   task,
   update,
+  sectionRef,
 }: {
   task: Task;
   update: (patch: Partial<Task>) => void;
+  sectionRef?: (element: HTMLDetailsElement | null) => void;
 }) {
   const generated = task.id.startsWith("up-next:");
   return (
-    <details className="up-next-editor" hidden={generated}>
+    <details
+      ref={sectionRef}
+      className="up-next-editor"
+      hidden={generated}
+      tabIndex={-1}
+    >
       <summary>
         <span className="up-next-title">
           Up Next <span className="up-next-optional">Optional</span>

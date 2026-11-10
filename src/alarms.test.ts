@@ -147,6 +147,7 @@ test("all recurrence types and created dates reuse taskDue, without ordinary or 
   for (const repeat of [
     "daily",
     "weekly",
+    "monthly",
     "weeklyAny",
     "monthlyAny",
     "selected",
@@ -158,6 +159,7 @@ test("all recurrence types and created dates reuse taskDue, without ordinary or 
       repeat,
       days: [new Date(noon).getDay()],
       intervalDays: 2,
+      dayOfMonth: 30,
     });
     assert.equal(alarmQueue(reconcileAlarms(s, evening)).length, 1, repeat);
   }

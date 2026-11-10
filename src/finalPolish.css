@@ -278,6 +278,68 @@
   height: 16px;
   margin: 0;
 }
+.app .task-editor-shortcuts {
+  display: flex;
+  gap: 6px;
+  max-width: 100%;
+  margin: 8px 0 12px;
+  padding: 2px 1px 5px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+.app .task-editor-shortcuts button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #68537788;
+  border-radius: 999px;
+  background: #221d29;
+  color: #cbbbd7;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.app .task-editor-shortcuts button[aria-pressed="true"] {
+  border-color: #a78bbd;
+  background: #382c43;
+  color: #f0e4fa;
+}
+.app .task-editor-shortcuts button:focus-visible,
+.app .task-editor :is(h2, h3, .up-next-editor):focus-visible {
+  outline: 2px solid #bda2d6;
+  outline-offset: 2px;
+}
+.app .task-editor :is(h2, h3, .up-next-editor) {
+  scroll-margin-top: 22px;
+}
+.app .task-editor fieldset .days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.app .task-editor fieldset .days label {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid #68537766;
+  border-radius: 999px;
+  background: #211d27;
+}
+@media (max-width: 600px) {
+  .app .task-editor-shortcuts {
+    margin-right: -8px;
+    padding-right: 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app .task-editor-shortcuts,
+  .app .collection-progress-track > i {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
 .app:not(.night) .task-editor .task-editor-heading,
 .app:not(.night) .task-editor .task-editor-fields > h3 {
   color: #564563;

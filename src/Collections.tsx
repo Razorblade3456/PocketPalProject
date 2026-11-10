@@ -27,8 +27,7 @@ import {
 import {
   COLLECTION_COLORS,
   COLLECTION_ICONS,
-  taskDue,
-  taskFinishedToday,
+  dateKey,
   type Collection,
   type CollectionColor,
   type CollectionIcon,
@@ -205,7 +204,6 @@ export function CollectionFields({
 
 export function CollectionsPanel({
   s,
-  today,
   now,
   onEditTask,
   onCreate,
@@ -213,7 +211,6 @@ export function CollectionsPanel({
   onDelete,
 }: {
   s: State;
-  today: string;
   now: number;
   onEditTask: (task: Task) => void;
   onCreate: (collection: CollectionDraft) => string;
@@ -227,6 +224,7 @@ export function CollectionsPanel({
   const [icon, setIcon] = useState<CollectionIcon | "">("folder");
   const [color, setColor] = useState<CollectionColor | "">("purple");
   const collections = s.collections || [];
+  const monthKey = dateKey(now).slice(0, 7);
   const resetForm = () => {
     setName("");
     setIcon("folder");
@@ -313,12 +311,19 @@ export function CollectionsPanel({
           </p>
         ) : (
           collections.map((collection) => {
-            const tasks = s.tasks.filter(
-              (task) => task.collectionId === collection.id && taskDue(s, task, now),
+            const tasks = s.tasks.filter((task) => task.collectionId === collection.id);
+            const completedTaskIds = new Set(
+              s.outcomes
+                .filter(
+                  (outcome) =>
+                    outcome.date.slice(0, 7) === monthKey &&
+                    outcome.status === "completed" &&
+                    !outcome.deleted &&
+                    tasks.some((task) => task.id === outcome.taskId),
+                )
+                .map((outcome) => outcome.taskId),
             );
-            const completed = tasks.filter((task) =>
-              taskFinishedToday(s, task, today),
-            ).length;
+            const completed = completedTaskIds.size;
             const percent = tasks.length
               ? Math.round((completed / tasks.length) * 100)
               : 0;
@@ -327,7 +332,10 @@ export function CollectionsPanel({
               ? colorValues[collection.color]
               : colorValues.purple;
             return (
-              <details className="collection-row" key={collection.id}>
+              <details
+                className={`collection-row${tasks.length ? "" : " is-empty"}`}
+                key={collection.id}
+              >
                 <summary>
                   <span className="collection-row-icon" style={{ color: accent }}>
                     <Icon size={16} />
@@ -335,26 +343,28 @@ export function CollectionsPanel({
                   <span className="collection-row-title">
                     <strong>{collection.name}</strong>
                     <small>
-                      {completed}/{tasks.length} completed
+                      {tasks.length
+                        ? `${completed}/${tasks.length} completed this month`
+                        : "No tasks yet"}
                     </small>
                   </span>
-                  <span
+                  {tasks.length > 0 && <span
                     className="collection-progress-track"
                     role="progressbar"
-                    aria-label={`${collection.name} progress`}
+                    aria-label={`${collection.name} monthly progress`}
                     aria-valuemin={0}
-                    aria-valuemax={tasks.length || 1}
+                    aria-valuemax={tasks.length}
                     aria-valuenow={completed}
                   >
                     <i style={{ width: `${percent}%`, background: accent }} />
-                  </span>
+                  </span>}
                   <ChevronDown className="collection-row-chevron" size={15} />
                 </summary>
                 <div className="collection-row-body">
                   <div className="collection-task-list">
                     {tasks.length ? (
                       tasks.map((task) => {
-                        const done = taskFinishedToday(s, task, today);
+                        const done = completedTaskIds.has(task.id);
                         return (
                           <button
                             type="button"
@@ -365,7 +375,7 @@ export function CollectionsPanel({
                           >
                             <span
                               className={`collection-task-status${done ? " is-complete" : ""}`}
-                              aria-label={done ? "Completed" : "Not completed"}
+                              aria-label={done ? "Completed this month" : "Not completed this month"}
                             >
                               {done && <Check size={12} />}
                             </span>
@@ -382,9 +392,7 @@ export function CollectionsPanel({
                         );
                       })
                     ) : (
-                      <p className="collection-no-tasks">
-                        No tasks scheduled today.
-                      </p>
+                      <p className="collection-no-tasks">No tasks in this collection yet.</p>
                     )}
                   </div>
                   <div className="collection-row-actions">

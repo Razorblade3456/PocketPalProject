@@ -214,6 +214,57 @@ test("daily, weekly, selected weekdays, one-time and start dates use local calen
     false,
   );
 });
+test("monthly specific dates clamp to month end and respect the start date", () => {
+  const monthly = task("monthly", {
+    repeat: "monthly",
+    date: "2026-01-31",
+    createdDate: "2026-01-31",
+    dayOfMonth: 31,
+  });
+  assert.equal(due(monthly, +localDate("2026-01-31")), true);
+  assert.equal(due(monthly, +localDate("2026-02-27")), false);
+  assert.equal(due(monthly, +localDate("2026-02-28")), true);
+  assert.equal(due(monthly, +localDate("2026-03-31")), true);
+  assert.equal(due(monthly, +localDate("2028-02-29")), true);
+  assert.equal(due(monthly, +localDate("2028-02-28")), false);
+  const defaultDay = task("monthly-default", {
+    repeat: "monthly",
+    date: "2026-10-15",
+    createdDate: "2026-10-15",
+  });
+  assert.equal(due(defaultDay, +localDate("2026-11-15")), true);
+
+  const startedLate = task("monthly-late", {
+    repeat: "monthly",
+    date: "2026-10-20",
+    createdDate: "2026-10-20",
+    dayOfMonth: 15,
+  });
+  assert.equal(due(startedLate, +localDate("2026-10-31")), false);
+  assert.equal(due(startedLate, +localDate("2026-11-15")), true);
+  assert.equal(validState({ ...setup(), tasks: [monthly] }), true);
+  assert.equal(validState({ ...setup(), tasks: [{ ...monthly, dayOfMonth: 32 }] }), false);
+});
+test("monthly specific missed outcomes settle once per scheduled month", () => {
+  const start = +localDate("2026-01-31");
+  let s = initial(start);
+  s.tasks = [
+    task("monthly", {
+      date: "2026-01-31",
+      createdDate: "2026-01-31",
+      createdAt: start,
+      repeat: "monthly",
+      dayOfMonth: 31,
+    }),
+  ];
+  s = decay(s, +localDate("2026-04-01"));
+  assert.deepEqual(
+    s.outcomes.map((outcome) => outcome.date),
+    ["2026-01-31", "2026-02-28", "2026-03-31"],
+  );
+  assert.ok(s.outcomes.every((outcome) => outcome.status === "missed"));
+  assert.equal(decay(s, +localDate("2026-04-01")).outcomes.length, 3);
+});
 test("automatic misses reconcile multiple days once and reset today to pending", () => {
   const s = setup();
   const later = +localDate(shiftDate(dateKey(now), 3));

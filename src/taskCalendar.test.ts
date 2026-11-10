@@ -87,6 +87,23 @@ test("future start dates reuse recurrence without appearing early or changing th
   assert.ok(s.tasks.every((t) => !taskDue(s, t, now)));
   assert.equal(JSON.stringify(s), before);
 });
+test("monthly specific tasks appear only on the selected or clamped calendar date", () => {
+  let s = initial(now);
+  s = saveTask(
+    s,
+    task({
+      id: "monthly-day",
+      date: "2026-11-01",
+      repeat: "monthly",
+      dayOfMonth: 31,
+    }),
+    now,
+  );
+  assert.ok(!calendarTasks(s, "2026-11-01").some((row) => row.task.id === "monthly-day"));
+  assert.ok(!calendarTasks(s, "2026-11-29").some((row) => row.task.id === "monthly-day"));
+  assert.ok(calendarTasks(s, "2026-11-30").some((row) => row.task.id === "monthly-day"));
+  assert.ok(calendarTasks(s, "2026-12-31").some((row) => row.task.id === "monthly-day"));
+});
 test("recurrence, pauses, skips and intervals come from existing scheduler", () => {
   let s = initial(now);
   s = saveTask(

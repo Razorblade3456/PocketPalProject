@@ -171,7 +171,7 @@ export default function App() {
     ],
     [
       "One Clear Task Editor",
-      "Create or edit a task with its settings in one place. Choose a priority, then set the date and time. Weekday, interval, and goal fields appear when they apply.",
+      "Create or edit a task in one form. Use the Details, Alarm, Repeat, and Up Next shortcuts to jump to settings without losing your edits.",
     ],
     [
       "Priorities & Alarms",
@@ -179,11 +179,11 @@ export default function App() {
     ],
     [
       "Repeat & Rest Days",
-      "Choose a repeat schedule, including one completion any day each week or month. Mark vacation days in the calendar to pause missed-task penalties and reminders; you can still complete tasks.",
+      "Repeat options are grouped into Common, Custom, and Flexible. Monthly Specific Day uses the chosen date and falls back to month-end; Any Day schedules stay flexible. Calendar vacation days pause missed penalties and reminders.",
     ],
     [
       "Collections",
-      "Use Collection (optional) while adding or editing a task to assign or move it. Create Collections on the dashboard or with + New Collection; customize them with a preset icon and color. Collection tasks still appear in Today's Tasks.",
+      "Create or assign Collections from the editor or dashboard. Monthly progress counts each assigned task with a completion once, even if it repeats.",
     ],
     [
       "Up Next",
@@ -1107,7 +1107,6 @@ export default function App() {
               />
               <CollectionsPanel
                 s={s}
-                today={today}
                 now={now}
                 onEditTask={(task) => {
                   setPanel(null);
@@ -1794,8 +1793,25 @@ function TaskEditor({
   const [customMinutes, setCustomMinutes] = useState(false);
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [warning, setWarning] = useState("");
+  const [shortcut, setShortcut] = useState("details");
+  const shortcutTargets = useRef<Record<string, HTMLElement | null>>({});
   const update = (p: Partial<Task>) => setT((v) => ({ ...v, ...p }));
   const flexiblePeriod = t.repeat === "weeklyAny" || t.repeat === "monthlyAny";
+  const calendarStart = new Date(`${t.date}T12:00:00`);
+  const startDateValid = Number.isFinite(calendarStart.getTime());
+  const defaultMonthDay = startDateValid ? calendarStart.getDate() : 1;
+  const jumpTo = (key: string) => {
+    setShortcut(key);
+    const target = shortcutTargets.current[key];
+    if (!target) return;
+    target.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    });
+    target.focus({ preventScroll: true });
+  };
   return (
     <form
       className="task-editor"
@@ -1823,7 +1839,32 @@ function TaskEditor({
       }}
     >
       <span className="eyebrow">TASK DETAILS</span>
-      <h2>{task ? "Edit Task" : "Add Task"}</h2>
+      <h2
+        ref={(el) => {
+          shortcutTargets.current.details = el;
+        }}
+        tabIndex={-1}
+      >
+        {task ? "Edit Task" : "Add Task"}
+      </h2>
+      <nav className="task-editor-shortcuts" aria-label="Task editor sections">
+        {[
+          ["details", "Details"],
+          ["alarm", "Alarm"],
+          ["repeat", "Repeat"],
+          ["upNext", "Up Next"],
+        ].map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            aria-pressed={shortcut === key}
+            disabled={key === "upNext" && t.id.startsWith("up-next:")}
+            onClick={() => jumpTo(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
       <label>
         What will you do?
         <input
@@ -1872,7 +1913,15 @@ function TaskEditor({
           />
         </label>
       </div>
-      <h3 className="task-editor-heading">Alarm Settings</h3>
+      <h3
+        className="task-editor-heading"
+        ref={(el) => {
+          shortcutTargets.current.alarm = el;
+        }}
+        tabIndex={-1}
+      >
+        Alarm Settings
+      </h3>
       <label className="toggle task-alarm-toggle">
         <input
           type="checkbox"
@@ -1917,40 +1966,6 @@ function TaskEditor({
         </label>
       )}
       {t.importantAlarm && alarmSetup}
-      {warning && (
-        <p className="task-alarm-warning" role="alert">
-          {warning}
-        </p>
-      )}
-      <h3 className="task-editor-heading">Repeat &amp; Goals</h3>
-      <label>
-        Repeat
-        <select
-          value={t.repeat}
-          onChange={(e) => {
-            setScheduleChanged(true);
-            const repeat = e.target.value as Task["repeat"];
-            update({
-              repeat,
-              ...(repeat === "weeklyAny" || repeat === "monthlyAny"
-                ? { repetitions: "once", dailyGoal: 1 }
-                : {}),
-            });
-          }}
-        >
-          <option value="daily">Once per day</option>
-          <option value="weekly">Every week</option>
-          <option value="weeklyAny">Once per week · Any day</option>
-          <option value="monthlyAny">Once per month · Any day</option>
-          <option value="selected">Selected days</option>
-          <option value="once">Just once</option>
-          <option value="interval">Every X days</option>
-          <option value="afterCompletion">Every X days after completion</option>
-        </select>
-      </label>
-
-      <TaskAdvancedFields task={t} update={update} />
-
       {t.importantAlarm && task?.relativeAlarmAt && !scheduleChanged && (
         <div className="relative-alarm-settings">
           <span className="alarm-duration-label">Remind me in:</span>
@@ -2025,9 +2040,171 @@ function TaskEditor({
           )}
         </div>
       )}
+      {warning && (
+        <p className="task-alarm-warning" role="alert">
+          {warning}
+        </p>
+      )}
+      <h3
+        className="task-editor-heading"
+        ref={(el) => {
+          shortcutTargets.current.repeat = el;
+        }}
+        tabIndex={-1}
+      >
+        Repeat &amp; Goals
+      </h3>
+      <label>
+        Repeat
+        <select
+          value={t.repeat}
+          onChange={(e) => {
+            setScheduleChanged(true);
+            const repeat = e.target.value as Task["repeat"];
+            update({
+              repeat,
+              ...(repeat === "weeklyAny" || repeat === "monthlyAny"
+                ? { repetitions: "once", dailyGoal: 1 }
+                : {}),
+            });
+          }}
+        >
+          <optgroup label="Common">
+            <option value="once">Just Once</option>
+            <option value="daily">Every Day</option>
+            <option value="weekly">Every Week — Specific Day</option>
+            <option value="monthly">Every Month — Specific Day</option>
+          </optgroup>
+          <optgroup label="Custom">
+            <option value="selected">Selected Weekdays</option>
+            <option value="interval">Every X Days</option>
+            <option value="afterCompletion">Every X Days After Completion</option>
+          </optgroup>
+          <optgroup label="Flexible">
+            <option value="weeklyAny">Once a Week — Any Day</option>
+            <option value="monthlyAny">Once a Month — Any Day</option>
+          </optgroup>
+        </select>
+      </label>
+
+      {t.repeat === "weekly" && (
+        <p className="fine">
+          {startDateValid
+            ? `Repeats every ${calendarStart.toLocaleDateString([], { weekday: "long" })}, based on the selected start date.`
+            : "Choose a start date to set the weekly day."}
+        </p>
+      )}
+      {t.repeat === "monthly" && (
+        <>
+          <label>
+            Day of month
+            <select
+              value={
+                t.dayOfMonth ?? defaultMonthDay
+              }
+              onChange={(e) => update({ dayOfMonth: Number(e.target.value) })}
+            >
+              {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
+                <option key={day} value={day}>
+                  {day}{day % 100 >= 11 && day % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][day % 10] || "th"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <p className="fine">
+            Starts on or after the selected date. If a month is shorter, it uses that month’s final day.
+          </p>
+        </>
+      )}
+      {flexiblePeriod && (
+        <p className="fine">
+          Complete once on any day before the {t.repeat === "weeklyAny" ? "week" : "month"} ends.
+        </p>
+      )}
+      {(t.repeat === "interval" || t.repeat === "afterCompletion") && (
+        <label>
+          Interval in calendar days
+          <input
+            type="number"
+            min={1}
+            max={365}
+            required
+            value={t.intervalDays || 1}
+            onChange={(e) => update({ intervalDays: Number(e.target.value) })}
+          />
+        </label>
+      )}
+      {t.repeat === "selected" && (
+        <fieldset>
+          <legend>Choose at least one day</legend>
+          <div className="days">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
+              <label key={d}>
+                <input
+                  type="checkbox"
+                  checked={t.days.includes(i)}
+                  onChange={(e) =>
+                    update({
+                      days: e.target.checked
+                        ? [...t.days, i]
+                        : t.days.filter((x) => x !== i),
+                    })
+                  }
+                />
+                {d}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+      {!flexiblePeriod && (t.repeat !== "once" || t.repetitions !== "once") && (
+        <label>
+          Daily entries
+          <select
+            value={t.repetitions || "once"}
+            onChange={(e) =>
+              update({
+                repetitions: e.target.value as Task["repetitions"],
+                ...(e.target.value === "multiple" ? { dailyGoal: 3 } : {}),
+              })
+            }
+          >
+            <option value="once">Once per day</option>
+            <option value="multiple">Multiple times per day</option>
+            <option value="goal">Custom daily goal</option>
+            <option value="unlimited">Unlimited repetitions</option>
+          </select>
+        </label>
+      )}
+      {!flexiblePeriod && (t.repetitions === "goal" || t.repetitions === "multiple") && (
+        <label>
+          Daily goal
+          <input
+            type="number"
+            min={t.repetitions === "multiple" ? 2 : 1}
+            max={100}
+            required
+            value={taskProgressGoal(t)}
+            onChange={(e) => update({ dailyGoal: Number(e.target.value) })}
+          />
+        </label>
+      )}
+      {!flexiblePeriod && (
+        <p className="fine">
+          Entries beyond your goal still count. Unlimited tasks have no automatic misses.
+        </p>
+      )}
+
+      <TaskAdvancedFields
+        task={t}
+        update={update}
+        sectionRef={(el) => {
+          shortcutTargets.current.upNext = el;
+        }}
+      />
 
       <section className="task-editor-fields" aria-label="Task settings">
-        <h3>Frequency, Progress &amp; Notes</h3>
+        <h3>Notes</h3>
         {t.steps?.length ? (
           <details className="saved-task-steps">
             <summary>
@@ -2043,43 +2220,6 @@ function TaskEditor({
             </p>
           </details>
         ) : null}
-        {(t.repeat === "interval" || t.repeat === "afterCompletion") && (
-          <label>
-            Interval in calendar days
-            <input
-              type="number"
-              min={1}
-              max={365}
-              required
-              value={t.intervalDays || 1}
-              onChange={(e) => update({ intervalDays: Number(e.target.value) })}
-            />
-          </label>
-        )}
-        {t.repeat === "selected" && (
-          <fieldset>
-            <legend>Choose at least one day</legend>
-            <div className="days">
-              {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
-                <label key={d}>
-                  <input
-                    type="checkbox"
-                    checked={t.days.includes(i)}
-                    onChange={(e) =>
-                      update({
-                        days: e.target.checked
-                          ? [...t.days, i]
-                          : t.days.filter((x) => x !== i),
-                      })
-                    }
-                  />
-                  {d}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        )}
-
         <label>
           Notes (optional)
           <textarea
@@ -2088,47 +2228,6 @@ function TaskEditor({
             onChange={(e) => update({ description: e.target.value })}
           />
         </label>
-        {flexiblePeriod ? (
-          <p className="fine">One completion any day before the period ends.</p>
-        ) : (
-          <label>
-            Daily entries
-            <select
-              value={t.repetitions || "once"}
-              onChange={(e) =>
-                update({
-                  repetitions: e.target.value as Task["repetitions"],
-                  ...(e.target.value === "multiple" ? { dailyGoal: 3 } : {}),
-                })
-              }
-            >
-              <option value="once">Once per day</option>
-              <option value="multiple">Multiple times per day</option>
-              <option value="goal">Custom daily goal</option>
-              <option value="unlimited">Unlimited repetitions</option>
-            </select>
-          </label>
-        )}
-        {!flexiblePeriod &&
-          (t.repetitions === "goal" || t.repetitions === "multiple") && (
-          <label>
-            Daily goal
-            <input
-              type="number"
-              min={t.repetitions === "multiple" ? 2 : 1}
-              max={100}
-              required
-              value={taskProgressGoal(t)}
-              onChange={(e) => update({ dailyGoal: Number(e.target.value) })}
-            />
-          </label>
-          )}
-        {!flexiblePeriod && (
-          <p className="fine">
-            Entries beyond your goal still count. Unlimited tasks have no
-            automatic misses.
-          </p>
-        )}
       </section>
       <div className="button-row">
         <button

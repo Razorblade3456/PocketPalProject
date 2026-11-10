@@ -80,6 +80,9 @@
 .app .collection-row > summary::-webkit-details-marker {
   display: none;
 }
+.app .collection-row.is-empty > summary {
+  grid-template-columns: 22px minmax(0, 1fr) 16px;
+}
 .app .collection-row-icon {
   display: grid;
   place-items: center;

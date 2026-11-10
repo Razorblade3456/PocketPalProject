@@ -88,6 +88,7 @@ export type Task = {
   repeat:
     | "daily"
     | "weekly"
+    | "monthly"
     | "weeklyAny"
     | "monthlyAny"
     | "selected"
@@ -95,6 +96,7 @@ export type Task = {
     | "interval"
     | "afterCompletion";
   intervalDays?: number;
+  dayOfMonth?: number;
   createdDate?: string;
   durationMinutes?: number;
   priority?: "low" | "normal" | "high";
@@ -398,6 +400,14 @@ export const due = (t: Task, n = Date.now(), outcomes: Occurrence[] = []) => {
   if (t.repeat === "daily") return true;
   if (t.repeat === "once") return key === t.date;
   if (t.repeat === "weekly") return d.getDay() === localDate(t.date).getDay();
+  if (t.repeat === "monthly") {
+    const selectedDay = Math.max(
+      1,
+      Math.min(31, t.dayOfMonth ?? localDate(t.date).getDate()),
+    );
+    const finalDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return d.getDate() === Math.min(selectedDay, finalDay);
+  }
   if (t.repeat === "weeklyAny" || t.repeat === "monthlyAny") return true;
   if (t.repeat === "selected") return t.days.includes(d.getDay());
   const interval = Math.max(1, t.intervalDays || 1);
@@ -1373,6 +1383,7 @@ const taskValid = (t: Task) =>
   [
     "daily",
     "weekly",
+    "monthly",
     "weeklyAny",
     "monthlyAny",
     "selected",
@@ -1380,6 +1391,8 @@ const taskValid = (t: Task) =>
     "interval",
     "afterCompletion",
   ].includes(t.repeat) &&
+  (t.dayOfMonth === undefined ||
+    (Number.isInteger(t.dayOfMonth) && t.dayOfMonth >= 1 && t.dayOfMonth <= 31)) &&
   Array.isArray(t.days) &&
   t.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) &&
   isDate(t.date) &&
