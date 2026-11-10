@@ -8,7 +8,15 @@ export const priorityBallColors = {
   normal: "#E5A35D",
   low: "#9CB58B",
 };
-/** Read-only visual history: priority comes from the recorded task, never the live task. */
+export function normalizeJarPriority(value: unknown): NonNullable<Task["priority"]> {
+  return value === "high" || value === "low" || value === "normal"
+    ? value
+    : "normal";
+}
+/**
+ * Read-only visual history. Priority comes from the recorded task snapshot,
+ * never the live task; legacy records without a snapshot use Normal.
+ */
 export function jarBalls(s: State, date: string): JarBall[] {
   const tracked = new Set(s.tasks.map((task) => task.id));
   const records = new Map(s.outcomes.map((o) => [rewardKey(o), o]));
@@ -17,7 +25,9 @@ export function jarBalls(s: State, date: string): JarBall[] {
       .filter((c) => c.date === date && tracked.has(c.taskId))
       .map((c) => ({
         ...c,
-        priority: records.get(rewardKey(c))?.task.priority,
+        priority: normalizeJarPriority(
+          records.get(rewardKey(c))?.task.priority,
+        ),
       })),
     ...s.outcomes
       .filter(
@@ -28,6 +38,10 @@ export function jarBalls(s: State, date: string): JarBall[] {
           !o.automatic &&
           !o.deleted,
       )
-      .map((o) => ({ ...o, priority: o.task.priority, missed: true })),
+      .map((o) => ({
+        ...o,
+        priority: normalizeJarPriority(o.task.priority),
+        missed: true,
+      })),
   ].sort((a, b) => a.at - b.at);
 }

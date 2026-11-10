@@ -1055,7 +1055,7 @@ export function Pet({
       aria-label={
         preview ? `${pets[kind].name}: ${stages[level]}` : "Pet your companion"
       }
-      className={`pet-button species-${kind} stage-${level} ${sleep ? "sleeping" : ""} ${calm ? "calm" : ""} ${excited ? "food-approach" : ""} ${careAction === "food" ? "is-eating" : careAction === "water" ? "is-drinking" : careAction === "clean" ? "is-cleaning" : careAction === "happy" ? "is-playing" : ""} ${reaction.includes("favorite") ? "favorite-reaction" : ""} ${sad ? "hurt" : ""} ${preview ? "pet-preview" : ""}`}
+      className={`pet-button species-${kind} stage-${level} ${sleep ? "sleeping" : ""} ${calm ? "calm" : ""} ${excited ? "food-approach" : ""} ${careAction === "food" ? "is-eating" : careAction === "water" ? "is-drinking" : careAction === "clean" ? "is-cleaning" : careAction === "happy" ? "is-playing" : ""} ${reaction.includes("favorite") ? "favorite-reaction" : ""} ${animated ? "has-reaction" : ""} ${sad ? "hurt" : ""} ${preview ? "pet-preview" : ""}`}
       onPointerMove={(e) => {
         if (preview || level === 5) return;
         const r = e.currentTarget.getBoundingClientRect();

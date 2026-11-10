@@ -3552,6 +3552,24 @@ dialog {
 .pet-button.favorite-reaction:not(.stage-5) .pet-art {
   animation: favorite-wiggle 0.35s ease-in-out 5;
 }
+/* Interaction/reaction is the primary motion; suppress competing pet-art bobbing. */
+.pet-button.is-eating .pet-art,
+.pet-button.is-drinking .pet-art,
+.pet-button.is-cleaning .pet-art,
+.pet-button.is-playing .pet-art,
+.pet-button.has-reaction .pet-art,
+.pet-button.hurt .pet-art,
+.pet-button.sleeping .pet-art,
+.pet-button.stage-5 .pet-art {
+  animation: none !important;
+}
+.pet-button.has-reaction .care-idle,
+.pet-button.has-reaction .care-face,
+.pet-button.has-reaction .hunger-appearance *,
+.pet-button.has-reaction .hydration-appearance *,
+.pet-button.has-reaction .cleanliness-overlay * {
+  animation: none !important;
+}
 @keyframes food-notice {
   50% {
     transform: translateY(-5px) rotate(2deg);

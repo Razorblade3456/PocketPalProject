@@ -12,6 +12,7 @@ export function OutcomeControls({
   canUndo,
   rewardCoins = 5,
   missPenalty = 8,
+  missDisabled = false,
 }: {
   name: string;
   counts: { completed: number; missed: number };
@@ -21,6 +22,7 @@ export function OutcomeControls({
   canUndo: boolean;
   rewardCoins?: number;
   missPenalty?: number;
+  missDisabled?: boolean;
 }) {
   const [locked, setLocked] = useState(false),
     until = useRef(0),
@@ -78,7 +80,7 @@ export function OutcomeControls({
                 ? `Record another missed attempt · up to −${missPenalty} care`
                 : "Record a missed attempt · no care penalty"
             }
-            disabled={locked}
+            disabled={locked || missDisabled}
             onClick={() => act("missed")}
           >
             <Minus size={16} />

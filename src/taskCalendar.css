@@ -58,19 +58,31 @@
   background: #352b40;
   border-color: #9b7eac;
 }
+.app .calendar-day.is-today {
+  border-color: #b6a2cc;
+  box-shadow: 0 0 0 1px #b6a2cc55;
+}
 .app .calendar-day.is-today .calendar-date {
-  text-decoration: underline;
-  text-underline-offset: 4px;
-  text-decoration-color: #b6a2cc;
+  color: #e4d5ef;
+  font-weight: 800;
 }
 .app .calendar-day[aria-pressed="true"] {
   background: #44334f;
   border-color: #c1a1d3;
   box-shadow: inset 0 0 0 1px #a080b4;
 }
+.app .calendar-day.is-today[aria-pressed="true"] {
+  box-shadow: 0 0 0 1px #b6a2cc66, inset 0 0 0 1px #a080b4;
+}
 .calendar-date {
   font-size: 12px;
   line-height: 1.2;
+}
+.calendar-vacation-mark {
+  margin-left: 2px;
+  color: #b4aa91;
+  font-size: 9px;
+  font-weight: 500;
 }
 .calendar-orbs {
   display: flex;
@@ -277,6 +289,84 @@
 .app .calendar-selected[open] summary {
   margin-bottom: 9px;
 }
+.calendar-vacation-message {
+  margin: 4px 0 8px;
+  padding: 7px 10px;
+  border: 1px solid #827b6655;
+  border-radius: 9px;
+  background: #716a3517;
+  color: #c9c09f;
+  text-align: center;
+  font-size: 11px;
+}
+.calendar-vacation-tools {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  margin: 8px 0 12px;
+}
+.app .calendar-vacation-action,
+.calendar-vacation-range > div > button {
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid #827b6655;
+  border-radius: 9px;
+  background: #34332a;
+  color: #d0c7a8;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+.app .calendar-vacation-action:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.calendar-vacation-tools > small,
+.calendar-vacation-notice {
+  color: #aaa28d;
+  text-align: center;
+  font-size: 10px;
+  line-height: 1.45;
+}
+.calendar-vacation-range {
+  width: 100%;
+  max-width: 380px;
+  border-top: 1px solid #493b52;
+  padding-top: 6px;
+}
+.calendar-vacation-range > summary {
+  color: #bdb4c7;
+  text-align: center;
+  font-size: 10px;
+  cursor: pointer;
+}
+.calendar-vacation-range > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 8px;
+}
+.calendar-vacation-range label {
+  display: grid;
+  gap: 4px;
+  color: #bdb4c7;
+  font-size: 10px;
+}
+.calendar-vacation-range input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 5px;
+  border: 1px solid #53465b;
+  border-radius: 7px;
+  background: #24202b;
+  color: #eee8e4;
+  font: inherit;
+}
+.calendar-vacation-range > div > button {
+  grid-column: 1 / -1;
+}
 .app .calendar-selected ul {
   max-height: 240px;
   overflow-y: auto;
@@ -405,6 +495,14 @@
   }
   .calendar-edit span {
     max-width: 38px;
+  }
+  .app .calendar-vacation-action,
+  .calendar-vacation-range > div > button {
+    min-height: 44px;
+  }
+  .calendar-vacation-range input {
+    min-height: 44px;
+    font-size: 16px;
   }
 }
 .app .calendar-add {

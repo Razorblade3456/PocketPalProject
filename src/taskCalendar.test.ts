@@ -33,6 +33,32 @@ const task = (patch: Partial<Task> = {}): Task => ({
   careLinked: false,
   ...patch,
 });
+test("flexible calendar tasks stay singular across their window and show the deadline", () => {
+  let s = saveTask(
+    initial(now),
+    task({
+      id: "weekly-any",
+      name: "Read one chapter",
+      repeat: "weeklyAny",
+      date: "2026-10-26",
+      createdDate: "2026-10-26",
+    }),
+    now,
+  );
+  const monday = calendarTasks(s, "2026-11-02")[0],
+    sunday = calendarTasks(s, "2026-11-08")[0];
+  assert.equal(monday.task.id, "weekly-any");
+  assert.equal(sunday.task.id, "weekly-any");
+  assert.equal(monday.deadline, "Due Sunday");
+  assert.equal(sunday.deadline, "Due Sunday");
+  s = { ...s, vacationDays: ["2026-11-02"] };
+  const html = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-02" }),
+  );
+  assert.ok(html.includes("vacation day"));
+  assert.ok(html.includes("Vacation Day — tasks can rest today."));
+  assert.ok(html.includes("☾"));
+});
 test("future start dates reuse recurrence without appearing early or changing the save", () => {
   let s = initial(now);
   for (const t of [
@@ -337,7 +363,9 @@ test("jar colors use immutable recorded priority and legacy records retain defau
     jarBalls(s, "2026-11-01");
     assert.equal(JSON.stringify(s), before);
     delete s.outcomes[0].task.priority;
-    assert.equal(jarBalls(s, "2026-11-01")[0].priority, undefined);
+    assert.equal(jarBalls(s, "2026-11-01")[0].priority, "normal");
+    s.outcomes[0].task.priority = "invalid" as Task["priority"];
+    assert.equal(jarBalls(s, "2026-11-01")[0].priority, "normal");
   }
 });
 test("manual skull balls preserve success totals, coins and care; undo removes them; automatic misses excluded", () => {
@@ -351,6 +379,9 @@ test("manual skull balls preserve success totals, coins and care; undo removes t
   assert.equal(balls[0].missed, true);
   assert.ok(
     renderToStaticMarkup(createElement(Jar, { balls })).includes("jar-skull"),
+  );
+  assert.ok(
+    renderToStaticMarkup(createElement(Jar, { balls })).includes("#25232a"),
   );
   assert.equal(s.coins, coins);
   assert.equal(JSON.stringify(s.care), care);

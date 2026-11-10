@@ -4,8 +4,9 @@ import {
   shiftDate,
   taskDue,
   taskCounts,
-  taskFinishedToday,
   taskProgressGoal,
+  taskPeriod,
+  taskDeadlineLabel,
   sortActiveTasks,
   type State,
   type Task,
@@ -31,6 +32,7 @@ export type CalendarTask = {
   missed: number;
   goal: number;
   status: string;
+  deadline?: string;
 };
 /** A read-only projection. Recorded snapshots retain historical names and goals. */
 export function calendarTasks(
@@ -53,9 +55,30 @@ export function calendarTasks(
     }
   }
   return sortActiveTasks([...planned.values()]).map((task) => {
-    const counts = taskCounts(s, task.id, date),
+    const flexible =
+        task.repeat === "weeklyAny" || task.repeat === "monthlyAny",
+      period = flexible ? taskPeriod(task, date) : { start: date, end: date },
+      first = [period.start, task.date, task.createdDate || task.date]
+        .sort()
+        .at(-1)!,
+      entries = flexible
+        ? s.outcomes.filter(
+            (o) =>
+              o.taskId === task.id &&
+              o.date >= first &&
+              o.date <= date &&
+              !o.deleted,
+          )
+        : undefined,
+      allCounts = taskCounts(s, task.id, date),
+      counts = entries
+        ? {
+            completed: entries.filter((o) => o.status === "completed").length,
+            missed: entries.filter((o) => o.status === "missed").length,
+          }
+        : allCounts,
       goal = taskProgressGoal(task),
-      completed = taskFinishedToday(s, task, date);
+      completed = counts.completed >= goal;
     const missed = counts.missed;
     const status = completed
       ? "Completed"
@@ -64,6 +87,14 @@ export function calendarTasks(
         : date < today && goal > 0
           ? "Unfinished"
           : "Pending";
-    return { task, completed, count: counts.completed, missed, goal, status };
+    return {
+      task,
+      completed,
+      count: counts.completed,
+      missed,
+      goal,
+      status,
+      deadline: taskDeadlineLabel(task, date),
+    };
   });
 }

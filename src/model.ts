@@ -39,7 +39,14 @@ export type Task = {
   description: string;
   time: string;
   repeat:
-    "daily" | "weekly" | "selected" | "once" | "interval" | "afterCompletion";
+    | "daily"
+    | "weekly"
+    | "weeklyAny"
+    | "monthlyAny"
+    | "selected"
+    | "once"
+    | "interval"
+    | "afterCompletion";
   intervalDays?: number;
   createdDate?: string;
   durationMinutes?: number;
@@ -92,6 +99,7 @@ export type Occurrence = Completion & {
   timeZone?: string;
 };
 type Settings = {
+  tutorialSeen?: boolean;
   petCare?: boolean;
   alarmSound?: boolean;
   alarmsEnabled?: boolean;
@@ -172,6 +180,7 @@ export type State = {
   rewardPolicy?: RewardPolicy;
   rewardLedger?: RewardTransaction[];
   habitEvents?: HabitEvent[];
+  vacationDays?: string[];
   focusDays?: Record<string, string[]>;
   version: 4;
   ownedOutfits: Outfit[];
@@ -222,6 +231,68 @@ export const shiftDate = (key: string, days: number) => {
   d.setDate(d.getDate() + days);
   return dateKey(+d);
 };
+export type TaskPeriod = { start: string; end: string };
+/** Local-calendar window for flexible recurring work; weeks are Monday–Sunday. */
+export function taskPeriod(task: Task, date: string): TaskPeriod {
+  if (task.repeat === "weeklyAny") {
+    const start = shiftDate(date, -((localDate(date).getDay() + 6) % 7));
+    return { start, end: shiftDate(start, 6) };
+  }
+  if (task.repeat === "monthlyAny") {
+    const start = `${date.slice(0, 7)}-01`;
+    const next = localDate(start);
+    next.setMonth(next.getMonth() + 1);
+    return { start, end: shiftDate(dateKey(+next), -1) };
+  }
+  return { start: date, end: date };
+}
+export function taskDeadlineLabel(task: Task, date: string): string | undefined {
+  if (task.repeat !== "weeklyAny" && task.repeat !== "monthlyAny")
+    return undefined;
+  const end = taskPeriod(task, date).end;
+  const due = localDate(end).toLocaleDateString(
+    undefined,
+    task.repeat === "weeklyAny"
+      ? { weekday: "long" }
+      : { month: "short", day: "numeric" },
+  );
+  return `Due ${due}`;
+}
+export const isVacationDay = (s: Pick<State, "vacationDays">, date: string) =>
+  !!s.vacationDays?.includes(date);
+/** Add a current/future date range without rewriting settled history. */
+export function addVacationRange(
+  s: State,
+  start: string,
+  end: string,
+  n = Date.now(),
+): State {
+  const first = start <= end ? start : end,
+    last = start <= end ? end : start,
+    today = dateKey(n);
+  if (
+    !isDate(first) ||
+    !isDate(last) ||
+    first < today ||
+    last < today ||
+    calendarDays(last, first) > 365
+  )
+    return s;
+  const dates = new Set(s.vacationDays || []);
+  for (let date = first; date <= last; date = shiftDate(date, 1))
+    dates.add(date);
+  return dates.size === (s.vacationDays || []).length
+    ? s
+    : { ...s, vacationDays: [...dates].sort() };
+}
+/** Settled vacation history is immutable in V1. */
+export function removeVacationDay(s: State, date: string, n = Date.now()) {
+  if (date < dateKey(n) || !isVacationDay(s, date)) return s;
+  return {
+    ...s,
+    vacationDays: (s.vacationDays || []).filter((day) => day !== date),
+  };
+}
 const endOfDay = (key: string) =>
   +new Date(shiftDate(key, 1) + "T00:00:00") - 1;
 const clamp = (v: number, min = 0) => Math.max(min, Math.min(100, v));
@@ -278,6 +349,7 @@ export const due = (t: Task, n = Date.now(), outcomes: Occurrence[] = []) => {
   if (t.repeat === "daily") return true;
   if (t.repeat === "once") return key === t.date;
   if (t.repeat === "weekly") return d.getDay() === localDate(t.date).getDay();
+  if (t.repeat === "weeklyAny" || t.repeat === "monthlyAny") return true;
   if (t.repeat === "selected") return t.days.includes(d.getDay());
   const interval = Math.max(1, t.intervalDays || 1);
   const last = outcomes
@@ -415,14 +487,41 @@ export function outcomeFor(s: State, id: string, date: string) {
   );
 }
 export const goalFor = (task: Task) =>
-  task.repetitions === "unlimited"
-    ? 0
-    : task.repetitions === "goal"
-      ? Math.max(1, Math.min(100, Math.round(task.dailyGoal || 1)))
-      : 1;
+  task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
+    ? 1
+    : task.repetitions === "unlimited"
+      ? 0
+      : task.repetitions === "goal"
+        ? Math.max(1, Math.min(100, Math.round(task.dailyGoal || 1)))
+        : 1;
 export function taskCounts(s: State, id: string, date: string) {
+  const snapshots = s.outcomes
+    .filter((o) => o.taskId === id && !o.deleted && o.date <= date)
+    .filter((o) => {
+      if (o.task.repeat === "weeklyAny" || o.task.repeat === "monthlyAny") {
+        const period = taskPeriod(o.task, date);
+        return date >= period.start && date <= period.end;
+      }
+      return o.date === date;
+    })
+    .sort((a, b) => b.sequence - a.sequence);
+  const task =
+    (date < dateKey() ? snapshots[0]?.task : undefined) ||
+    s.tasks.find((t) => t.id === id) ||
+    snapshots[0]?.task;
+  const period =
+    task && (task.repeat === "weeklyAny" || task.repeat === "monthlyAny")
+      ? taskPeriod(task, date)
+      : { start: date, end: date };
+  const first = task
+    ? [period.start, task.date, task.createdDate || task.date].sort().at(-1)!
+    : date;
   const entries = s.outcomes.filter(
-    (o) => o.taskId === id && o.date === date && !o.deleted,
+    (o) =>
+      o.taskId === id &&
+      o.date >= first &&
+      o.date <= period.end &&
+      !o.deleted,
   );
   return {
     completed: entries.filter((o) => o.status === "completed").length,
@@ -434,7 +533,9 @@ export function taskCounts(s: State, id: string, date: string) {
 }
 /** UI targets do not change recurrence minimums or funded reward limits. */
 export const taskProgressGoal = (task: Task) =>
-  task.repetitions === "multiple"
+  task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
+    ? 1
+    : task.repetitions === "multiple"
     ? Math.max(
         2,
         Math.min(
@@ -444,7 +545,9 @@ export const taskProgressGoal = (task: Task) =>
       )
     : goalFor(task);
 export const taskFinishedToday = (s: State, task: Task, date: string) =>
-  task.repetitions === "unlimited"
+  task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
+    ? taskCounts(s, task.id, date).completed >= 1
+    : task.repetitions === "unlimited"
     ? (s.habitEvents || [])
         .filter(
           (e) =>
@@ -465,7 +568,12 @@ export function recordAttempt(
   id: string = crypto.randomUUID(),
 ): State {
   s = decay(s, n);
-  if (s.outcomes.some((o) => o.id === id) || date > dateKey(n)) return s;
+  if (
+    s.outcomes.some((o) => o.id === id) ||
+    date > dateKey(n) ||
+    (status === "missed" && isVacationDay(s, date))
+  )
+    return s;
   const task = s.tasks.find((t) => t.id === taskId);
   if (!task || !taskDue(s, task, +localDate(date))) return s;
   const entry: Occurrence = {
@@ -504,7 +612,12 @@ export function correctAttempt(
 ): State {
   s = decay(s, n);
   const old = s.outcomes.find((o) => o.id === id && !o.deleted);
-  if (!old || old.status === status) return s;
+  if (
+    !old ||
+    old.status === status ||
+    (status === "missed" && isVacationDay(s, old.date))
+  )
+    return s;
   return project(
     {
       ...s,
@@ -744,16 +857,48 @@ export function decay(s: State, n = Date.now()): State {
     day = shiftDate(day, 1)
   ) {
     for (const task of s.tasks) {
-      if (!taskDue({ ...s, outcomes }, task, +localDate(day))) continue;
+      const flexible =
+          task.repeat === "weeklyAny" || task.repeat === "monthlyAny",
+        period = flexible ? taskPeriod(task, day) : { start: day, end: day };
+      if (flexible && period.end !== day) continue;
+      if (!flexible && isVacationDay(s, day)) continue;
+      if (
+        !flexible &&
+        !taskDue({ ...s, outcomes }, task, +localDate(day))
+      )
+        continue;
       const records = outcomes.filter(
-        (o) => o.taskId === task.id && o.date === day && !o.deleted,
+        (o) =>
+          o.taskId === task.id &&
+          o.date >= period.start &&
+          o.date <= period.end &&
+          !o.deleted,
       );
       const recorded = records.filter((o) => o.status !== "pending").length;
       const shortfall = Math.max(0, goalFor(task) - recorded);
+      if (flexible) {
+        let available = false;
+        const first =
+          [period.start, task.date, task.createdDate || task.date]
+            .sort()
+            .at(-1)!;
+        for (let date = first; date <= period.end; date = shiftDate(date, 1)) {
+          if (
+            !isVacationDay(s, date) &&
+            taskDue({ ...s, outcomes }, task, +localDate(date))
+          ) {
+            available = true;
+            break;
+          }
+        }
+        if (!available) continue;
+      }
       const pending = records.filter((o) => o.status === "pending");
       for (let i = 0; i < shortfall; i++) {
         const old = pending[i];
-        const id = old?.id ?? JSON.stringify(["auto", task.id, day, i]);
+        const id =
+          old?.id ??
+          JSON.stringify([flexible ? "auto-period" : "auto", task.id, day, i]);
         const occurrence: Occurrence = {
           ...(old || {}),
           id,
@@ -798,6 +943,7 @@ export function setOutcome(
   if (
     !task ||
     (!old && !taskDue(s, task, +localDate(date))) ||
+    (status === "missed" && isVacationDay(s, date)) ||
     old?.status === status ||
     (!old && status === "pending")
   )
@@ -1144,6 +1290,8 @@ const taskValid = (t: Task) =>
   [
     "daily",
     "weekly",
+    "weeklyAny",
+    "monthlyAny",
     "selected",
     "once",
     "interval",
@@ -1193,7 +1341,9 @@ function commonValid(x: unknown): boolean {
     [0.5, 1, 2].includes(s.settings.speed) &&
     ["sound", "motion", "reminders", "cozy"].every(
       (k) => typeof s.settings[k as keyof Settings] === "boolean",
-    )
+    ) &&
+    (s.settings.tutorialSeen === undefined ||
+      typeof s.settings.tutorialSeen === "boolean")
   );
 }
 function validModel(x: unknown, version: number): x is State {
@@ -1754,6 +1904,14 @@ export function validHabitData(s: State) {
               s.outcomes?.some((o) => o.id === e.entryId)),
       ) ||
       new Set(s.rewardLedger.map((e) => e.id)).size !== s.rewardLedger.length)
+  )
+    return false;
+  if (
+    s.vacationDays !== undefined &&
+    (!Array.isArray(s.vacationDays) ||
+      s.vacationDays.length > 20000 ||
+      !s.vacationDays.every(isDate) ||
+      new Set(s.vacationDays).size !== s.vacationDays.length)
   )
     return false;
   if (

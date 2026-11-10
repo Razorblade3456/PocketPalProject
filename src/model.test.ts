@@ -41,11 +41,17 @@ import {
   petRhythm,
   sortTodayTasks,
   taskDue,
+  addVacationRange,
+  removeVacationDay,
+  isVacationDay,
+  taskPeriod,
+  taskDeadlineLabel,
   SUPPLIES,
   type State,
   type Task,
   type Care,
 } from "./model";
+import { jarBalls } from "./jarModel";
 const now = +new Date(2026, 9, 25, 12),
   hour = 3600000;
 const task = (id = "a", patch: Partial<Task> = {}): Task => ({
@@ -1443,4 +1449,144 @@ test("Up Next data is optional for old tasks and invalid queue lengths are rejec
     ],
   };
   assert.equal(validState(bad), false);
+});
+test("tutorial completion setting round-trips and remains optional for existing saves", () => {
+  const s = initial(now);
+  const old = JSON.parse(JSON.stringify(s));
+  assert.ok(parseState(old));
+  s.settings.tutorialSeen = true;
+  assert.equal(parseState(JSON.parse(JSON.stringify(s)))?.settings.tutorialSeen, true);
+  s.settings.tutorialSeen = "yes" as unknown as boolean;
+  assert.equal(parseState(JSON.parse(JSON.stringify(s))), null);
+});
+test("vacation ranges save current/future dates and cannot rewrite settled dates", () => {
+  const today = "2026-10-25",
+    n = +localDate(today);
+  let s = saveTask(initial(n), task("daily", { date: today, createdAt: n }), n);
+  s = addVacationRange(s, today, today, n);
+  assert.equal(isVacationDay(s, today), true);
+  assert.equal(removeVacationDay(s, today, n).vacationDays?.length, 0);
+  const range = addVacationRange(s, "2026-10-27", "2026-10-26", n);
+  assert.deepEqual(range.vacationDays?.sort(), [today, "2026-10-26", "2026-10-27"]);
+  assert.deepEqual(
+    parseState(JSON.parse(JSON.stringify(range)))?.vacationDays,
+    range.vacationDays,
+  );
+  assert.equal(addVacationRange(s, "2026-10-24", today, n), s);
+  assert.equal(
+    removeVacationDay(s, today, +localDate("2026-10-26")),
+    s,
+    "past vacation entries stay locked after settlement",
+  );
+  const missedOnRest = recordAttempt(s, "daily", today, "missed", n, "rest-miss");
+  assert.equal(missedOnRest.outcomes.some((o) => o.id === "rest-miss"), false);
+  const completedOnRest = recordAttempt(
+    s,
+    "daily",
+    today,
+    "completed",
+    n,
+    "rest-complete",
+  );
+  assert.equal(completedOnRest.completions.length, 1);
+  assert.equal(
+    correctAttempt(completedOnRest, "rest-complete", "missed", n)
+      .outcomes[0].status,
+    "completed",
+    "a vacation completion cannot be converted into a missed penalty",
+  );
+  const settled = decay(s, +localDate("2026-10-26"));
+  assert.equal(settled.outcomes.length, 0);
+  assert.equal(settled.completions.length, 0);
+  assert.equal(jarBalls(settled, today).length, 0);
+});
+test("weekly-any period uses Monday through Sunday and settles only one miss", () => {
+  const monday = "2026-10-19",
+    friday = "2026-10-23",
+    sunday = "2026-10-25",
+    nextMonday = "2026-10-26",
+    n = +localDate(monday),
+    flexible = task("week", {
+      repeat: "weeklyAny",
+      date: monday,
+      createdDate: monday,
+      createdAt: n,
+      repetitions: "unlimited",
+    });
+  assert.deepEqual(taskPeriod(flexible, friday), { start: monday, end: sunday });
+  assert.equal(taskDeadlineLabel(flexible, friday), "Due Sunday");
+  let s = saveTask(initial(n), flexible, n);
+  s = recordAttempt(s, "week", friday, "completed", +localDate(friday), "week-done");
+  s = decay(s, +localDate(nextMonday));
+  assert.equal(s.outcomes.filter((o) => o.status === "missed").length, 0);
+  assert.equal(taskCounts(s, "week", sunday).completed, 1);
+  assert.equal(taskFinishedToday(s, flexible, sunday), true);
+  assert.equal(taskCounts(s, "week", nextMonday).completed, 0);
+
+  const unfinished = saveTask(
+    initial(n),
+    task("unfinished", { repeat: "weeklyAny", date: monday, createdDate: monday, createdAt: n }),
+    n,
+  );
+  const settled = decay(unfinished, +localDate(nextMonday));
+  assert.equal(
+    settled.outcomes.filter((o) => o.taskId === "unfinished" && o.status === "missed").length,
+    1,
+  );
+  assert.equal(settled.outcomes.find((o) => o.taskId === "unfinished")?.date, sunday);
+  assert.equal(decay(settled, +localDate("2026-10-27")).outcomes.length, 1);
+});
+test("weekly vacation windows are excused only when all available days are covered", () => {
+  const monday = "2026-10-19",
+    sunday = "2026-10-25",
+    nextMonday = "2026-10-26",
+    n = +localDate(monday),
+    weekly = task("week", { repeat: "weeklyAny", date: monday, createdDate: monday, createdAt: n });
+  let full = saveTask(initial(n), weekly, n);
+  full = addVacationRange(full, monday, sunday, n);
+  assert.equal(decay(full, +localDate(nextMonday)).outcomes.length, 0);
+
+  let partial = saveTask(initial(n), weekly, n);
+  partial = addVacationRange(partial, monday, "2026-10-23", n);
+  const settled = decay(partial, +localDate(nextMonday));
+  assert.equal(settled.outcomes.filter((o) => o.status === "missed").length, 1);
+});
+test("monthly-any task has one month-end outcome and refresh begins the next period", () => {
+  const first = "2026-11-01",
+    last = "2026-11-30",
+    next = "2026-12-01",
+    n = +localDate(first),
+    monthly = task("month", {
+      repeat: "monthlyAny",
+      date: first,
+      createdDate: first,
+      createdAt: n,
+      repetitions: "goal",
+      dailyGoal: 5,
+    });
+  assert.deepEqual(taskPeriod(monthly, "2026-11-12"), { start: first, end: last });
+  assert.equal(taskDeadlineLabel(monthly, "2026-11-12"), "Due Nov 30");
+  const s = saveTask(initial(n), monthly, n);
+  const settled = decay(s, +localDate(next));
+  assert.equal(settled.outcomes.filter((o) => o.status === "missed").length, 1);
+  assert.equal(taskCounts(settled, "month", last).missed, 1);
+  assert.equal(taskCounts(settled, "month", next).missed, 0);
+
+  let completed = saveTask(initial(n), monthly, n);
+  completed = recordAttempt(
+    completed,
+    "month",
+    "2026-11-18",
+    "completed",
+    +localDate("2026-11-18"),
+    "month-done",
+  );
+  assert.equal(
+    decay(completed, +localDate(next)).outcomes.filter((o) => o.status === "missed").length,
+    0,
+  );
+
+  let excused = saveTask(initial(n), monthly, n);
+  excused = addVacationRange(excused, first, last, n);
+  assert.equal(decay(excused, +localDate(next)).outcomes.length, 0);
 });

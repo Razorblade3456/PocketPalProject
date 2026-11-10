@@ -1,4 +1,4 @@
-import { jarBalls } from "./jarModel";
+import { jarBalls, normalizeJarPriority } from "./jarModel";
 import { TaskCalendar } from "./TaskCalendar";
 import { dailyCareBonus, mergeDailyCareBonuses, sortTodayTasks } from "./model";
 import "./priorities.css";
@@ -49,6 +49,8 @@ import {
   taskCounts,
   goalFor,
   taskDue,
+  taskDeadlineLabel,
+  isVacationDay,
   taskReminderMode,
   policyFor,
   rewardLimitFor,
@@ -118,6 +120,7 @@ export default function App() {
     | "rewards"
     | "tasks"
     | "onboard"
+    | "tutorial"
     | "health"
     | "shop"
     | "wardrobe"
@@ -147,6 +150,45 @@ export default function App() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [draftName, setDraftName] = useState(s.name || "Mochi");
   const [demo, setDemo] = useState(true);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const addTaskAfterTutorial = useRef(false);
+  const freshOnboarding = useRef(
+    !s.name &&
+      s.tasks.length === 0 &&
+      s.outcomes.length === 0 &&
+      s.completions.length === 0 &&
+      s.coins === 0,
+  );
+  const tutorial = [
+    [
+      "Today's Tasks",
+      "Add habits and log progress with one tap. Use the + and − controls to correct an entry.",
+    ],
+    [
+      "Priorities & Alarms",
+      "Set task priority and reminders in the editor. Important alarms can keep sounding until you snooze or stop them.",
+    ],
+    [
+      "Up Next",
+      "Add a follow-up task in the editor. Completing this task can automatically activate the next one in your sequence.",
+    ],
+    [
+      "Pick Up Here",
+      "Resume an unfinished task from your dashboard. Your note and timer help you return to where you left off.",
+    ],
+    [
+      "Task Calendar",
+      "Select a date to review or edit its tasks, and look back at recorded progress and jar entries.",
+    ],
+    [
+      "Progress Jar & Care",
+      "Earn coins from completed tasks, then use supplies to care for your pet. Jar balls keep their recorded priority.",
+    ],
+    [
+      "Mini Pet",
+      "Open Mini Mochi for a small floating browser pet. The Windows desktop companion is launched separately.",
+    ],
+  ] as const;
   const today = dateKey(now),
     level = stage(s),
     nightTheme =
@@ -163,10 +205,14 @@ export default function App() {
     taskFinishedToday(s, t, today),
   );
   const activeTasks = orderedTodayTasks.filter(
-    (t) => taskCounts(s, t.id, today).missed === 0,
+    (t) =>
+      !taskFinishedToday(s, t, today) &&
+      taskCounts(s, t.id, today).missed === 0,
   );
   const missedTasks = orderedTodayTasks.filter(
-    (t) => taskCounts(s, t.id, today).missed > 0,
+    (t) =>
+      !taskFinishedToday(s, t, today) &&
+      taskCounts(s, t.id, today).missed > 0,
   );
   const earned = s.completions.filter((c) => c.date === today);
   const jarEntries = jarBalls(s, today);
@@ -300,6 +346,7 @@ export default function App() {
     todayTasks
       .filter(
         (t) =>
+          !isVacationDay(s, today) &&
           taskReminderMode(t) === "reminder" &&
           reminderFor(s, t, today) <= time &&
           taskCounts(s, t.id, today).completed < (goalFor(t) || 1),
@@ -311,7 +358,7 @@ export default function App() {
         setMessage(`Reminder: ${t.name}`);
         void notifyTask("PocketPal Reminder", t.name, "reminder:" + key);
       });
-  }, [now, s.settings, s.name, today, s.tasks, s.outcomes]);
+  }, [now, s.settings, s.name, today, s.tasks, s.outcomes, s.vacationDays]);
   useEffect(() => {
     if (panel || edit !== undefined) {
       dialog.current?.showModal();
@@ -333,9 +380,23 @@ export default function App() {
     v: State["settings"][K],
   ) => setS((p) => changeSettings(p, { [k]: v }));
   const close = () => {
+    if (panel === "tutorial")
+      setS((p) =>
+        p.settings.tutorialSeen
+          ? p
+          : { ...p, settings: { ...p.settings, tutorialSeen: true } },
+      );
     setPanel(null);
     setEdit(undefined);
     setCalendarStart(undefined);
+  };
+  const finishTutorial = () => {
+    setS((p) => ({ ...p, settings: { ...p.settings, tutorialSeen: true } }));
+    setPanel(null);
+    if (addTaskAfterTutorial.current) {
+      addTaskAfterTutorial.current = false;
+      setEdit(null);
+    }
   };
   const openShop = () => {
     setInventoryOpen(false);
@@ -390,7 +451,7 @@ export default function App() {
           token: id,
           taskId: t.id,
           category: entry.category,
-          priority: entry.task.priority,
+          priority: normalizeJarPriority(entry.task.priority),
           missed: status === "missed",
           source: source || {
             x: window.innerWidth / 2,
@@ -595,6 +656,16 @@ export default function App() {
           : counts.missed
             ? "missed"
             : "pending";
+    const rewardedToday =
+      t.repeat === "weeklyAny" || t.repeat === "monthlyAny"
+        ? s.outcomes.filter(
+            (o) =>
+              o.taskId === t.id &&
+              o.date === today &&
+              o.status === "completed" &&
+              !o.deleted,
+          ).length
+        : counts.completed;
     return (
       <motion.article
         layout
@@ -608,6 +679,15 @@ export default function App() {
           )}
           <TaskMeta s={s} task={t} today={today} setS={setS} />
           <div className="task-schedule">
+            {(taskDeadlineLabel(t, today) ||
+              (t.repeat === "daily" ? "Due Today" : undefined)) && (
+              <span className="task-deadline">
+                {taskDeadlineLabel(t, today) || "Due Today"}
+                {t.repeat === "weeklyAny" || t.repeat === "monthlyAny"
+                  ? ` · ${counts.completed}/1 ${t.repeat === "weeklyAny" ? "this week" : "this month"}`
+                  : ""}
+              </span>
+            )}
             <time hidden={t.reminderEnabled === false}>
               {new Date(
                 t.relativeAlarmAt || `2000-01-01T${t.time}`,
@@ -629,9 +709,10 @@ export default function App() {
         <OutcomeControls
           counts={counts}
           missPenalty={t.careLinked === false ? 0 : 8}
+          missDisabled={isVacationDay(s, today)}
           goal={taskProgressGoal(t)}
           rewardCoins={
-            counts.completed < rewardLimitFor(s, t) ? policyFor(s).coins : 0
+            rewardedToday < rewardLimitFor(s, t) ? policyFor(s).coins : 0
           }
           canUndo={!!counts.latest}
           onUndo={() => {
@@ -996,6 +1077,7 @@ export default function App() {
               <TaskCalendar
                 s={s}
                 today={today}
+                onVacationChange={setS}
                 onAdd={(date) => {
                   setCalendarStart(date);
                   setPanel(null);
@@ -1198,8 +1280,14 @@ export default function App() {
                       name: draftName.trim() || "Mochi",
                       tasks: demo ? demoTasks() : [],
                     }));
-                    close();
-                    if (!demo) setEdit(null);
+                    if (freshOnboarding.current && !s.settings.tutorialSeen) {
+                      addTaskAfterTutorial.current = !demo;
+                      setTutorialStep(0);
+                      setPanel("tutorial");
+                    } else {
+                      close();
+                      if (!demo) setEdit(null);
+                    }
                   }}
                 >
                   <label>
@@ -1243,6 +1331,16 @@ export default function App() {
                   Settings <small className="beta-label">Beta</small>
                 </h2>
                 <PwaSettings />
+                <button
+                  className="secondary tutorial-replay"
+                  type="button"
+                  onClick={() => {
+                    setTutorialStep(0);
+                    setPanel("tutorial");
+                  }}
+                >
+                  <Sparkles size={16} /> Tutorial &amp; Help
+                </button>
                 <label>
                   Pet name
                   <input
@@ -1396,6 +1494,40 @@ export default function App() {
                   }}
                 />
               </>
+            ) : panel === "tutorial" ? (
+              <section
+                className="tutorial-panel"
+                aria-labelledby="tutorial-title"
+                aria-live="polite"
+              >
+                <span className="eyebrow">A QUICK TOUR · {tutorialStep + 1} OF {tutorial.length}</span>
+                <h2 id="tutorial-title">{tutorial[tutorialStep][0]}</h2>
+                <p>{tutorial[tutorialStep][1]}</p>
+                <div
+                  className="tutorial-progress"
+                  role="progressbar"
+                  aria-label="Tutorial progress"
+                  aria-valuemin={1}
+                  aria-valuemax={tutorial.length}
+                  aria-valuenow={tutorialStep + 1}
+                >
+                  <span style={{ width: `${((tutorialStep + 1) / tutorial.length) * 100}%` }} />
+                </div>
+                <div className="button-row tutorial-actions">
+                  <button className="secondary" type="button" onClick={finishTutorial}>Skip</button>
+                  <button
+                    className="secondary"
+                    type="button"
+                    disabled={tutorialStep === 0}
+                    onClick={() => setTutorialStep((step) => Math.max(0, step - 1))}
+                  >Back</button>
+                  {tutorialStep < tutorial.length - 1 ? (
+                    <button className="primary" type="button" onClick={() => setTutorialStep((step) => Math.min(tutorial.length - 1, step + 1))}>Next <ChevronRight size={16} /></button>
+                  ) : (
+                    <button className="primary" type="button" onClick={finishTutorial}>Finish <Check size={16} /></button>
+                  )}
+                </div>
+              </section>
             ) : panel === "tasks" ? (
               <>
                 <span className="eyebrow">TASKS</span>
@@ -1615,6 +1747,7 @@ function TaskEditor({
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [warning, setWarning] = useState("");
   const update = (p: Partial<Task>) => setT((v) => ({ ...v, ...p }));
+  const flexiblePeriod = t.repeat === "weeklyAny" || t.repeat === "monthlyAny";
   return (
     <form
       className="task-editor"
@@ -1719,11 +1852,19 @@ function TaskEditor({
           value={t.repeat}
           onChange={(e) => {
             setScheduleChanged(true);
-            update({ repeat: e.target.value as Task["repeat"] });
+            const repeat = e.target.value as Task["repeat"];
+            update({
+              repeat,
+              ...(repeat === "weeklyAny" || repeat === "monthlyAny"
+                ? { repetitions: "once", dailyGoal: 1 }
+                : {}),
+            });
           }}
         >
-          <option value="daily">Every day</option>
+          <option value="daily">Once per day</option>
           <option value="weekly">Every week</option>
+          <option value="weeklyAny">Once per week · Any day</option>
+          <option value="monthlyAny">Once per month · Any day</option>
           <option value="selected">Selected days</option>
           <option value="once">Just once</option>
           <option value="interval">Every X days</option>
@@ -1898,24 +2039,29 @@ function TaskEditor({
             Sound & notifications during quiet hours
           </label>
         )}
-        <label>
-          Daily entries
-          <select
-            value={t.repetitions || "once"}
-            onChange={(e) =>
-              update({
-                repetitions: e.target.value as Task["repetitions"],
-                ...(e.target.value === "multiple" ? { dailyGoal: 3 } : {}),
-              })
-            }
-          >
-            <option value="once">Once per day</option>
-            <option value="multiple">Multiple times per day</option>
-            <option value="goal">Custom daily goal</option>
-            <option value="unlimited">Unlimited repetitions</option>
-          </select>
-        </label>
-        {(t.repetitions === "goal" || t.repetitions === "multiple") && (
+        {flexiblePeriod ? (
+          <p className="fine">One completion any day before the period ends.</p>
+        ) : (
+          <label>
+            Daily entries
+            <select
+              value={t.repetitions || "once"}
+              onChange={(e) =>
+                update({
+                  repetitions: e.target.value as Task["repetitions"],
+                  ...(e.target.value === "multiple" ? { dailyGoal: 3 } : {}),
+                })
+              }
+            >
+              <option value="once">Once per day</option>
+              <option value="multiple">Multiple times per day</option>
+              <option value="goal">Custom daily goal</option>
+              <option value="unlimited">Unlimited repetitions</option>
+            </select>
+          </label>
+        )}
+        {!flexiblePeriod &&
+          (t.repetitions === "goal" || t.repetitions === "multiple") && (
           <label>
             Daily goal
             <input
@@ -1927,11 +2073,13 @@ function TaskEditor({
               onChange={(e) => update({ dailyGoal: Number(e.target.value) })}
             />
           </label>
+          )}
+        {!flexiblePeriod && (
+          <p className="fine">
+            Entries beyond your goal still count. Unlimited tasks have no
+            automatic misses.
+          </p>
         )}
-        <p className="fine">
-          Entries beyond your goal still count. Unlimited tasks have no
-          automatic misses.
-        </p>
       </section>
       <div className="button-row">
         <button

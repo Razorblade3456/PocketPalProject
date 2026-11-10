@@ -147,6 +147,8 @@ test("all recurrence types and created dates reuse taskDue, without ordinary or 
   for (const repeat of [
     "daily",
     "weekly",
+    "weeklyAny",
+    "monthlyAny",
     "selected",
     "once",
     "interval",
@@ -163,6 +165,13 @@ test("all recurrence types and created dates reuse taskDue, without ordinary or 
     alarmQueue(reconcileAlarms(setup({ importantAlarm: false }), evening))
       .length,
     0,
+  );
+  const vacation = setup();
+  vacation.vacationDays = [dateKey(noon)];
+  assert.equal(
+    alarmQueue(reconcileAlarms(vacation, evening)).length,
+    0,
+    "vacation suppresses scheduled alarms",
   );
   assert.equal(
     alarmQueue(

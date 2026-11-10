@@ -896,6 +896,24 @@
 .care-body[data-body-motion="dead"] .care-idle {
   animation: none;
 }
+/* The full-pet reaction owns the pose while care overlays remain static. */
+.pet-art:has(.care-body[data-body-motion="reaction"]) .care-body *,
+.pet-art:has(.care-body[data-body-motion="reaction"]) .hunger-appearance *,
+.pet-art:has(.care-body[data-body-motion="reaction"]) .hydration-appearance *,
+.pet-art:has(.care-body[data-body-motion="reaction"]) .cleanliness-overlay *,
+.pet-art:has(.care-body[data-body-motion="reaction"]) .moth-wings,
+.pet-art:has(.care-body[data-body-motion="reaction"]) .wing-left,
+.pet-art:has(.care-body[data-body-motion="reaction"]) .wing-right {
+  animation: none !important;
+}
+.pet-art:has(.care-body[data-body-motion="sleep"]) .moth-wings,
+.pet-art:has(.care-body[data-body-motion="sleep"]) .wing-left,
+.pet-art:has(.care-body[data-body-motion="sleep"]) .wing-right,
+.pet-art:has(.care-body[data-body-motion="dead"]) .moth-wings,
+.pet-art:has(.care-body[data-body-motion="dead"]) .wing-left,
+.pet-art:has(.care-body[data-body-motion="dead"]) .wing-right {
+  animation: none !important;
+}
 .pet-button.is-eating .care-mouth,
 .pet-button.is-drinking .care-mouth {
   animation-duration: 0.6s;

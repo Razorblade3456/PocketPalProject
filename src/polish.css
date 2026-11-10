@@ -531,6 +531,62 @@ dialog::backdrop {
   border-color: #b9a2ce33;
   color: #d0bfdf;
 }
+.tutorial-replay {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0 16px;
+}
+.tutorial-panel {
+  padding: 8px 0 2px;
+}
+.modal .tutorial-panel h2 {
+  margin: 8px 0;
+}
+.modal .tutorial-panel > p {
+  min-height: 3.4em;
+  line-height: 1.7;
+  color: #d0c4d5;
+}
+.tutorial-progress {
+  height: 4px;
+  margin: 18px 0;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #493d50;
+}
+.tutorial-progress > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #b69acb;
+  transition: width 180ms ease-out;
+}
+.tutorial-actions {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.tutorial-actions button {
+  min-width: 0;
+}
+.tutorial-actions .primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+@media (max-width: 440px) {
+  .tutorial-actions {
+    gap: 5px;
+  }
+  .tutorial-actions button {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+}
 @media (max-width: 560px) {
   .quick-care {
     gap: 7px;

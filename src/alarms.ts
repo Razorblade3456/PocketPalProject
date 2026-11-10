@@ -8,6 +8,7 @@ import {
   taskReminderMode,
   reminderFor,
   pausedOn,
+  isVacationDay,
   taskFinishedToday,
   type State,
   type Task,
@@ -73,13 +74,15 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
           !!t.steps?.some((step) => step.id === a.stepId) &&
           !stepIsDone(s, t.id, a.stepId, a.date) &&
           stepIsDone(s, t.id, a.originStepId, a.date) &&
-          !pausedOn(s, t.id, a.date)
+          !pausedOn(s, t.id, a.date) &&
+          !isVacationDay(s, a.date)
         );
       if (
         !t ||
         taskReminderMode(t) !== "alarm" ||
         a.schedule !== signature(s, t, a.date) ||
-        pausedOn(s, t.id, a.date)
+        pausedOn(s, t.id, a.date) ||
+        isVacationDay(s, a.date)
       )
         return false;
       const plan = (s.habitEvents || [])
@@ -140,6 +143,7 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
       if (
         !ids.has(id) &&
         !pausedOn(s, t.id, date) &&
+        !isVacationDay(s, date) &&
         !taskFinishedToday(s, t, date) &&
         plan?.kind !== "skip" &&
         plan?.kind !== "reschedule"
@@ -165,7 +169,11 @@ export function reconcileAlarms(s: State, n = Date.now()): State {
       ),
     );
     for (let date = from; date <= today; date = shiftDate(date, 1)) {
-      if (!taskDue(s, t, +localDate(date)) || taskFinishedToday(s, t, date))
+      if (
+        isVacationDay(s, date) ||
+        !taskDue(s, t, +localDate(date)) ||
+        taskFinishedToday(s, t, date)
+      )
         continue;
       const id = JSON.stringify([t.id, date]);
       if (ids.has(id)) continue;

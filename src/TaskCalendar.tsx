@@ -1,9 +1,18 @@
 import { googleCalendarUrl, downloadCalendar } from "./calendarExport";
 import { Jar } from "./Jar";
 import { jarBalls } from "./jarModel";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { ChevronLeft, ChevronRight, Pencil, CalendarPlus } from "lucide-react";
-import { dateKey, localDate, type State, type Task } from "./model";
+import {
+  addVacationRange,
+  calendarDays,
+  dateKey,
+  isVacationDay,
+  localDate,
+  removeVacationDay,
+  type State,
+  type Task,
+} from "./model";
 import {
   calendarMonth,
   calendarDaysForMonth,
@@ -35,15 +44,20 @@ export function TaskCalendar({
   today = dateKey(),
   onEdit,
   onAdd,
+  onVacationChange,
 }: {
   s: State;
   today?: string;
   onEdit?: (task: Task) => void;
   onAdd?: (date: string) => void;
+  onVacationChange?: Dispatch<SetStateAction<State>>;
 }) {
   const [selected, setSelected] = useState(today),
     [month, setMonth] = useState(() => calendarMonth(today)),
     [expanded, setExpanded] = useState(false);
+  const [vacationStart, setVacationStart] = useState(today),
+    [vacationEnd, setVacationEnd] = useState(today),
+    [vacationNotice, setVacationNotice] = useState("");
   const days = useMemo(() => calendarDaysForMonth(month), [month]);
   const byDate = useMemo(
     () =>
@@ -55,6 +69,7 @@ export function TaskCalendar({
     [s, days, today],
   );
   const rows = byDate.get(selected) || calendarTasks(s, selected, today);
+  const selectedIsVacation = isVacationDay(s, selected);
   const monthLabel = localDate(month).toLocaleDateString(undefined, {
     month: "long",
     year: "numeric",
@@ -64,6 +79,44 @@ export function TaskCalendar({
     setMonth(next);
     setSelected(next);
     setExpanded(false);
+  };
+  const markSelectedVacation = () => {
+    if (selected < today) {
+      setVacationNotice(
+        "Past dates are locked because their task outcomes may already be settled.",
+      );
+      return;
+    }
+    onVacationChange?.((p) => addVacationRange(p, selected, selected));
+    setVacationNotice("Vacation day saved.");
+  };
+  const markVacationPeriod = () => {
+    if (!vacationStart || !vacationEnd) {
+      setVacationNotice("Choose both a start and end date.");
+      return;
+    }
+    if (vacationStart < today || vacationEnd < today) {
+      setVacationNotice("Vacation dates can only be added for today or later.");
+      return;
+    }
+    if (Math.abs(calendarDays(vacationEnd, vacationStart)) > 365) {
+      setVacationNotice("Choose a vacation period no longer than one year.");
+      return;
+    }
+    onVacationChange?.((p) =>
+      addVacationRange(p, vacationStart, vacationEnd, +localDate(today)),
+    );
+    setVacationNotice("Vacation dates saved.");
+  };
+  const removeSelectedVacation = () => {
+    if (selected < today) {
+      setVacationNotice(
+        "Past vacation dates are locked because task outcomes may already be settled.",
+      );
+      return;
+    }
+    onVacationChange?.((p) => removeVacationDay(p, selected, +localDate(today)));
+    setVacationNotice("Vacation day removed.");
   };
   return (
     <section className="task-calendar" aria-label="Task Calendar">
@@ -122,6 +175,8 @@ export function TaskCalendar({
               aria-pressed={date === selected}
               aria-label={
                 dayLabel(date) +
+                (date === today ? ", today" : "") +
+                (isVacationDay(s, date) ? ", vacation day" : "") +
                 ", " +
                 byDate.get(date)!.length +
                 " tasks, " +
@@ -131,9 +186,20 @@ export function TaskCalendar({
               onClick={() => {
                 setSelected(date);
                 setExpanded(true);
+                if (date >= today) {
+                  setVacationStart(date);
+                  setVacationEnd(date);
+                }
               }}
             >
-              <span className="calendar-date">{localDate(date).getDate()}</span>
+              <span className="calendar-date">
+                {localDate(date).getDate()}
+                {isVacationDay(s, date) && (
+                  <small className="calendar-vacation-mark" aria-hidden="true">
+                    ☾
+                  </small>
+                )}
+              </span>
               <span className="calendar-orbs">
                 {byDate
                   .get(date)!
@@ -170,6 +236,68 @@ export function TaskCalendar({
           {" · "}
           <span>{rows.length} tasks</span>
         </summary>
+        {selectedIsVacation && (
+          <p className="calendar-vacation-message">
+            Vacation Day — tasks can rest today.
+          </p>
+        )}
+        {onVacationChange && (
+          <div className="calendar-vacation-tools">
+            {selectedIsVacation ? (
+              <button
+                type="button"
+                className="calendar-vacation-action"
+                onClick={removeSelectedVacation}
+                disabled={selected < today}
+              >
+                Remove Vacation
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="calendar-vacation-action"
+                onClick={markSelectedVacation}
+                disabled={selected < today}
+              >
+                ☾ Mark Vacation Day
+              </button>
+            )}
+            {selected < today && (
+              <small>Past dates are locked to protect settled task history.</small>
+            )}
+            <details className="calendar-vacation-range">
+              <summary>Mark a vacation period</summary>
+              <div>
+                <label>
+                  Start
+                  <input
+                    type="date"
+                    min={today}
+                    value={vacationStart}
+                    onChange={(e) => setVacationStart(e.target.value)}
+                  />
+                </label>
+                <label>
+                  End
+                  <input
+                    type="date"
+                    min={today}
+                    value={vacationEnd}
+                    onChange={(e) => setVacationEnd(e.target.value)}
+                  />
+                </label>
+                <button type="button" onClick={markVacationPeriod}>
+                  Save Vacation Period
+                </button>
+              </div>
+            </details>
+            {vacationNotice && (
+              <small className="calendar-vacation-notice" role="status">
+                {vacationNotice}
+              </small>
+            )}
+          </div>
+        )}
         {onAdd && (
           <button
             type="button"
@@ -201,6 +329,7 @@ export function TaskCalendar({
                   </small>
                   <span className="calendar-task-status">
                     {row.status}
+                    {row.deadline ? " · " + row.deadline : ""}
                     {row.goal > 1
                       ? " · " + row.count + "/" + row.goal + " Done"
                       : row.goal === 0
