@@ -154,7 +154,18 @@
     gap: 4px;
   }
 }
-.app .task-editor #task-advanced > label > textarea {
+.app .task-editor .task-editor-heading,
+.app .task-editor .task-editor-fields > h3 {
+  margin: 10px 0 3px;
+  padding-top: 10px;
+  border-top: 1px solid #68537755;
+  color: #d9c9e4;
+  font-size: 13px;
+}
+.app .task-editor .task-editor-fields > h3 {
+  margin-top: 4px;
+}
+.app .task-editor .task-editor-fields > label > textarea {
   height: 64px;
   min-height: 64px;
   resize: vertical;
@@ -252,7 +263,7 @@
     min-height: 44px;
   }
 }
-.app .task-editor .task-advanced .habit-check {
+.app .task-editor .habit-check {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -266,6 +277,11 @@
   min-width: 16px;
   height: 16px;
   margin: 0;
+}
+.app:not(.night) .task-editor .task-editor-heading,
+.app:not(.night) .task-editor .task-editor-fields > h3 {
+  color: #564563;
+  border-color: #a28ab866;
 }
 /* Narrow-screen containment; desktop geometry remains unchanged. */
 @media (max-width: 800px) {
@@ -370,14 +386,6 @@
 .app .task-alarm-warning {
   color: #edb7a2;
   font-size: 12px;
-}
-.app .more-options {
-  margin: 14px 0;
-  padding: 8px 12px;
-  color: #d3bfdf;
-  border: 1px solid #65536e;
-  border-radius: 8px;
-  background: #31283a;
 }
 @media (max-width: 380px) {
   .app .task-date-time {

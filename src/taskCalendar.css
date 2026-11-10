@@ -59,12 +59,25 @@
   border-color: #9b7eac;
 }
 .app .calendar-day.is-today {
-  border-color: #b6a2cc;
-  box-shadow: 0 0 0 1px #b6a2cc55;
+  border: 2px solid #c1a6d7;
+  background: #46364f;
+  box-shadow: 0 0 0 1px #c1a6d755, 0 0 12px #a980c52b;
 }
 .app .calendar-day.is-today .calendar-date {
   color: #e4d5ef;
   font-weight: 800;
+}
+.app .calendar-day.is-today .calendar-date::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 16px;
+  height: 3px;
+  border-radius: 3px;
+  background: #d2b9e6;
+  box-shadow: 0 0 7px #c7a8e3aa;
+  transform: translateX(-50%);
 }
 .app .calendar-day[aria-pressed="true"] {
   background: #44334f;
@@ -72,11 +85,41 @@
   box-shadow: inset 0 0 0 1px #a080b4;
 }
 .app .calendar-day.is-today[aria-pressed="true"] {
-  box-shadow: 0 0 0 1px #b6a2cc66, inset 0 0 0 1px #a080b4;
+  border-color: #ddc6ed;
+  background: #594366;
+  box-shadow: 0 0 0 1px #c1a6d777, 0 0 12px #a980c533, inset 0 0 0 1px #a080b4;
+}
+.app:not(.night) .calendar-day.is-today {
+  border-color: #8d70a0;
+  background: #efe7f3;
+  color: #392d42;
+  box-shadow: 0 0 0 1px #9d82ad66, 0 0 10px #a980c52b;
+}
+.app:not(.night) .calendar-day.is-today .calendar-date {
+  color: #392d42;
+}
+.app:not(.night) .calendar-day.is-today .calendar-date::after {
+  background: #8a689f;
+  box-shadow: 0 0 5px #8a689f88;
+}
+.app:not(.night) .calendar-day[aria-pressed="true"] {
+  background: #e5d9eb;
+  border-color: #9c80ad;
+  color: #392d42;
+  box-shadow: inset 0 0 0 1px #b79ec5;
+}
+.app:not(.night) .calendar-day.is-today[aria-pressed="true"] {
+  border-color: #785b8d;
+  background: #ded0e6;
+  box-shadow: 0 0 0 1px #987ba866, 0 0 10px #a980c52b, inset 0 0 0 1px #b79ec5;
 }
 .calendar-date {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
   font-size: 12px;
   line-height: 1.2;
+  padding-bottom: 5px;
 }
 .calendar-vacation-mark {
   margin-left: 2px;

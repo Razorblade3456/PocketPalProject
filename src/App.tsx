@@ -165,8 +165,16 @@ export default function App() {
       "Add habits and log progress with one tap. Use the + and − controls to correct an entry.",
     ],
     [
+      "One Clear Task Editor",
+      "Create or edit a task with its settings in one place. Choose a priority, then set the date and time. Weekday, interval, and goal fields appear when they apply.",
+    ],
+    [
       "Priorities & Alarms",
-      "Set task priority and reminders in the editor. Important alarms can keep sounding until you snooze or stop them.",
+      "Choose High, Normal, or Low priority. Set a regular reminder or an Important Alarm, which keeps sounding until you snooze or stop it. Quiet-hour overrides are optional.",
+    ],
+    [
+      "Repeat & Rest Days",
+      "Choose a repeat schedule, including one completion any day each week or month. Mark vacation days in the calendar to pause missed-task penalties and reminders; you can still complete tasks.",
     ],
     [
       "Up Next",
@@ -178,7 +186,7 @@ export default function App() {
     ],
     [
       "Task Calendar",
-      "Select a date to review or edit its tasks, and look back at recorded progress and jar entries.",
+      "Today stays highlighted in lavender even when another date is selected. The selected-date fill helps you tell the two apart. Review tasks, vacation days, and recorded jar entries here.",
     ],
     [
       "Progress Jar & Care",
@@ -1743,7 +1751,6 @@ function TaskEditor({
   const [alarmMinutes, setAlarmMinutes] = useState(20);
   const [relativeChanged, setRelativeChanged] = useState(false);
   const [customMinutes, setCustomMinutes] = useState(false);
-  const [advanced, setAdvanced] = useState(false);
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [warning, setWarning] = useState("");
   const update = (p: Partial<Task>) => setT((v) => ({ ...v, ...p }));
@@ -1791,6 +1798,7 @@ function TaskEditor({
         />
       </label>
       <TaskPriority task={t} update={update} />
+      <h3 className="task-editor-heading">Date &amp; Time</h3>
       <div className="task-date-time">
         <label>
           Date
@@ -1817,6 +1825,7 @@ function TaskEditor({
           />
         </label>
       </div>
+      <h3 className="task-editor-heading">Alarm Settings</h3>
       <label className="toggle task-alarm-toggle">
         <input
           type="checkbox"
@@ -1830,8 +1839,18 @@ function TaskEditor({
             });
           }}
         />
-        Alarm · {t.importantAlarm ? "ON" : "OFF"}
+        Important Alarm · {t.importantAlarm ? "ON" : "OFF"}
       </label>
+      {!t.importantAlarm && (
+        <label className="habit-check task-normal-reminder">
+          <input
+            type="checkbox"
+            checked={t.reminderEnabled !== false}
+            onChange={(e) => update({ reminderEnabled: e.target.checked })}
+          />
+          Normal reminder
+        </label>
+      )}
       <p className="fine">
         Remind me at the scheduled time.
         {t.importantAlarm
@@ -1840,12 +1859,23 @@ function TaskEditor({
             ? " Existing regular reminder kept."
             : ""}
       </p>
+      {t.importantAlarm && (
+        <label className="toggle task-quiet-hours">
+          <input
+            type="checkbox"
+            checked={!!t.alarmOverrideQuiet}
+            onChange={(e) => update({ alarmOverrideQuiet: e.target.checked })}
+          />
+          Sound & notifications during quiet hours
+        </label>
+      )}
       {t.importantAlarm && alarmSetup}
       {warning && (
         <p className="task-alarm-warning" role="alert">
           {warning}
         </p>
       )}
+      <h3 className="task-editor-heading">Repeat &amp; Goals</h3>
       <label>
         Repeat
         <select
@@ -1949,26 +1979,8 @@ function TaskEditor({
         </div>
       )}
 
-      <button
-        type="button"
-        className="more-options"
-        aria-expanded={advanced}
-        aria-controls="task-advanced"
-        onClick={() => setAdvanced((v) => !v)}
-      >
-        More Options
-      </button>
-      <section id="task-advanced" hidden={!advanced}>
-        {!t.importantAlarm && (
-          <label className="habit-check">
-            <input
-              type="checkbox"
-              checked={t.reminderEnabled !== false}
-              onChange={(e) => update({ reminderEnabled: e.target.checked })}
-            />
-            Normal reminder
-          </label>
-        )}
+      <section className="task-editor-fields" aria-label="Task settings">
+        <h3>Frequency, Progress &amp; Notes</h3>
         {t.steps?.length ? (
           <details className="saved-task-steps">
             <summary>
@@ -2029,16 +2041,6 @@ function TaskEditor({
             onChange={(e) => update({ description: e.target.value })}
           />
         </label>
-        {t.importantAlarm && (
-          <label className="toggle">
-            <input
-              type="checkbox"
-              checked={!!t.alarmOverrideQuiet}
-              onChange={(e) => update({ alarmOverrideQuiet: e.target.checked })}
-            />
-            Sound & notifications during quiet hours
-          </label>
-        )}
         {flexiblePeriod ? (
           <p className="fine">One completion any day before the period ends.</p>
         ) : (

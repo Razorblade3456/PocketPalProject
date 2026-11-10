@@ -55,6 +55,9 @@ test("flexible calendar tasks stay singular across their window and show the dea
   const html = renderToStaticMarkup(
     createElement(TaskCalendar, { s, today: "2026-11-02" }),
   );
+  assert.ok(html.includes('class="calendar-day is-today"'));
+  assert.ok(html.includes('aria-current="date"'));
+  assert.ok(html.includes('aria-pressed="true"'));
   assert.ok(html.includes("vacation day"));
   assert.ok(html.includes("Vacation Day — tasks can rest today."));
   assert.ok(html.includes("☾"));
