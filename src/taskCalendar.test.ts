@@ -12,6 +12,8 @@ import {
   correctAttempt,
   deleteTask,
   addHabitEvent,
+  addVacationRange,
+  decay,
   type Task,
 } from "./model";
 import {
@@ -254,6 +256,125 @@ test("calendar renders four orbs plus overflow, readable statuses, and a seven-d
   assert.ok(html.includes("Completed"));
   assert.ok(html.indexOf("Task 0</strong>") < html.indexOf("Task 5</strong>"));
   assert.equal(JSON.stringify(s), before);
+});
+
+test("calendar shows black skulls for missed outcomes and restores priority dots when corrected", () => {
+  let s = initial(now);
+  s = saveTask(s, task({ id: "missed", priority: "high" }), now);
+  s = saveTask(s, task({ id: "done", priority: "normal" }), now);
+  s = saveTask(
+    s,
+    task({
+      id: "future",
+      date: "2026-11-03",
+      repeat: "once",
+      priority: "low",
+    }),
+    now,
+  );
+  s = recordAttempt(s, "missed", "2026-11-01", "missed", now, "miss-one");
+  s = recordAttempt(s, "done", "2026-11-01", "completed", now, "done-one");
+  const html = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-01" }),
+  );
+  assert.ok(html.includes('class="calendar-orb is-missed"'));
+  assert.ok(html.includes("lucide-skull"));
+  assert.ok(html.includes("Missed"));
+  assert.ok(html.includes('calendar-orb priority-low'));
+  assert.ok(html.includes('class="calendar-missed"'));
+
+  s = correctAttempt(s, "miss-one", "completed", now);
+  const corrected = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-01" }),
+  );
+  assert.equal(
+    (corrected.match(/class="calendar-orb is-missed"/g) || []).length,
+    1,
+    "the missed example remains in the legend, but the corrected task skull is gone",
+  );
+  assert.ok(corrected.includes('class="calendar-orb priority-high is-complete"'));
+});
+
+test("automatic misses show skulls only on their scheduled date and after flexible deadlines", () => {
+  const start = +localDate("2026-10-26");
+  let s = initial(now);
+  s.tasks = [
+    task({
+      id: "weekly-any",
+      repeat: "weeklyAny",
+      date: "2026-10-26",
+      createdDate: "2026-10-26",
+      createdAt: start,
+    }),
+    task({ id: "monthly-any", repeat: "monthlyAny" }),
+    task({ repeat: "monthly", dayOfMonth: 15 }),
+  ];
+  assert.ok(
+    calendarTasks(s, "2026-11-01", "2026-11-01").every(
+      (row) => row.status !== "Missed",
+    ),
+  );
+
+  s = decay(s, +localDate("2026-11-02"));
+  const autoMissHtml = renderToStaticMarkup(
+    createElement(TaskCalendar, { s, today: "2026-11-02" }),
+  );
+  assert.ok(autoMissHtml.includes('class="calendar-orb is-missed"'));
+  assert.equal(
+    calendarTasks(s, "2026-11-01", "2026-11-02").find(
+      (row) => row.task.id === "weekly-any",
+    )?.status,
+    "Missed",
+  );
+  assert.equal(
+    calendarTasks(s, "2026-11-01", "2026-11-02").find(
+      (row) => row.task.id === "monthly-any",
+    )?.status,
+    "Unfinished",
+  );
+  s = decay(s, +localDate("2026-11-16"));
+  assert.equal(
+    calendarTasks(s, "2026-11-15", "2026-11-16").find(
+      (row) => row.task.id === "a",
+    )?.status,
+    "Missed",
+  );
+  assert.equal(
+    calendarTasks(s, "2026-11-15", "2026-11-16").find(
+      (row) => row.task.id === "monthly-any",
+    )?.status,
+    "Unfinished",
+  );
+  s = decay(s, +localDate("2026-12-01"));
+  assert.equal(
+    calendarTasks(s, "2026-11-30", "2026-12-01").find(
+      (row) => row.task.id === "monthly-any",
+    )?.status,
+    "Missed",
+  );
+});
+
+test("vacation dates do not gain automatically missed calendar indicators", () => {
+  let s = initial(now);
+  s = saveTask(
+    s,
+    task({ id: "vacation-task", repeat: "once", date: "2026-11-02" }),
+    now,
+  );
+  s = addVacationRange(s, "2026-11-02", "2026-11-02", now);
+  s = decay(s, +localDate("2026-11-03"));
+  assert.equal(
+    s.outcomes.some(
+      (outcome) => outcome.taskId === "vacation-task" && outcome.status === "missed",
+    ),
+    false,
+  );
+  assert.notEqual(
+    calendarTasks(s, "2026-11-02", "2026-11-03").find(
+      (row) => row.task.id === "vacation-task",
+    )?.status,
+    "Missed",
+  );
 });
 
 test("calendar rows and four visible orbs follow the main list's priority/time order", () => {

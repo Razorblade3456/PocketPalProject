@@ -2,7 +2,13 @@ import { googleCalendarUrl, downloadCalendar } from "./calendarExport";
 import { Jar } from "./Jar";
 import { jarBalls } from "./jarModel";
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
-import { ChevronLeft, ChevronRight, Pencil, CalendarPlus } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Pencil,
+  CalendarPlus,
+  Skull,
+} from "lucide-react";
 import {
   addVacationRange,
   calendarDays,
@@ -27,16 +33,19 @@ const dayLabel = (date: string) =>
     day: "numeric",
   });
 function Orb({ row }: { row: CalendarTask }) {
+  const missed = row.status === "Missed";
   return (
     <span
-      className={
-        "calendar-orb priority-" +
-        (row.task.priority || "normal") +
-        (row.completed ? " is-complete" : "")
-      }
+      className={missed
+        ? "calendar-orb is-missed"
+        : "calendar-orb priority-" +
+          (row.task.priority || "normal") +
+          (row.completed ? " is-complete" : "")}
       title={row.task.name + " · " + row.status}
       aria-hidden="true"
-    />
+    >
+      {missed && <Skull size={8} strokeWidth={2.6} aria-hidden="true" />}
+    </span>
   );
 }
 export function TaskCalendar({
@@ -170,7 +179,13 @@ export function TaskCalendar({
             <button
               type="button"
               key={date}
-              className={"calendar-day" + (date === today ? " is-today" : "")}
+              className={
+                "calendar-day" +
+                (date === today ? " is-today" : "") +
+                (byDate.get(date)!.some((row) => row.status === "Missed")
+                  ? " has-missed"
+                  : "")
+              }
               aria-current={date === today ? "date" : undefined}
               aria-pressed={date === selected}
               aria-label={
@@ -181,7 +196,9 @@ export function TaskCalendar({
                 byDate.get(date)!.length +
                 " tasks, " +
                 byDate.get(date)!.filter((r) => r.completed).length +
-                " completed"
+                " completed, " +
+                byDate.get(date)!.filter((r) => r.status === "Missed").length +
+                " missed"
               }
               onClick={() => {
                 setSelected(date);
@@ -222,7 +239,8 @@ export function TaskCalendar({
       <p className="calendar-legend">
         <span className="calendar-orb priority-normal" />
         Pending <span className="calendar-orb priority-normal is-complete" />
-        Completed
+        Completed <span className="calendar-orb is-missed"><Skull size={10} aria-hidden="true" /></span>
+        Missed
       </p>
       <details
         open={expanded}

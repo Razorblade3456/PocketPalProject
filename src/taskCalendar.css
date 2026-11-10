@@ -146,6 +146,22 @@
   display: inline-block;
   flex: 0 0 auto;
 }
+.calendar-orb.is-missed {
+  width: 11px;
+  height: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #79747f;
+  background: #25232a;
+  color: #eee7db;
+}
+.calendar-orb.is-missed svg {
+  display: block;
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+}
 .calendar-orb.is-complete {
   background: transparent;
 }
@@ -156,6 +172,7 @@
 }
 .calendar-legend {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -196,6 +213,20 @@
   margin-top: 5px;
   width: 8px;
   height: 8px;
+}
+.calendar-selected li > .calendar-orb.is-missed {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+}
+.calendar-selected li > .calendar-orb.is-missed svg,
+.calendar-legend .calendar-orb.is-missed svg {
+  width: 10px;
+  height: 10px;
+}
+.calendar-legend .calendar-orb.is-missed {
+  width: 14px;
+  height: 14px;
 }
 .calendar-selected li > div {
   min-width: 0;
@@ -471,6 +502,15 @@
   }
   .app .intro h1 {
     font-size: 20px;
+  }
+}
+
+.app .calendar-day.has-missed {
+  min-height: 42px;
+}
+@media (max-width: 800px) {
+  .app .calendar-day.has-missed {
+    min-height: 54px;
   }
 }
 

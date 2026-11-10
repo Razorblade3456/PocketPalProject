@@ -195,7 +195,7 @@ export default function App() {
     ],
     [
       "Task Calendar",
-      "Today stays highlighted in lavender even when another date is selected. The selected-date fill helps you tell the two apart. Review tasks, vacation days, and recorded jar entries here.",
+      "Black skulls represent missed tasks. Colored dots show tasks by priority. Review dates, vacation days, and recorded jar entries here.",
     ],
     [
       "Progress Jar & Care",
