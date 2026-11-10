@@ -1,5 +1,6 @@
 import { jarBalls, normalizeJarPriority } from "./jarModel";
 import { TaskCalendar } from "./TaskCalendar";
+import { CollectionsPanel, NewCollectionFields } from "./Collections";
 import { dailyCareBonus, mergeDailyCareBonuses, sortTodayTasks } from "./model";
 import "./priorities.css";
 import { notifyTask } from "./notifications";
@@ -41,6 +42,9 @@ import {
   buyAndUseBasic,
   taskFinishedToday,
   taskProgressGoal,
+  addCollection,
+  updateCollection,
+  deleteCollection,
   addHabitEvent,
   recordAttempt,
   recordTaskCompletion,
@@ -83,6 +87,7 @@ import {
   demoTasks,
   type State,
   type Task,
+  type Collection,
 } from "./model";
 import { Pet, PetChoices, LifeGuide, stages, pets } from "./Pets";
 import {
@@ -175,6 +180,10 @@ export default function App() {
     [
       "Repeat & Rest Days",
       "Choose a repeat schedule, including one completion any day each week or month. Mark vacation days in the calendar to pause missed-task penalties and reminders; you can still complete tasks.",
+    ],
+    [
+      "Collections",
+      "Keep related tasks together in Collections. Your tasks still appear in Today's Tasks, so nothing gets lost. Create one on the dashboard or choose + New Collection in a task editor.",
     ],
     [
       "Up Next",
@@ -1096,6 +1105,26 @@ export default function App() {
                   setEdit(task);
                 }}
               />
+              <CollectionsPanel
+                s={s}
+                today={today}
+                now={now}
+                onEditTask={(task) => {
+                  setPanel(null);
+                  setEdit(task);
+                }}
+                onCreate={(collection) => {
+                  const id = crypto.randomUUID();
+                  setS((previous) => addCollection(previous, { id, ...collection }));
+                  return id;
+                }}
+                onUpdate={(id, patch) =>
+                  setS((previous) => updateCollection(previous, id, patch))
+                }
+                onDelete={(id) =>
+                  setS((previous) => deleteCollection(previous, id))
+                }
+              />
               <section className="progress-panel">
                 <div className="section-heading">
                   <h2>Progress Jar</h2>
@@ -1258,6 +1287,14 @@ export default function App() {
               <TaskEditor
                 task={edit}
                 startDate={calendarStart}
+                collections={s.collections || []}
+                onCreateCollection={(collection) => {
+                  const id = crypto.randomUUID();
+                  setS((previous) =>
+                    addCollection(previous, { id, ...collection }),
+                  );
+                  return id;
+                }}
                 alarmSetup={importantAlarms.setup}
                 onSave={(t) => {
                   setS((p) => saveTask(p, t));
@@ -1715,12 +1752,16 @@ function TaskEditor({
   task,
   startDate,
   alarmSetup,
+  collections,
+  onCreateCollection,
   onSave,
   onDelete,
 }: {
   task: Task | null;
   startDate?: string;
   alarmSetup?: React.ReactNode;
+  collections: Collection[];
+  onCreateCollection: (collection: Omit<Collection, "id">) => string;
   onSave: (t: Task) => void;
   onDelete?: () => void;
 }) {
@@ -1798,6 +1839,12 @@ function TaskEditor({
         />
       </label>
       <TaskPriority task={t} update={update} />
+      <NewCollectionFields
+        collections={collections}
+        selected={t.collectionId}
+        onChange={(collectionId) => update({ collectionId })}
+        onCreate={onCreateCollection}
+      />
       <h3 className="task-editor-heading">Date &amp; Time</h3>
       <div className="task-date-time">
         <label>

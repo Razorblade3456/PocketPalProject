@@ -1,4 +1,38 @@
 export type Category = "food" | "water" | "clean" | "happy";
+export const COLLECTION_ICONS = [
+  "folder",
+  "wallet",
+  "book",
+  "home",
+  "heart",
+  "sparkles",
+] as const;
+export const COLLECTION_COLORS = [
+  "purple",
+  "burgundy",
+  "orange",
+  "sage",
+] as const;
+export type CollectionIcon = (typeof COLLECTION_ICONS)[number];
+export type CollectionColor = (typeof COLLECTION_COLORS)[number];
+export type Collection = {
+  id: string;
+  name: string;
+  icon?: CollectionIcon;
+  color?: CollectionColor;
+};
+const collectionValid = (collection: Collection) =>
+  !!collection &&
+  typeof collection.id === "string" &&
+  collection.id.length > 0 &&
+  collection.id.length <= 120 &&
+  typeof collection.name === "string" &&
+  !!collection.name.trim() &&
+  collection.name.length <= 60 &&
+  (collection.icon === undefined ||
+    (COLLECTION_ICONS as readonly string[]).includes(collection.icon)) &&
+  (collection.color === undefined ||
+    (COLLECTION_COLORS as readonly string[]).includes(collection.color));
 import {
   SUPPLIES,
   OUTFITS,
@@ -30,6 +64,7 @@ export type PetKind = "mochi" | "pippin" | "crumb" | "rattle";
 export type OutcomeStatus = "pending" | "completed" | "missed";
 export type Care = Record<Category, number>;
 export type Task = {
+  collectionId?: string;
   importantAlarm?: boolean;
   alarmEnabledAt?: number;
   relativeAlarmAt?: number;
@@ -175,6 +210,7 @@ export type HabitEvent = {
 };
 export type RewardPolicy = { coins: number; dailyCap: number };
 export type State = {
+  collections?: Collection[];
   alarms?: import("./alarms").AlarmRecord[];
   alarmsCheckedAt?: number;
   rewardPolicy?: RewardPolicy;
@@ -319,6 +355,7 @@ export function initial(n = Date.now()): State {
     updated: n,
     care,
     tasks: [],
+    collections: [],
     completions: [],
     outcomes: [],
     achievements: [],
@@ -1031,6 +1068,7 @@ export function recordTaskCompletion(
     days: [],
     date: dateKey(n),
     category: "happy",
+    collectionId: source.collectionId,
     createdAt: n,
     createdDate: dateKey(n),
     priority: template.priority,
@@ -1066,6 +1104,37 @@ export function saveTask(s: State, task: Task, n = Date.now()): State {
     tasks: old
       ? s.tasks.map((t) => (t.id === task.id ? next : t))
       : [...s.tasks, next],
+  };
+}
+export function addCollection(s: State, collection: Collection): State {
+  if (!collectionValid(collection) || (s.collections || []).some((c) => c.id === collection.id))
+    return s;
+  return { ...s, collections: [...(s.collections || []), collection] };
+}
+export function updateCollection(
+  s: State,
+  id: string,
+  patch: Partial<Omit<Collection, "id">>,
+): State {
+  const current = (s.collections || []).find((collection) => collection.id === id);
+  if (!current) return s;
+  const updated = { ...current, ...patch };
+  if (!collectionValid(updated)) return s;
+  return {
+    ...s,
+    collections: (s.collections || []).map((collection) =>
+      collection.id === id ? updated : collection,
+    ),
+  };
+}
+export function deleteCollection(s: State, id: string): State {
+  if (!(s.collections || []).some((collection) => collection.id === id)) return s;
+  return {
+    ...s,
+    collections: (s.collections || []).filter((collection) => collection.id !== id),
+    tasks: s.tasks.map((task) =>
+      task.collectionId === id ? { ...task, collectionId: undefined } : task,
+    ),
   };
 }
 export function deleteTask(s: State, id: string, n = Date.now()): State {
@@ -1286,6 +1355,8 @@ const taskValid = (t: Task) =>
   typeof t.id === "string" &&
   typeof t.name === "string" &&
   typeof t.description === "string" &&
+  (t.collectionId === undefined ||
+    (typeof t.collectionId === "string" && t.collectionId.length > 0)) &&
   /^([01]\d|2[0-3]):[0-5]\d$/.test(t.time) &&
   [
     "daily",
@@ -1319,6 +1390,11 @@ function commonValid(x: unknown): boolean {
     Array.isArray(s.tasks) &&
     s.tasks.every(taskValid) &&
     new Set(s.tasks.map((t) => t.id)).size === s.tasks.length &&
+    (s.collections === undefined ||
+      (Array.isArray(s.collections) &&
+        s.collections.every(collectionValid) &&
+        new Set(s.collections.map((collection) => collection.id)).size ===
+          s.collections.length)) &&
     Array.isArray(s.completions) &&
     s.completions.every(
       (c) =>
@@ -1650,6 +1726,7 @@ function compatibleSaveShape(x: unknown): unknown {
     if (Object.keys(missing).length)
       patch({ inventory: { ...original.inventory, ...missing } });
   }
+  if (original.collections === undefined) patch({ collections: [] });
   const legacyTask = (t: Task): Task => {
     if (!t || typeof t !== "object") return t;
     const missing: Partial<Task> = {};
@@ -1703,6 +1780,21 @@ function compatibleSaveShape(x: unknown): unknown {
   if (Array.isArray(next.tasks)) {
     const tasks = next.tasks.map(legacyTask);
     if (tasks.some((t, i) => t !== next.tasks[i])) patch({ tasks });
+  }
+  if (Array.isArray(next.collections) && Array.isArray(next.tasks)) {
+    const collectionIds = new Set(
+      next.collections
+        .filter((collection) => collection && typeof collection.id === "string")
+        .map((collection) => collection.id),
+    );
+    const tasks = next.tasks.map((task) =>
+      task &&
+      typeof task.collectionId === "string" &&
+      !collectionIds.has(task.collectionId)
+        ? { ...task, collectionId: undefined }
+        : task,
+    );
+    if (tasks.some((task, i) => task !== next.tasks[i])) patch({ tasks });
   }
   if (Array.isArray(next.outcomes)) {
     const outcomes = next.outcomes.map((o) => {

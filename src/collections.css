@@ -1,0 +1,290 @@
+.app .collections-panel {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #493b52;
+  border-radius: 15px;
+  background: #25202d;
+}
+.app .collections-heading,
+.app .collections-heading-actions {
+  display: flex;
+  align-items: center;
+}
+.app .collections-heading {
+  justify-content: space-between;
+  gap: 8px;
+}
+.app .collections-heading h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.app .collections-heading > div:first-child > span {
+  display: block;
+  margin-top: 3px;
+  color: #b9aabd;
+  font-size: 10px;
+}
+.app .collections-heading-actions {
+  gap: 5px;
+}
+.app .collection-add-button,
+.app .collection-mobile-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid #65536e;
+  border-radius: 9px;
+  background: #31283a;
+  color: #e2d4eb;
+  cursor: pointer;
+}
+.app .collection-add-button {
+  font-size: 11px;
+}
+.app .collection-mobile-toggle {
+  display: none;
+}
+.app .collection-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 11px;
+}
+.app .collection-empty,
+.app .collection-no-tasks {
+  margin: 3px 0;
+  color: #b9aabd;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.app .collection-row {
+  min-width: 0;
+  border: 1px solid #493b52;
+  border-radius: 10px;
+  background: #211d28;
+  overflow: hidden;
+}
+.app .collection-row > summary {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) minmax(38px, 68px) 16px;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 6px 9px;
+  cursor: pointer;
+  list-style: none;
+}
+.app .collection-row > summary::-webkit-details-marker {
+  display: none;
+}
+.app .collection-row-icon {
+  display: grid;
+  place-items: center;
+}
+.app .collection-row-title {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.app .collection-row-title strong {
+  overflow: hidden;
+  color: #f0e9e4;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app .collection-row-title small {
+  color: #b9aabd;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+.app .collection-progress-track {
+  height: 5px;
+  border-radius: 5px;
+  background: #44394b;
+  overflow: hidden;
+}
+.app .collection-progress-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  transition: width 160ms ease;
+}
+.app .collection-row-chevron {
+  color: #b9aabd;
+  transition: transform 160ms ease;
+}
+.app .collection-row[open] .collection-row-chevron {
+  transform: rotate(180deg);
+}
+.app .collection-row-body {
+  padding: 0 9px 9px;
+}
+.app .collection-task-list {
+  display: grid;
+  gap: 3px;
+}
+.app .collection-task {
+  display: grid;
+  grid-template-columns: 16px 7px minmax(0, 1fr) 14px;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  min-height: 34px;
+  padding: 5px 3px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #e9e0ec;
+  text-align: left;
+  font-size: 11px;
+  cursor: pointer;
+}
+.app .collection-task:hover {
+  background: #342b3c;
+}
+.app .collection-task-status {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border: 1px solid #796b80;
+  border-radius: 50%;
+  color: #d3c2df;
+}
+.app .collection-task-status.is-complete {
+  border-color: #9cb58b;
+  background: #42503b;
+  color: #d5e4c5;
+}
+.app .collection-task-priority {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.app .collection-task-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app .collection-task > svg {
+  color: #a994b4;
+}
+.app .collection-no-tasks {
+  padding: 5px 2px;
+}
+.app .collection-row-actions,
+.app .collection-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.app .collection-row-actions button,
+.app .collection-form-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid #65536e;
+  border-radius: 8px;
+  background: #31283a;
+  color: #e2d4eb;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.app .collection-row-actions .collection-delete-button {
+  color: #d7a8b5;
+}
+.app .collection-edit-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 9px;
+  padding: 9px;
+  border: 1px solid #493b52;
+  border-radius: 9px;
+  background: #1e1a25;
+}
+.app .collection-edit-form label,
+.app .task-collection-field > label {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  color: #c7b7d0;
+  font-size: 10px;
+}
+.app .collection-edit-form input,
+.app .collection-edit-form select,
+.app .task-collection-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  box-sizing: border-box;
+  padding: 6px 8px;
+  border: 1px solid #62516d;
+  border-radius: 8px;
+  background: #201b28;
+  color: #f0e9e4;
+  font: inherit;
+  font-size: 11px;
+}
+.app .collection-form-pickers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.app .collection-form-actions .collection-action-primary {
+  border-color: #8a709e;
+  background: #493658;
+}
+.app .collection-form-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.app .task-collection-field {
+  min-width: 0;
+}
+.app .task-collection-field .collection-edit-form {
+  margin: 7px 0 10px;
+}
+@media (max-width: 800px) {
+  .app .collections-panel {
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+  .app .collections-heading h2 {
+    font-size: 15px;
+  }
+  .app .collections-heading > div:first-child > span {
+    font-size: 9px;
+  }
+  .app .collection-mobile-toggle {
+    display: inline-flex;
+  }
+  .app .collection-mobile-toggle[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+  }
+  .app .collection-list[data-mobile-open="false"] {
+    display: none;
+  }
+  .app .collection-add-button,
+  .app .collection-mobile-toggle {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .app .collection-edit-form input,
+  .app .collection-edit-form select,
+  .app .task-collection-field select,
+  .app .collection-row-actions button,
+  .app .collection-form-actions button {
+    min-height: 40px;
+  }
+}

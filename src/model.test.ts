@@ -31,6 +31,9 @@ import {
   setOutcome,
   saveTask,
   deleteTask,
+  addCollection,
+  updateCollection,
+  deleteCollection,
   changeSettings,
   revive,
   streak,
@@ -1220,10 +1223,17 @@ test("legacy version-one companion identity survives migration", () => {
 
 test("Up Next creates one real task with an alarm on full completion and transfers the remaining sequence", () => {
   const date = dateKey(now);
-  let s = saveTask(
-    initial(now),
+  let s = addCollection(initial(now), {
+    id: "home",
+    name: "Home",
+    icon: "home",
+    color: "sage",
+  });
+  s = saveTask(
+    s,
     task("laundry", {
       repeat: "once",
+      collectionId: "home",
       upNext: [
         {
           id: "dry",
@@ -1252,6 +1262,7 @@ test("Up Next creates one real task with an alarm on full completion and transfe
   const next = s.tasks[1];
   assert.equal(next.id, "up-next:completion-1");
   assert.equal(next.name, "Move clothes to dryer");
+  assert.equal(next.collectionId, "home");
   assert.equal(next.date, date);
   assert.equal(next.repeat, "once");
   assert.equal(taskDue(s, next, now), true);
@@ -1266,6 +1277,7 @@ test("Up Next creates one real task with an alarm on full completion and transfe
   s = recordTaskCompletion(s, next.id, date, now + 40 * 60000, "completion-2");
   assert.equal(s.tasks.length, 3);
   assert.equal(s.tasks[2].name, "Fold clothes");
+  assert.equal(s.tasks[2].collectionId, "home");
   assert.equal(s.tasks[2].priority, "low");
   assert.equal(s.tasks[2].relativeAlarmAt, undefined);
   assert.equal(s.tasks[2].importantAlarm, false);
@@ -1449,6 +1461,56 @@ test("Up Next data is optional for old tasks and invalid queue lengths are rejec
     ],
   };
   assert.equal(validState(bad), false);
+});
+
+test("collections round-trip in backups, preserve task history, and ungroup tasks on deletion", () => {
+  const date = dateKey(now),
+    original = task("rent", { repeat: "daily" });
+  let s = addCollection(initial(now), {
+    id: "finance-id",
+    name: "Finance",
+    icon: "wallet",
+    color: "burgundy",
+  });
+  s = saveTask(s, { ...original, collectionId: "finance-id" }, now);
+  s = recordTaskCompletion(s, "rent", date, now, "rent-done");
+  const restored = parseState(JSON.parse(JSON.stringify(s)), now);
+  assert.ok(restored);
+  assert.deepEqual(restored.collections, s.collections);
+  assert.equal(restored.tasks[0].collectionId, "finance-id");
+  assert.equal(restored.outcomes.length, 1);
+  assert.equal(restored.rewardLedger?.length, 1);
+
+  const renamed = updateCollection(restored, "finance-id", {
+    name: "Money",
+    icon: "sparkles",
+    color: "orange",
+  });
+  assert.deepEqual(renamed.collections?.[0], {
+    id: "finance-id",
+    name: "Money",
+    icon: "sparkles",
+    color: "orange",
+  });
+  const withoutGroup = deleteCollection(renamed, "finance-id");
+  assert.equal(withoutGroup.collections?.length, 0);
+  assert.equal(withoutGroup.tasks[0].collectionId, undefined);
+  assert.equal(withoutGroup.outcomes.length, 1);
+  assert.deepEqual(withoutGroup.rewardLedger, renamed.rewardLedger);
+});
+
+test("older saves without collections load with an empty optional collection list", () => {
+  let old = saveTask(
+    initial(now),
+    task("legacy-task", { collectionId: "missing-collection" }),
+    now,
+  ) as State & { collections?: State["collections"] };
+  delete old.collections;
+  const restored = parseState(JSON.parse(JSON.stringify(old)), now);
+  assert.ok(restored);
+  assert.deepEqual(restored.collections, []);
+  assert.equal(restored.tasks.length, 1);
+  assert.equal(restored.tasks[0].collectionId, undefined);
 });
 test("tutorial completion setting round-trips and remains optional for existing saves", () => {
   const s = initial(now);

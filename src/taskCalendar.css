@@ -259,6 +259,7 @@
   padding-top: 18px;
 }
 .app .dashboard-right > .task-calendar,
+.app .dashboard-right > .collections-panel,
 .app .dashboard-right > .progress-panel {
   background: #25202d;
   border: 1px solid #493b52;
@@ -449,6 +450,11 @@
     order: 2;
   }
   .app .dashboard-right > .progress-panel {
+    order: 4;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .app .dashboard-right > .collections-panel {
     order: 3;
     width: 100%;
     box-sizing: border-box;

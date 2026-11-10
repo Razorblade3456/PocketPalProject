@@ -129,3 +129,4 @@ root.render(
 );
 
 import "./taskCalendar.css";
+import "./collections.css";
