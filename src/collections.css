@@ -238,8 +238,46 @@
 }
 .app .collection-form-pickers {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 7px;
+}
+.app .collection-icon-field {
+  display: grid;
+  gap: 5px;
+  color: #c7b7d0;
+  font-size: 10px;
+}
+.app .collection-icon-picker {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 5px;
+}
+.app .collection-icon-picker button {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 3px;
+  border: 1px solid #54465d;
+  border-radius: 8px;
+  background: #29232f;
+  color: #c7b7d0;
+  cursor: pointer;
+}
+.app .collection-icon-picker button:hover {
+  background: #393044;
+  border-color: #9b80ad;
+}
+.app .collection-icon-picker button.is-selected {
+  border-color: #c4a6d7;
+  background: #493858;
+  color: #eadcf4;
+  box-shadow: inset 0 0 0 1px #b59ac7;
+}
+.app .collection-icon-picker button:focus-visible {
+  outline: 2px solid #c4a6d7;
+  outline-offset: 1px;
 }
 .app .collection-form-actions .collection-action-primary {
   border-color: #8a709e;
@@ -250,7 +288,33 @@
   cursor: default;
 }
 .app .task-collection-field {
+  display: grid;
+  gap: 6px;
   min-width: 0;
+  margin: 5px 0 10px;
+  padding: 9px 10px;
+  border: 1px solid #65536e;
+  border-radius: 10px;
+  background: #2a2431;
+}
+.app .task-collection-field > label {
+  color: #e1d3eb;
+  font-size: 11px;
+}
+.app .task-collection-field select {
+  min-height: 40px;
+  font-size: 12px;
+}
+.app .task-collection-selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  background: #17141d55;
+  font-size: 10px;
 }
 .app .task-collection-field .collection-edit-form {
   margin: 7px 0 10px;

@@ -2,9 +2,21 @@ export type Category = "food" | "water" | "clean" | "happy";
 export const COLLECTION_ICONS = [
   "folder",
   "wallet",
+  "piggyBank",
+  "graduationCap",
   "book",
+  "laptop",
+  "briefcase",
   "home",
+  "shoppingCart",
+  "dumbbell",
   "heart",
+  "pawPrint",
+  "music",
+  "gamepad",
+  "plane",
+  "calendar",
+  "utensils",
   "sparkles",
 ] as const;
 export const COLLECTION_COLORS = [
@@ -1727,6 +1739,18 @@ function compatibleSaveShape(x: unknown): unknown {
       patch({ inventory: { ...original.inventory, ...missing } });
   }
   if (original.collections === undefined) patch({ collections: [] });
+  if (Array.isArray(next.collections)) {
+    const collections = next.collections.map((collection) =>
+      collection &&
+      typeof collection === "object" &&
+      collection.icon !== undefined &&
+      !(COLLECTION_ICONS as readonly string[]).includes(collection.icon)
+        ? { ...collection, icon: "folder" as const }
+        : collection,
+    );
+    if (collections.some((collection, i) => collection !== next.collections![i]))
+      patch({ collections });
+  }
   const legacyTask = (t: Task): Task => {
     if (!t || typeof t !== "object") return t;
     const missing: Partial<Task> = {};

@@ -183,7 +183,7 @@ export default function App() {
     ],
     [
       "Collections",
-      "Keep related tasks together in Collections. Your tasks still appear in Today's Tasks, so nothing gets lost. Create one on the dashboard or choose + New Collection in a task editor.",
+      "Use Collection (optional) while adding or editing a task to assign or move it. Create Collections on the dashboard or with + New Collection; customize them with a preset icon and color. Collection tasks still appear in Today's Tasks.",
     ],
     [
       "Up Next",

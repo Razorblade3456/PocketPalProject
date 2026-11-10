@@ -4,12 +4,17 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   addCollection,
+  COLLECTION_ICONS,
   initial,
   recordTaskCompletion,
   saveTask,
   type Task,
 } from "./model";
-import { CollectionsPanel, NewCollectionFields } from "./Collections";
+import {
+  CollectionFields,
+  CollectionsPanel,
+  NewCollectionFields,
+} from "./Collections";
 
 const now = +new Date(2026, 9, 26, 12),
   today = "2026-10-26";
@@ -97,6 +102,29 @@ test("task editor collection picker offers None and a compact create option", ()
   assert.ok(html.includes("<option value=\"\">None</option>"));
   assert.ok(html.includes("Home"));
   assert.ok(html.includes("+ New Collection"));
+  assert.ok(html.includes('value="home" selected=""'));
+});
+
+test("visual icon picker exposes 18 named icons and keeps one explicit selection", () => {
+  const html = renderToStaticMarkup(
+    createElement(CollectionFields, {
+      name: "College",
+      setName: () => {},
+      icon: "graduationCap",
+      setIcon: () => {},
+      color: "purple",
+      setColor: () => {},
+      onSubmit: () => {},
+      onCancel: () => {},
+      submitLabel: "Save",
+    }),
+  );
+  assert.equal(COLLECTION_ICONS.length, 18);
+  assert.equal((html.match(/aria-pressed="(?:true|false)"/g) || []).length, 19);
+  assert.equal((html.match(/aria-pressed="true"/g) || []).length, 1);
+  assert.ok(html.includes('aria-label="Graduation cap"'));
+  assert.ok(html.includes('title="Shopping cart"'));
+  assert.ok(html.includes('class="is-selected" aria-label="Graduation cap"'));
 });
 
 test("collection section starts collapsed on mobile and rows remain individually expandable", () => {

@@ -1481,6 +1481,24 @@ test("collections round-trip in backups, preserve task history, and ungroup task
   assert.equal(restored.outcomes.length, 1);
   assert.equal(restored.rewardLedger?.length, 1);
 
+  const secondGroup = addCollection(restored, {
+    id: "college-id",
+    name: "College",
+    icon: "graduationCap",
+  });
+  const moved = saveTask(
+    secondGroup,
+    { ...secondGroup.tasks[0], collectionId: "college-id" },
+    now,
+  );
+  assert.equal(moved.tasks[0].collectionId, "college-id");
+  const unassigned = saveTask(
+    moved,
+    { ...moved.tasks[0], collectionId: undefined },
+    now,
+  );
+  assert.equal(unassigned.tasks[0].collectionId, undefined);
+
   const renamed = updateCollection(restored, "finance-id", {
     name: "Money",
     icon: "sparkles",
@@ -1497,6 +1515,19 @@ test("collections round-trip in backups, preserve task history, and ungroup task
   assert.equal(withoutGroup.tasks[0].collectionId, undefined);
   assert.equal(withoutGroup.outcomes.length, 1);
   assert.deepEqual(withoutGroup.rewardLedger, renamed.rewardLedger);
+});
+
+test("all new icon keys round-trip and unknown saved icons fall back to Folder", () => {
+  const saved = addCollection(initial(now), {
+    id: "savings",
+    name: "Savings",
+    icon: "piggyBank",
+    color: "sage",
+  });
+  assert.equal(parseState(JSON.parse(JSON.stringify(saved)), now)?.collections?.[0].icon, "piggyBank");
+  const unknown = JSON.parse(JSON.stringify(saved));
+  unknown.collections[0].icon = "retired-icon";
+  assert.equal(parseState(unknown, now)?.collections?.[0].icon, "folder");
 });
 
 test("older saves without collections load with an empty optional collection list", () => {

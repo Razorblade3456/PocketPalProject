@@ -1,14 +1,26 @@
 import { useState } from "react";
 import {
   BookOpen,
+  Briefcase,
+  CalendarDays,
   Check,
   ChevronDown,
+  Dumbbell,
   Folder,
+  Gamepad2,
+  GraduationCap,
   Heart,
   Home,
+  Laptop,
+  Music,
+  PawPrint,
+  PiggyBank,
   Pencil,
+  Plane,
   Plus,
+  ShoppingCart,
   Sparkles,
+  Utensils,
   Wallet,
   X,
 } from "lucide-react";
@@ -27,17 +39,43 @@ import {
 const collectionIcons = {
   folder: Folder,
   wallet: Wallet,
+  piggyBank: PiggyBank,
+  graduationCap: GraduationCap,
   book: BookOpen,
+  laptop: Laptop,
+  briefcase: Briefcase,
   home: Home,
+  shoppingCart: ShoppingCart,
+  dumbbell: Dumbbell,
   heart: Heart,
+  pawPrint: PawPrint,
+  music: Music,
+  gamepad: Gamepad2,
+  plane: Plane,
+  calendar: CalendarDays,
+  utensils: Utensils,
   sparkles: Sparkles,
 } satisfies Record<CollectionIcon, typeof Folder>;
+const iconFor = (icon?: string) =>
+  (icon && collectionIcons[icon as CollectionIcon]) || Folder;
 const iconLabels: Record<CollectionIcon, string> = {
   folder: "Folder",
   wallet: "Wallet",
+  piggyBank: "Piggy bank",
+  graduationCap: "Graduation cap",
   book: "Book",
+  laptop: "Laptop",
+  briefcase: "Briefcase",
   home: "Home",
+  shoppingCart: "Shopping cart",
+  dumbbell: "Dumbbell",
   heart: "Heart",
+  pawPrint: "Paw print",
+  music: "Music",
+  gamepad: "Game controller",
+  plane: "Airplane",
+  calendar: "Calendar",
+  utensils: "Utensils",
   sparkles: "Sparkles",
 };
 const colorValues: Record<CollectionColor, string> = {
@@ -60,7 +98,7 @@ const priorityColors = {
 
 type CollectionDraft = Omit<Collection, "id">;
 
-function CollectionFields({
+export function CollectionFields({
   name,
   setName,
   icon,
@@ -102,20 +140,37 @@ function CollectionFields({
         />
       </label>
       <div className="collection-form-pickers">
-        <label>
-          Icon · optional
-          <select
-            value={icon}
-            onChange={(event) => setIcon(event.target.value as CollectionIcon | "")}
-          >
-            <option value="">None</option>
-            {COLLECTION_ICONS.map((choice) => (
-              <option key={choice} value={choice}>
-                {iconLabels[choice]}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="collection-icon-field">
+          <span>Icon · optional</span>
+          <div className="collection-icon-picker" role="group" aria-label="Collection icon">
+            <button
+              type="button"
+              className={icon === "" ? "is-selected" : ""}
+              aria-label="No icon"
+              title="No icon"
+              aria-pressed={icon === ""}
+              onClick={() => setIcon("")}
+            >
+              <X size={15} />
+            </button>
+            {COLLECTION_ICONS.map((choice) => {
+              const Icon = collectionIcons[choice];
+              return (
+                <button
+                  key={choice}
+                  type="button"
+                  className={icon === choice ? "is-selected" : ""}
+                  aria-label={iconLabels[choice]}
+                  title={iconLabels[choice]}
+                  aria-pressed={icon === choice}
+                  onClick={() => setIcon(choice)}
+                >
+                  <Icon size={15} />
+                </button>
+              );
+            })}
+          </div>
+        </div>
         <label>
           Accent · optional
           <select
@@ -267,9 +322,7 @@ export function CollectionsPanel({
             const percent = tasks.length
               ? Math.round((completed / tasks.length) * 100)
               : 0;
-            const Icon = collection.icon
-              ? collectionIcons[collection.icon]
-              : Folder;
+            const Icon = iconFor(collection.icon);
             const accent = collection.color
               ? colorValues[collection.color]
               : colorValues.purple;
@@ -411,6 +464,13 @@ export function NewCollectionFields({
     onChange(id);
     reset();
   };
+  const selectedCollection = collections.find(
+    (collection) => collection.id === selected,
+  );
+  const SelectedIcon = iconFor(selectedCollection?.icon);
+  const selectedAccent = selectedCollection?.color
+    ? colorValues[selectedCollection.color]
+    : colorValues.purple;
   return (
     <div className="task-collection-field">
       <label>
@@ -435,6 +495,11 @@ export function NewCollectionFields({
           <option value="__new__">+ New Collection</option>
         </select>
       </label>
+      {selectedCollection && !creating && (
+        <span className="task-collection-selected" style={{ color: selectedAccent }}>
+          <SelectedIcon size={14} /> {selectedCollection.name}
+        </span>
+      )}
       {creating && (
         <CollectionFields
           name={name}
