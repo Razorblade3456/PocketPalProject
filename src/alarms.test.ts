@@ -67,6 +67,15 @@ test("important alarms use local task time, queue once, and do not mutate task/c
   ] as const)
     assert.deepEqual(due[key], s[key]);
 });
+test("selected-day alarms are created only on the task's scheduled weekdays", () => {
+  const weekdayTask = setup({ repeat: "selected", days: [1, 2, 3, 4, 5] });
+  let s = reconcileAlarms(weekdayTask, noon);
+  assert.ok(s.alarms?.some((alarm) => alarm.date === "2026-10-30"));
+  s = reconcileAlarms(s, +new Date(2026, 9, 31, 12));
+  assert.ok(!s.alarms?.some((alarm) => alarm.date === "2026-10-31"));
+  s = reconcileAlarms(s, +new Date(2026, 10, 2, 12));
+  assert.ok(s.alarms?.some((alarm) => alarm.date === "2026-11-02"));
+});
 test("stopped alarms persist across refresh without completing tasks or duplicating", () => {
   let s = reconcileAlarms(setup(), evening);
   s = dismissAlarm(s, s.alarms![0].id, 0, evening);

@@ -1,6 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  repeatChoiceForTask,
+  repeatPatch,
+  repeatPatchChangesTask,
+  repeatShortcutDays,
+} from "./repeatPresets";
+import {
   initial,
   saveTask,
   recordAttempt,
@@ -187,6 +193,58 @@ test("weekly, selected weekdays and one-time schedules retain their local dates"
   assert.ok(!taskDue(weekly, weekly.tasks[0], at(1)));
   assert.ok(taskDue(selected, selected.tasks[0], +localDate("2026-10-31")));
   assert.ok(!taskDue(once, once.tasks[0], at(1)));
+});
+test("weekday and weekend presets reuse selected-day scheduling and preserve custom schedules", () => {
+  const original = make({ repeat: "selected", days: [5, 1, 4, 2, 3] }).tasks[0];
+  assert.equal(repeatChoiceForTask(original), "weekdays");
+  assert.equal(repeatChoiceForTask({ ...original, days: [6, 0] }), "weekend");
+  assert.equal(repeatChoiceForTask({ ...original, days: [1, 3] }), "selected");
+  assert.deepEqual(
+    roundtrip(make({ repeat: "selected", days: [1, 2, 3, 4, 5] })).tasks[0].days,
+    [1, 2, 3, 4, 5],
+  );
+
+  const custom = repeatPatch(original, "selected");
+  assert.deepEqual(custom.days, original.days);
+  assert.equal(repeatPatchChangesTask(original, custom), false);
+  const weekday = repeatPatch({ ...original, repeat: "daily", days: [2] }, "weekdays");
+  assert.equal(weekday.repeat, "selected");
+  assert.deepEqual(weekday.days, [1, 2, 3, 4, 5]);
+  assert.equal({ ...original, ...weekday }.date, original.date);
+  const weekend = repeatPatch(original, "weekend");
+  assert.deepEqual(weekend.days, [0, 6]);
+  assert.deepEqual(repeatShortcutDays("weekdays"), [1, 2, 3, 4, 5]);
+  assert.deepEqual(repeatShortcutDays("weekends"), [0, 6]);
+  assert.deepEqual(repeatShortcutDays("all"), [0, 1, 2, 3, 4, 5, 6]);
+  assert.deepEqual(repeatShortcutDays("clear"), []);
+
+  const weekdays = make({ repeat: "selected", days: [1, 2, 3, 4, 5] });
+  const weekends = make({ repeat: "selected", days: [0, 6] });
+  for (let offset = 0; offset < 14; offset++) {
+    const date = at(offset);
+    const weekday = new Date(date).getDay();
+    assert.equal(taskDue(weekdays, weekdays.tasks[0], date), weekday >= 1 && weekday <= 5);
+    assert.equal(taskDue(weekends, weekends.tasks[0], date), weekday === 0 || weekday === 6);
+  }
+});
+test("weekday recurrence does not automatically miss weekend dates", () => {
+  const start = +localDate("2026-10-26");
+  const s = saveTask(initial(start), {
+    id: "weekday",
+    name: "Weekday task",
+    description: "",
+    time: "09:00",
+    repeat: "selected",
+    days: [1, 2, 3, 4, 5],
+    date: "2026-10-26",
+    category: "happy",
+  }, start);
+  const settled = decay(s, +localDate("2026-11-02"));
+  assert.ok(settled.outcomes.every((outcome) => {
+    const date = +localDate(outcome.date);
+    const weekday = new Date(date).getDay();
+    return weekday >= 1 && weekday <= 5;
+  }));
 });
 test("DST boundaries use calendar days rather than 24-hour elapsed periods", () => {
   const previous = process.env.TZ;

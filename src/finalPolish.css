@@ -431,6 +431,183 @@
   width: 100%;
   box-sizing: border-box;
 }
+.app .task-time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 12px;
+}
+.app .task-time-picker {
+  display: grid;
+  grid-template-columns: minmax(54px, 1fr) minmax(48px, 0.8fr) minmax(88px, 1.25fr);
+  align-items: end;
+  gap: 6px;
+  min-width: 0;
+}
+.app .task-time-picker label {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+.app .task-time-picker select,
+.app .task-time-picker input,
+.app .task-time-period button {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 40px;
+  padding: 6px 8px;
+  border: 1px solid #756080;
+  border-radius: 9px;
+  background: #201b28;
+  color: #f0e9e4;
+  font: inherit;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.app .task-time-picker input {
+  text-align: center;
+}
+.app .task-time-period {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+}
+.app .task-time-period button {
+  padding: 4px;
+  background: #31283a;
+  color: #d8c9df;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.app .task-time-period button[aria-pressed="true"] {
+  border-color: #b59ac7;
+  background: #604a70;
+  color: #fff;
+}
+.app .task-time-period button:hover {
+  border-color: #b59ac7;
+}
+.app .task-time-readout {
+  grid-column: 1 / -1;
+  justify-self: end;
+  color: #cbb8d8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.app .task-repeat-explanation {
+  margin: -3px 0 8px;
+  color: #cbb8d8;
+}
+.app .task-repeat-days {
+  box-sizing: border-box;
+  min-width: 0;
+  margin: 4px 0 10px;
+  padding: 9px;
+  border: 1px solid #68537788;
+  border-radius: 12px;
+  background: #211d29;
+}
+.app .task-repeat-days legend {
+  padding: 0 5px;
+  color: #e3d6eb;
+  font-size: 11px;
+}
+.app .task-editor .task-repeat-day-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 2px 0 8px;
+}
+.app .task-editor .task-repeat-day-shortcuts button {
+  min-height: 32px;
+  padding: 5px 9px;
+  border: 1px solid #68537788;
+  border-radius: 999px;
+  background: #2a2433;
+  color: #d9cbe3;
+  font-size: 10px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+.app .task-editor .task-repeat-day-shortcuts button:hover {
+  border-color: #b59ac7;
+  background: #382c43;
+}
+.app .task-editor fieldset .task-repeat-day-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+  min-width: 0;
+}
+.app .task-editor fieldset .task-repeat-day-grid label {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 44px;
+  place-items: center;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 1px;
+  border: 1px solid #68537766;
+  border-radius: 10px;
+  background: #211d27;
+  color: #aaa0b2;
+  font-size: 10px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+.app .task-editor .task-repeat-day-grid label span {
+  pointer-events: none;
+}
+.app .task-editor .task-repeat-day-grid label input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.app .task-editor .task-repeat-day-grid label:has(input:checked) {
+  border-color: #b59ac7;
+  background: #493958;
+  color: #f2e8f7;
+}
+.app .task-editor .task-repeat-day-grid label:has(input:checked)::after {
+  position: absolute;
+  top: 1px;
+  right: 4px;
+  color: #e6d6f1;
+  content: "✓";
+  font-size: 8px;
+  line-height: 1;
+}
+.app .task-editor .task-repeat-day-grid label:has(input:focus-visible) {
+  outline: 2px solid #b59ac7;
+  outline-offset: 2px;
+}
+@media (max-width: 360px) {
+  .app .task-editor fieldset .task-repeat-day-grid {
+    gap: 3px;
+  }
+  .app .task-editor fieldset .task-repeat-day-grid label {
+    min-height: 42px;
+    font-size: 9px;
+  }
+  .app .task-editor .task-repeat-day-shortcuts button {
+    padding-inline: 7px;
+  }
+}
 .app .task-alarm-toggle {
   color: #e5a35d;
   margin-bottom: 0;

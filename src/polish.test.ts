@@ -10,6 +10,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+import { TaskTimePicker, from12HourParts, to12HourParts } from "./TaskTimePicker";
 import {
   initial,
   dateKey,
@@ -30,6 +31,27 @@ import { SUPPLIES, EXTRA_SUPPLY_IDS } from "./catalog";
 import { ItemArt } from "./ItemArt";
 import { Pet } from "./Pets";
 const n = +new Date(2026, 9, 30, 12);
+test("task time picker converts exact 12-hour values and renders accessible controls", () => {
+  assert.equal(from12HourParts(12, "00", "AM"), "00:00");
+  assert.equal(from12HourParts(12, "00", "PM"), "12:00");
+  assert.equal(from12HourParts(9, "3", "PM"), "21:03");
+  assert.equal(from12HourParts(1, "07", "AM"), "01:07");
+  assert.equal(from12HourParts(10, "60", "AM"), null);
+  assert.equal(from12HourParts(13, "00", "PM"), null);
+  assert.deepEqual(to12HourParts("21:30"), {
+    hour: 9,
+    minute: "30",
+    period: "PM",
+  });
+  const html = renderToStaticMarkup(
+    createElement(TaskTimePicker, { value: "21:30", onChange: () => {} }),
+  );
+  assert.ok(html.includes('aria-label="Hour"'));
+  assert.ok(html.includes('aria-label="Minute"'));
+  assert.ok(html.includes('inputMode="numeric"'));
+  assert.ok(html.includes('aria-pressed="true">PM</button>'));
+  assert.ok(html.includes(">9:30 PM</output>"));
+});
 const task = (patch: Partial<Task> = {}): Task => ({
   id: "t",
   name: "Task",

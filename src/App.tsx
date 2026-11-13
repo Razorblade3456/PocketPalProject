@@ -1,6 +1,14 @@
 import { jarBalls, normalizeJarPriority } from "./jarModel";
 import { TaskCalendar } from "./TaskCalendar";
 import { CollectionsPanel, NewCollectionFields } from "./Collections";
+import { TaskTimePicker } from "./TaskTimePicker";
+import {
+  repeatChoiceForTask,
+  repeatPatch,
+  repeatPatchChangesTask,
+  repeatShortcutDays,
+  type RepeatChoice,
+} from "./repeatPresets";
 import { dailyCareBonus, mergeDailyCareBonuses, sortTodayTasks } from "./model";
 import "./priorities.css";
 import { notifyTask } from "./notifications";
@@ -176,7 +184,7 @@ export default function App() {
     ],
     [
       "Reminders & Routines",
-      "Set reminders and optional Important Alarms, group tasks in Collections, or add an Up Next task that activates when its predecessor is completed.",
+      "Set task time with Hour, Minute, and AM/PM. Choose weekdays, weekends, or your own days with Custom. Flexible schedules let you finish anytime before the deadline. Add reminders, Collections, or Up Next.",
     ],
     [
       "Jar & Pet Care",
@@ -1712,6 +1720,52 @@ export default function App() {
     </MotionConfig>
   );
 }
+function repeatDescription(
+  choice: RepeatChoice,
+  task: Task,
+  startDateValid: boolean,
+  calendarStart: Date,
+  defaultMonthDay: number,
+) {
+  if (choice === "once") return "Happens once on the selected date.";
+  if (choice === "daily") return "Repeats every day.";
+  if (choice === "weekdays") return "Repeats Monday through Friday.";
+  if (choice === "weekend") return "Repeats Saturday and Sunday.";
+  if (choice === "selected") return "Repeats on the days you’ve checked.";
+  if (choice === "weekly")
+    return startDateValid
+      ? `Repeats every ${calendarStart.toLocaleDateString([], { weekday: "long" })}.`
+      : "Choose a start date to set the weekly day.";
+  if (choice === "monthly") {
+    const day = task.dayOfMonth ?? defaultMonthDay;
+    const suffix = day % 100 >= 11 && day % 100 <= 13
+      ? "th"
+      : ["th", "st", "nd", "rd"][day % 10] || "th";
+    return `Repeats on the ${day}${suffix} of each month; shorter months use their final day.`;
+  }
+  if (choice === "interval") return `Repeats every ${task.intervalDays || 1} days.`;
+  if (choice === "afterCompletion")
+    return `Repeats ${task.intervalDays || 1} days after you complete it.`;
+  if (choice === "weeklyAny") return "Complete once anytime this week. Due Sunday.";
+  return "Complete once anytime this month. Due at month end.";
+}
+
+const dayShortcuts = [
+  { label: "Weekdays", value: "weekdays" },
+  { label: "Weekends", value: "weekends" },
+  { label: "All", value: "all" },
+  { label: "Clear", value: "clear" },
+] as const;
+const weekdayLabels = [
+  ["Mon", 1],
+  ["Tue", 2],
+  ["Wed", 3],
+  ["Thu", 4],
+  ["Fri", 5],
+  ["Sat", 6],
+  ["Sun", 0],
+] as const;
+
 function TaskEditor({
   task,
   startDate,
@@ -1759,9 +1813,13 @@ function TaskEditor({
   const [scheduleChanged, setScheduleChanged] = useState(false);
   const [warning, setWarning] = useState("");
   const [shortcut, setShortcut] = useState("details");
+  const [repeatChoiceOverride, setRepeatChoiceOverride] = useState<RepeatChoice | null>(null);
   const shortcutTargets = useRef<Record<string, HTMLElement | null>>({});
   const update = (p: Partial<Task>) => setT((v) => ({ ...v, ...p }));
   const flexiblePeriod = t.repeat === "weeklyAny" || t.repeat === "monthlyAny";
+  const showEntrySettings =
+    !flexiblePeriod && (t.repeat !== "once" || t.repetitions !== "once");
+  const repeatChoice = repeatChoiceOverride || repeatChoiceForTask(t);
   const calendarStart = new Date(`${t.date}T12:00:00`);
   const startDateValid = Number.isFinite(calendarStart.getTime());
   const defaultMonthDay = startDateValid ? calendarStart.getDate() : 1;
@@ -1865,18 +1923,17 @@ function TaskEditor({
             }}
           />
         </label>
-        <label>
-          Time
-          <input
-            required
-            type="time"
+        <div className="task-time-field">
+          <span className="task-time-label">Time</span>
+          <TaskTimePicker
             value={t.time}
-            onChange={(e) => {
+            onChange={(time) => {
+              if (time === t.time) return;
               setScheduleChanged(true);
-              update({ time: e.target.value, relativeAlarmAt: undefined });
+              update({ time, relativeAlarmAt: undefined });
             }}
           />
-        </label>
+        </div>
       </div>
       <h3
         className="task-editor-heading"
@@ -2022,26 +2079,27 @@ function TaskEditor({
       <label>
         Repeat
         <select
-          value={t.repeat}
+          className="task-repeat-select"
+          value={repeatChoice}
           onChange={(e) => {
+            const choice = e.target.value as RepeatChoice;
+            setRepeatChoiceOverride(choice);
+            const patch = repeatPatch(t, choice);
+            if (!repeatPatchChangesTask(t, patch)) return;
             setScheduleChanged(true);
-            const repeat = e.target.value as Task["repeat"];
-            update({
-              repeat,
-              ...(repeat === "weeklyAny" || repeat === "monthlyAny"
-                ? { repetitions: "once", dailyGoal: 1 }
-                : {}),
-            });
+            update(patch);
           }}
         >
           <optgroup label="Common">
             <option value="once">Just Once</option>
             <option value="daily">Every Day</option>
+            <option value="weekdays">Every Weekday (Monday–Friday)</option>
+            <option value="weekend">Every Weekend (Saturday–Sunday)</option>
             <option value="weekly">Every Week — Specific Day</option>
             <option value="monthly">Every Month — Specific Day</option>
           </optgroup>
           <optgroup label="Custom">
-            <option value="selected">Selected Weekdays</option>
+            <option value="selected">Choose Specific Days</option>
             <option value="interval">Every X Days</option>
             <option value="afterCompletion">Every X Days After Completion</option>
           </optgroup>
@@ -2052,13 +2110,10 @@ function TaskEditor({
         </select>
       </label>
 
-      {t.repeat === "weekly" && (
-        <p className="fine">
-          {startDateValid
-            ? `Repeats every ${calendarStart.toLocaleDateString([], { weekday: "long" })}, based on the selected start date.`
-            : "Choose a start date to set the weekly day."}
-        </p>
-      )}
+      <p className="fine task-repeat-explanation">
+        {repeatDescription(repeatChoice, t, startDateValid, calendarStart, defaultMonthDay)}
+      </p>
+
       {t.repeat === "monthly" && (
         <>
           <label>
@@ -2067,7 +2122,12 @@ function TaskEditor({
               value={
                 t.dayOfMonth ?? defaultMonthDay
               }
-              onChange={(e) => update({ dayOfMonth: Number(e.target.value) })}
+              onChange={(e) => {
+                const dayOfMonth = Number(e.target.value);
+                if (dayOfMonth === (t.dayOfMonth ?? defaultMonthDay)) return;
+                setScheduleChanged(true);
+                update({ dayOfMonth });
+              }}
             >
               {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                 <option key={day} value={day}>
@@ -2076,15 +2136,7 @@ function TaskEditor({
               ))}
             </select>
           </label>
-          <p className="fine">
-            Starts on or after the selected date. If a month is shorter, it uses that month’s final day.
-          </p>
         </>
-      )}
-      {flexiblePeriod && (
-        <p className="fine">
-          Complete once on any day before the {t.repeat === "weeklyAny" ? "week" : "month"} ends.
-        </p>
       )}
       {(t.repeat === "interval" || t.repeat === "afterCompletion") && (
         <label>
@@ -2100,31 +2152,49 @@ function TaskEditor({
         </label>
       )}
       {t.repeat === "selected" && (
-        <fieldset>
-          <legend>Choose at least one day</legend>
-          <div className="days">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
-              <label key={d}>
-                <input
-                  type="checkbox"
-                  checked={t.days.includes(i)}
-                  onChange={(e) =>
-                    update({
-                      days: e.target.checked
-                        ? [...t.days, i]
-                        : t.days.filter((x) => x !== i),
-                    })
-                  }
-                />
-                {d}
-              </label>
+        <fieldset className="task-repeat-days">
+          <legend>Choose days · select at least one</legend>
+          <div className="task-repeat-day-shortcuts" role="group" aria-label="Quick day selections">
+            {dayShortcuts.map(({ label, value }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  const days = repeatShortcutDays(value);
+                  setRepeatChoiceOverride("selected");
+                  if (days.length === t.days.length && days.every((day) => t.days.includes(day))) return;
+                  setScheduleChanged(true);
+                  update({ days });
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="days task-repeat-day-grid">
+            {weekdayLabels.map(([label, day]) => (
+                <label key={label}>
+                  <input
+                    type="checkbox"
+                    checked={t.days.includes(day)}
+                    onChange={(e) => {
+                      const days = e.target.checked
+                        ? [...t.days, day]
+                        : t.days.filter((x) => x !== day);
+                      setRepeatChoiceOverride("selected");
+                      setScheduleChanged(true);
+                      update({ days });
+                    }}
+                  />
+                  <span>{label}</span>
+                </label>
             ))}
           </div>
         </fieldset>
       )}
-      {!flexiblePeriod && (t.repeat !== "once" || t.repetitions !== "once") && (
+      {showEntrySettings && (
         <label>
-          Daily entries
+          Completions each scheduled day
           <select
             value={t.repetitions || "once"}
             onChange={(e) =>
@@ -2134,8 +2204,8 @@ function TaskEditor({
               })
             }
           >
-            <option value="once">Once per day</option>
-            <option value="multiple">Multiple times per day</option>
+            <option value="once">Once per scheduled day</option>
+            <option value="multiple">Multiple times per scheduled day</option>
             <option value="goal">Custom daily goal</option>
             <option value="unlimited">Unlimited repetitions</option>
           </select>
@@ -2143,7 +2213,7 @@ function TaskEditor({
       )}
       {!flexiblePeriod && (t.repetitions === "goal" || t.repetitions === "multiple") && (
         <label>
-          Daily goal
+          Target completions per scheduled day
           <input
             type="number"
             min={t.repetitions === "multiple" ? 2 : 1}
@@ -2154,9 +2224,11 @@ function TaskEditor({
           />
         </label>
       )}
-      {!flexiblePeriod && (
+      {showEntrySettings && (
         <p className="fine">
-          Entries beyond your goal still count. Unlimited tasks have no automatic misses.
+          {t.repetitions === "unlimited"
+            ? "Unlimited tasks can be logged any number of times and never receive automatic misses."
+            : "This is how many times you want to complete the task on each scheduled day. Extra entries still count."}
         </p>
       )}
 
