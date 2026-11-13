@@ -4,6 +4,7 @@ import {
   shiftDate,
   taskDue,
   taskCounts,
+  taskFinishedToday,
   taskProgressGoal,
   taskPeriod,
   taskDeadlineLabel,
@@ -49,9 +50,9 @@ export function calendarTasks(
     .filter((o) => o.date === date && !o.deleted && o.status !== "pending")
     .sort((a, b) => a.sequence - b.sequence);
   for (const o of records) {
-    if (date < today) {
+    if (date < today || (o.scheduledDate && o.scheduledDate > date)) {
       const task = { ...o.task, id: o.taskId, name: o.name };
-      if (date >= task.date) planned.set(o.taskId, task);
+      if (date >= task.date || o.scheduledDate) planned.set(o.taskId, task);
     }
   }
   return sortActiveTasks([...planned.values()]).map((task) => {
@@ -78,10 +79,32 @@ export function calendarTasks(
           }
         : allCounts,
       goal = taskProgressGoal(task),
-      completed = counts.completed >= goal;
+      earlyForOccurrence = s.outcomes.find(
+        (o) =>
+          o.taskId === task.id &&
+          o.scheduledDate === date &&
+          o.date < date &&
+          o.status === "completed" &&
+          !o.deleted,
+      ),
+      earlyOnActualDate = records.some(
+        (o) =>
+          o.taskId === task.id &&
+          o.scheduledDate &&
+          o.scheduledDate > date &&
+          o.status === "completed",
+      ),
+      completed =
+        (goal === 0
+          ? taskFinishedToday(s, task, date)
+          : counts.completed >= goal) ||
+        !!earlyForOccurrence ||
+        earlyOnActualDate;
     const missed = counts.missed;
-    const status = completed
-      ? "Completed"
+    const status = earlyForOccurrence || earlyOnActualDate
+      ? "Completed Early"
+      : completed
+        ? "Completed"
       : missed
         ? "Missed"
         : date < today && goal > 0

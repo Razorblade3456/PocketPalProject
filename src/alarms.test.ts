@@ -11,6 +11,7 @@ import {
   deleteTask,
   addHabitEvent,
   recordAttempt,
+  recordTaskCompletion,
   type State,
   type Task,
 } from "./model";
@@ -142,6 +143,21 @@ test("task deletion, edits, skip, pause and occurrence reschedule cancel stale a
     );
     assert.equal(alarmQueue(reconcileAlarms(changed, evening)).length, 0, kind);
   }
+});
+test("an early completed occurrence does not arm its due-day alarm", () => {
+  const actualDate = dateKey(noon),
+    scheduledDate = shiftDate(actualDate, 1),
+    s = setup({
+      repeat: "once",
+      date: scheduledDate,
+      createdDate: actualDate,
+      time: "19:00",
+    }),
+    completed = recordTaskCompletion(s, "alarm", actualDate, noon, "early-alarm", scheduledDate),
+    dueAt = +localDate(scheduledDate) + 19 * 60 * minute,
+    reconciled = reconcileAlarms(completed, dueAt + minute);
+  assert.equal(completed.outcomes.find((o) => o.id === "early-alarm")?.scheduledDate, scheduledDate);
+  assert.equal(reconciled.alarms?.length, 0);
 });
 test("all recurrence types and created dates reuse taskDue, without ordinary or completed alarms", () => {
   for (const repeat of [
@@ -677,7 +693,7 @@ test("optional step reminders reuse saved alarms, replace sequentially and only 
     "duplicate",
   );
   assert.deepEqual(repeated.alarms, s.alarms);
-  const restored = parseState(JSON.parse(JSON.stringify(s)))!;
+  const restored = parseState(JSON.parse(JSON.stringify(s)), noon + minute)!;
   assert.ok(restored);
   assert.equal(
     reconcileAlarms(restored, noon + minute).alarms![0].dueAt,

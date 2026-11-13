@@ -25,6 +25,8 @@ export function OutcomeControls({
   missDisabled?: boolean;
 }) {
   const [locked, setLocked] = useState(false),
+    attempts = counts.completed + counts.missed,
+    limitReached = goal > 0 && attempts >= goal,
     until = useRef(0),
     timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -60,7 +62,7 @@ export function OutcomeControls({
                 ? `Record another completion · +${rewardCoins} coins`
                 : "Track another completion · no additional coins today"
             }
-            disabled={locked}
+            disabled={locked || limitReached}
             onClick={(e) => {
               const r = e.currentTarget.getBoundingClientRect();
               act("completed", {
@@ -80,7 +82,7 @@ export function OutcomeControls({
                 ? `Record another missed attempt · up to −${missPenalty} care`
                 : "Record a missed attempt · no care penalty"
             }
-            disabled={locked || missDisabled}
+            disabled={locked || missDisabled || limitReached}
             onClick={() => act("missed")}
           >
             <Minus size={16} />
@@ -117,6 +119,11 @@ export function OutcomeControls({
             />
           </div>
         </div>
+      )}
+      {limitReached && (
+        <span className="task-attempt-cap" role="status">
+          {attempts}/{goal} attempts recorded
+        </span>
       )}
       {goal === 0 && <span className="unlimited-note">Unlimited tracking</span>}
     </div>
@@ -187,6 +194,7 @@ export function OutcomeHistory({
               second: "2-digit",
             })}{" "}
             {o.automatic ? " · automatic missed goal" : ""}
+            {o.scheduledDate && ` · completed early for ${o.scheduledDate}`}
           </small>
           <div className="entry-actions">
             <label>
@@ -260,8 +268,11 @@ export function OutcomeHistory({
               <span>
                 {e.source === "daily-care"
                   ? "Daily Care Bonus"
-                  : s.outcomes.find((o) => o.id === e.entryId)?.name ||
-                    "Task reward"}
+                  : e.entryId.endsWith(":early-bird")
+                    ? (s.outcomes.find((o) => o.id === e.entryId.slice(0, -11))
+                        ?.name || "Task") + " · Early Bird Bonus"
+                    : s.outcomes.find((o) => o.id === e.entryId)?.name ||
+                      "Task reward"}
               </span>
               <small>
                 {e.amount > 0 ? "+" : ""}

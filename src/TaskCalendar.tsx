@@ -6,11 +6,13 @@ import {
   ChevronLeft,
   ChevronRight,
   Pencil,
+  Check,
   CalendarPlus,
   Skull,
 } from "lucide-react";
 import {
   addVacationRange,
+  canCompleteEarly,
   calendarDays,
   dateKey,
   isVacationDay,
@@ -54,12 +56,14 @@ export function TaskCalendar({
   onEdit,
   onAdd,
   onVacationChange,
+  onCompleteEarly,
 }: {
   s: State;
   today?: string;
   onEdit?: (task: Task) => void;
   onAdd?: (date: string) => void;
   onVacationChange?: Dispatch<SetStateAction<State>>;
+  onCompleteEarly?: (task: Task, scheduledDate: string) => void;
 }) {
   const [selected, setSelected] = useState(today),
     [month, setMonth] = useState(() => calendarMonth(today)),
@@ -355,6 +359,18 @@ export function TaskCalendar({
                         : ""}
                     {row.missed > 0 ? " · " + row.missed + " missed" : ""}
                   </span>
+                  {selected > today &&
+                    onCompleteEarly &&
+                    canCompleteEarly(s, row.task, selected, today) && (
+                      <button
+                        type="button"
+                        className="calendar-complete-early"
+                        onClick={() => onCompleteEarly(row.task, selected)}
+                      >
+                        <Check size={13} aria-hidden="true" /> Complete Early
+                        <small>+2 coins</small>
+                      </button>
+                    )}
                 </div>
                 <details className="calendar-export">
                   <summary

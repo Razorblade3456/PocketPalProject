@@ -115,6 +115,39 @@ test("collection progress counts unique assigned tasks completed this month", ()
   assert.ok(nextMonth.includes("0/3 completed this month"));
 });
 
+test("early completion belongs to the scheduled month in collection progress", () => {
+  const actualDate = "2026-10-30",
+    scheduledDate = "2026-11-01",
+    at = +new Date(2026, 9, 30, 12);
+  let s = addCollection(initial(at), { id: "school", name: "College" });
+  s = saveTask(
+    s,
+    task("exam", {
+      name: "Exam preparation",
+      date: scheduledDate,
+      createdDate: actualDate,
+      createdAt: at,
+      repeat: "once",
+      collectionId: "school",
+    }),
+    at,
+  );
+  s = recordTaskCompletion(s, "exam", actualDate, at, "early-exam", scheduledDate);
+  const render = (time: number) =>
+    renderToStaticMarkup(
+      createElement(CollectionsPanel, {
+        s,
+        now: time,
+        onEditTask: () => {},
+        onCreate: () => "new",
+        onUpdate: () => {},
+        onDelete: () => {},
+      }),
+    );
+  assert.ok(render(at).includes("0/1 completed this month"));
+  assert.ok(render(+new Date(2026, 10, 2, 12)).includes("1/1 completed this month"));
+});
+
 test("task editor collection picker offers None and a compact create option", () => {
   const html = renderToStaticMarkup(
     createElement(NewCollectionFields, {

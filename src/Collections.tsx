@@ -316,7 +316,7 @@ export function CollectionsPanel({
               s.outcomes
                 .filter(
                   (outcome) =>
-                    outcome.date.slice(0, 7) === monthKey &&
+                    (outcome.scheduledDate || outcome.date).slice(0, 7) === monthKey &&
                     outcome.status === "completed" &&
                     !outcome.deleted &&
                     tasks.some((task) => task.id === outcome.taskId),

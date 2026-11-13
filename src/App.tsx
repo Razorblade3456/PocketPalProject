@@ -41,6 +41,7 @@ import {
   buyItem,
   buyAndUseBasic,
   taskFinishedToday,
+  canCompleteEarly,
   taskProgressGoal,
   addCollection,
   updateCollection,
@@ -166,44 +167,20 @@ export default function App() {
   );
   const tutorial = [
     [
-      "Today's Tasks",
-      "Add habits and log progress with one tap. Use the + and − controls to correct an entry.",
+      "Tasks & Attempts",
+      "Complete with + or log Missed with −. Both fill the task’s attempt limit (for example, 3/3); Undo removes the latest entry and reopens a slot.",
     ],
     [
-      "One Clear Task Editor",
-      "Create or edit a task in one form. Use the Details, Alarm, Repeat, and Up Next shortcuts to jump to settings without losing your edits.",
+      "Calendar & Early Bird",
+      "Colored dots show priority; black skulls mark missed tasks. Complete eligible fixed-date tasks up to 7 days early for +2 coins. Flexible Any Day tasks aren’t eligible.",
     ],
     [
-      "Priorities & Alarms",
-      "Choose High, Normal, or Low priority. Set a regular reminder or an Important Alarm, which keeps sounding until you snooze or stop it. Quiet-hour overrides are optional.",
+      "Reminders & Routines",
+      "Set reminders and optional Important Alarms, group tasks in Collections, or add an Up Next task that activates when its predecessor is completed.",
     ],
     [
-      "Repeat & Rest Days",
-      "Repeat options are grouped into Common, Custom, and Flexible. Monthly Specific Day uses the chosen date and falls back to month-end; Any Day schedules stay flexible. Calendar vacation days pause missed penalties and reminders.",
-    ],
-    [
-      "Collections",
-      "Create or assign Collections from the editor or dashboard. Monthly progress counts each assigned task with a completion once, even if it repeats.",
-    ],
-    [
-      "Up Next",
-      "Add a follow-up task in the editor. Completing this task can automatically activate the next one in your sequence.",
-    ],
-    [
-      "Pick Up Here",
-      "Resume an unfinished task from your dashboard. Your note and timer help you return to where you left off.",
-    ],
-    [
-      "Task Calendar",
-      "Black skulls represent missed tasks. Colored dots show tasks by priority. Review dates, vacation days, and recorded jar entries here.",
-    ],
-    [
-      "Progress Jar & Care",
-      "Earn coins from completed tasks, then use supplies to care for your pet. Jar balls keep their recorded priority.",
-    ],
-    [
-      "Mini Pet",
-      "Open Mini Mochi for a small floating browser pet. The Windows desktop companion is launched separately.",
+      "Jar & Pet Care",
+      "Completions fill the progress jar and earn eligible coins. Spend coins on supplies to care for your pet; open Mini Mochi for a floating browser companion.",
     ],
   ] as const;
   const today = dateKey(now),
@@ -441,6 +418,7 @@ export default function App() {
     status: "completed" | "missed",
     date = dateKey(),
     source?: RewardSource,
+    scheduledDate?: string,
   ) => {
     const at = Date.now(),
       lock = "task:" + t.id;
@@ -448,13 +426,13 @@ export default function App() {
     actionLocks.current.set(lock, at);
     setNow(at);
     const id = crypto.randomUUID(),
-      next = recordAttempt(s, t.id, date, status, at, id);
+      next = recordAttempt(s, t.id, date, status, at, id, scheduledDate);
     const entry = next.outcomes.find((o) => o.id === id);
     if (!entry) return;
     setS((p) =>
       status === "completed"
-        ? recordTaskCompletion(p, t.id, date, at, id)
-        : recordAttempt(p, t.id, date, status, at, id),
+        ? recordTaskCompletion(p, t.id, date, at, id, scheduledDate)
+        : recordAttempt(p, t.id, date, status, at, id, scheduledDate),
     );
     if (
       (status === "missed" || entry.rewardCoins > 0) &&
@@ -484,7 +462,7 @@ export default function App() {
     setReaction(
       status === "completed"
         ? entry.rewardCoins
-          ? `+${entry.rewardCoins} coins · completion recorded`
+          ? `+${entry.rewardCoins + (entry.earlyBirdBonusCoins || 0)} coins · completion recorded`
           : "Completion tracked"
         : "−" + difference + " " + labels[entry.category],
     );
@@ -495,11 +473,13 @@ export default function App() {
     setMessage(
       status === "completed"
         ? next.debt
-          ? `+${entry.rewardCoins} coins earned · ` +
+          ? `+${entry.rewardCoins + (entry.earlyBirdBonusCoins || 0)} coins earned · ` +
             next.debt +
             " still reserved from future wins."
           : entry.rewardCoins
-            ? `+${entry.rewardCoins} coins · Completion recorded.`
+            ? scheduledDate
+              ? `+${entry.rewardCoins + (entry.earlyBirdBonusCoins || 0)} coins · Early bird bonus included.`
+              : `+${entry.rewardCoins} coins · Completion recorded.`
             : "Completion tracked · today’s reward cap is reached. Every moment still counts."
         : difference
           ? "−" +
@@ -1094,6 +1074,10 @@ export default function App() {
               <TaskCalendar
                 s={s}
                 today={today}
+                onCompleteEarly={(task, scheduledDate) =>
+                  canCompleteEarly(s, task, scheduledDate, today) &&
+                  reward(task, "completed", today, undefined, scheduledDate)
+                }
                 onVacationChange={setS}
                 onAdd={(date) => {
                   setCalendarStart(date);

@@ -2973,6 +2973,13 @@ dialog {
   font-size: 8px;
   color: #9a9e86;
 }
+.task-attempt-cap {
+  display: block;
+  margin-top: 6px;
+  color: #d3b8dd;
+  font-size: 9px;
+  text-align: center;
+}
 .task-goal > div {
   height: 4px;
   background: #e2e7d2;

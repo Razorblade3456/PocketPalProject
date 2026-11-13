@@ -9,6 +9,7 @@ import {
   taskDue,
   localDate,
   recordAttempt,
+  recordTaskCompletion,
   correctAttempt,
   deleteTask,
   addHabitEvent,
@@ -88,6 +89,21 @@ test("future start dates reuse recurrence without appearing early or changing th
   assert.ok(!calendarTasks(s, "2026-11-21").some((r) => r.task.id === "once"));
   assert.ok(s.tasks.every((t) => !taskDue(s, t, now)));
   assert.equal(JSON.stringify(s), before);
+});
+test("calendar shows early completion on the actual day and fulfills the scheduled day", () => {
+  const actual = "2026-11-01",
+    scheduled = "2026-11-02",
+    n = +localDate(actual);
+  let s = saveTask(
+    initial(n),
+    task({ id: "once", repeat: "once", date: scheduled, createdDate: actual }),
+    n,
+  );
+  s = recordTaskCompletion(s, "once", actual, n, "early-calendar", scheduled);
+  assert.equal(calendarTasks(s, actual, actual)[0]?.status, "Completed Early");
+  assert.equal(calendarTasks(s, scheduled, actual)[0]?.status, "Completed Early");
+  assert.equal(calendarTasks(s, actual, actual)[0]?.completed, true);
+  assert.equal(calendarTasks(s, scheduled, actual)[0]?.count, 1);
 });
 test("monthly specific tasks appear only on the selected or clamped calendar date", () => {
   let s = initial(now);
@@ -542,24 +558,36 @@ test("manual skull balls preserve success totals, coins and care; undo removes t
 import { HistoricalJar } from "./TaskCalendar";
 import { parseState } from "./model";
 test("past calendar jar reconstructs recorded colors and skulls without changing saved state", () => {
-  let s = initial(now);
+  const archiveDate = "2030-11-01",
+    nextDate = "2030-11-02",
+    archiveNow = +localDate(archiveDate);
+  let s = initial(archiveNow);
   for (const priority of ["high", "normal", "low"] as const) {
-    s = saveTask(s, task({ id: priority, priority }), now);
+    s = saveTask(
+      s,
+      task({
+        id: priority,
+        priority,
+        date: archiveDate,
+        repetitions: "unlimited",
+      }),
+      archiveNow,
+    );
     s = recordAttempt(
       s,
       priority,
-      "2026-11-01",
+      archiveDate,
       "completed",
-      now,
+      archiveNow,
       "done-" + priority,
     );
   }
-  s = recordAttempt(s, "high", "2026-11-01", "missed", now + 1, "miss-one");
-  s = recordAttempt(s, "low", "2026-11-01", "missed", now + 2, "miss-two");
-  s = saveTask(s, { ...s.tasks[0], priority: "low" }, now + 3);
+  s = recordAttempt(s, "high", archiveDate, "missed", archiveNow + 1, "miss-one");
+  s = recordAttempt(s, "low", archiveDate, "missed", archiveNow + 2, "miss-two");
+  s = saveTask(s, { ...s.tasks[0], priority: "low" }, archiveNow + 3);
   const earnedCoins = s.coins,
     historyCount = s.outcomes.length;
-  s = deleteTask(s, "normal", now + 3);
+  s = deleteTask(s, "normal", archiveNow + 3);
   assert.equal(s.coins, earnedCoins);
   assert.equal(s.outcomes.length, historyCount);
   assert.equal(s.completions.filter((c) => c.taskId === "normal").length, 1);
@@ -567,8 +595,8 @@ test("past calendar jar reconstructs recorded colors and skulls without changing
   const html = renderToStaticMarkup(
     createElement(HistoricalJar, {
       s,
-      date: "2026-11-01",
-      today: "2026-11-02",
+      date: archiveDate,
+      today: nextDate,
     }),
   );
   assert.ok(html.includes("2 completed"));
@@ -579,19 +607,19 @@ test("past calendar jar reconstructs recorded colors and skulls without changing
     assert.ok(html.includes(color));
   assert.ok(html.includes("static-jar"));
   assert.equal(JSON.stringify(s), before);
-  s = deleteAttempt(s, "miss-one", now + 4);
+  s = deleteAttempt(s, "miss-one", archiveNow + 4);
   const updated = renderToStaticMarkup(
     createElement(HistoricalJar, {
       s,
-      date: "2026-11-01",
-      today: "2026-11-02",
+      date: archiveDate,
+      today: nextDate,
     }),
   );
   assert.equal((updated.match(/data-ball-key=/g) || []).length, 3);
   assert.ok(updated.includes("1 missed"));
   const restored = parseState(JSON.parse(JSON.stringify(s)))!;
   assert.ok(restored);
-  assert.equal(jarBalls(restored, "2026-11-01").length, 3);
+  assert.equal(jarBalls(restored, archiveDate).length, 3);
 });
 test("deleting a multi-ball or missed task hides only its balls from current and archived jars", () => {
   const date = "2026-11-01";

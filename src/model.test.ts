@@ -9,6 +9,8 @@ import {
   deleteAttempt,
   undoLatest,
   taskCounts,
+  taskProgressGoal,
+  canCompleteEarly,
   goalFor,
   rewardKey,
   buyItem,
@@ -798,11 +800,19 @@ test("re-completing version-1 history never restores its old food, water or happ
   assert.deepEqual(reload(s).care, s.care);
 });
 function earn(s: State, count: number, n = now) {
-  // Explicitly fund purchase-focused tests under the configurable economy.
+  // Purchase/ledger fixtures need repeated entries; finite-cap behavior has dedicated cases.
   s = {
     ...s,
     tasks: s.tasks.map((t) =>
-      t.id === "a" ? { ...t, rewardCap: Math.min(count, 100) } : t,
+      t.id === "a"
+        ? {
+            ...t,
+            rewardCap: Math.min(count, 100),
+            ...(t.repetitions === undefined && count > 1
+              ? { repetitions: "unlimited" as const }
+              : {}),
+          }
+        : t,
     ),
   };
   for (let i = 0; i < count; i++)
@@ -878,6 +888,7 @@ test("finished-today grouping is derived from the daily target and reverses afte
 });
 test("each intentional positive and negative press is a unique independent entry", () => {
   let s = setup();
+  s.tasks[0].repetitions = "unlimited";
   for (let i = 0; i < 3; i++)
     s = recordAttempt(s, "a", dateKey(now), "completed", now, "positive-" + i);
   s = recordAttempt(s, "a", dateKey(now), "missed", now, "negative");
@@ -957,14 +968,15 @@ test("unlimited tasks never generate automatic missed attempts, even over many d
   assert.equal(goalFor(s.tasks[0]), 0);
   assert.equal(after.outcomes.length, 0);
 });
-test("once and multiple modes have a daily minimum but allow intentional entries beyond it", () => {
+test("once and multiple modes cap combined attempts at their configured target", () => {
   for (const repetitions of ["once", "multiple"] as const) {
     let s = setup();
     s.tasks[0].repetitions = repetitions;
     s = earn(s, 4);
     s = decay(s, +localDate(shiftDate(dateKey(now), 1)));
-    assert.equal(s.completions.length, 4);
-    assert.equal(s.coins, 20);
+    const limit = repetitions === "once" ? 1 : 3;
+    assert.equal(s.completions.length, limit);
+    assert.equal(s.coins, limit * 5);
     assert.equal(s.outcomes.filter((o) => o.automatic).length, 0);
   }
 });
@@ -973,7 +985,7 @@ test("goals reached or exceeded have no extra automatic penalties", () => {
   s.tasks[0] = { ...s.tasks[0], repetitions: "goal", dailyGoal: 3 };
   s = earn(s, 5);
   s = decay(s, +localDate(shiftDate(dateKey(now), 1)));
-  assert.equal(s.outcomes.length, 5);
+  assert.equal(s.outcomes.length, 3);
   assert.equal(s.coins, 15);
 });
 test("a manually missed once-per-day goal is not penalized again at midnight", () => {
@@ -1733,4 +1745,99 @@ test("monthly-any task has one month-end outcome and refresh begins the next per
   let excused = saveTask(initial(n), monthly, n);
   excused = addVacationRange(excused, first, last, n);
   assert.equal(decay(excused, +localDate(next)).outcomes.length, 0);
+});
+
+test("finite task attempt limits include both completions and misses, and undo reopens a slot", () => {
+  const s = setup(now);
+  s.tasks = [task("a", { repetitions: "multiple", dailyGoal: 3 })];
+  let next = recordAttempt(s, "a", dateKey(now), "completed", now, "one");
+  next = recordAttempt(next, "a", dateKey(now), "missed", now, "two");
+  next = recordAttempt(next, "a", dateKey(now), "completed", now, "three");
+  const blocked = recordAttempt(next, "a", dateKey(now), "missed", now, "four");
+  assert.equal(blocked.outcomes.filter((o) => !o.deleted).length, 3);
+  assert.deepEqual(taskCounts(blocked, "a", dateKey(now)), {
+    completed: 2,
+    missed: 1,
+    latest: blocked.outcomes.at(-1),
+  });
+  const undone = undoLatest(blocked, "a", dateKey(now), now);
+  assert.equal(taskCounts(undone, "a", dateKey(now)).completed + taskCounts(undone, "a", dateKey(now)).missed, 2);
+  assert.equal(recordAttempt(undone, "a", dateKey(now), "missed", now, "four").outcomes.filter((o) => !o.deleted).length, 3);
+  const unlimited = { ...s, tasks: [task("a", { repetitions: "unlimited" })] };
+  assert.equal(taskProgressGoal(unlimited.tasks[0]), 0);
+  assert.equal(recordAttempt(unlimited, "a", dateKey(now), "completed", now, "u1").outcomes.length, 1);
+  assert.equal(recordAttempt(recordAttempt(unlimited, "a", dateKey(now), "completed", now, "u1"), "a", dateKey(now), "missed", now, "u2").outcomes.length, 2);
+});
+
+test("early completion fulfills its future fixed occurrence and awards one bonus", () => {
+  const actual = "2026-10-25",
+    scheduled = "2026-10-26",
+    n = +localDate(actual),
+    s = setup(n);
+  s.tasks = [task("a", { repeat: "once", date: scheduled, createdDate: actual, createdAt: n })];
+  assert.equal(canCompleteEarly(s, s.tasks[0], scheduled, actual), true);
+  const next = recordTaskCompletion(s, "a", actual, n, "early", scheduled),
+    outcome = next.outcomes.find((o) => o.id === "early");
+  assert.equal(outcome?.date, actual);
+  assert.equal(outcome?.scheduledDate, scheduled);
+  assert.equal(outcome?.earlyBirdBonusCoins, 2);
+  assert.equal(taskCounts(next, "a", scheduled).completed, 1);
+  assert.equal(taskCounts(next, "a", actual).completed, 0);
+  assert.equal(taskFinishedToday(next, next.tasks[0], scheduled), true);
+  assert.equal(next.coins - s.coins, 7);
+  assert.ok(validState(next));
+  assert.deepEqual(reload(next), next);
+  assert.equal(jarBalls(next, actual).filter((ball) => !ball.missed).length, 1);
+  assert.equal(jarBalls(next, scheduled).length, 0);
+  const settled = decay(next, +localDate("2026-10-28"));
+  assert.equal(settled.outcomes.filter((o) => o.taskId === "a" && o.status === "missed").length, 0);
+  const corrected = correctAttempt(next, "early", "missed", n);
+  assert.equal(corrected.coins, s.coins);
+  const restored = correctAttempt(corrected, "early", "completed", n);
+  assert.equal(restored.coins - s.coins, 7);
+  assert.equal(
+    restored.rewardLedger
+      ?.filter((entry) => entry.entryId === "early:early-bird")
+      .reduce((sum, entry) => sum + entry.amount, 0),
+    2,
+  );
+  const removed = deleteAttempt(next, "early", n);
+  assert.equal(removed.coins, s.coins);
+  assert.equal(canCompleteEarly(s, s.tasks[0], "2026-11-02", actual), false);
+  assert.equal(canCompleteEarly(s, s.tasks[0], "2026-11-01", actual), false);
+  assert.equal(canCompleteEarly(s, s.tasks[0], "2026-10-31", actual), false);
+  const sevenDays = shiftDate(actual, 7),
+    daily = { ...s.tasks[0], repeat: "daily" as const };
+  assert.equal(canCompleteEarly({ ...s, tasks: [daily] }, daily, sevenDays, actual), true);
+  assert.equal(
+    canCompleteEarly(
+      { ...s, tasks: [task("a", { repeat: "weeklyAny", date: actual })] },
+      task("a", { repeat: "weeklyAny", date: actual }),
+      scheduled,
+      actual,
+    ),
+    false,
+  );
+});
+
+test("weekly and monthly flexible periods share a finite attempt cap, while unlimited stays open", () => {
+  const weeklyDate = "2026-10-25",
+    monthlyDate = "2026-10-01",
+    s = setup(now),
+    weekly = task("week", { repeat: "weeklyAny", date: "2026-10-19", createdDate: "2026-10-19" }),
+    monthly = task("month", { repeat: "monthlyAny", date: monthlyDate, createdDate: monthlyDate });
+  s.tasks = [weekly, monthly];
+  let next = recordAttempt(s, "week", weeklyDate, "missed", now, "weekly-miss");
+  next = recordAttempt(next, "week", weeklyDate, "completed", now, "weekly-extra");
+  next = recordAttempt(next, "month", weeklyDate, "completed", now, "monthly-done");
+  next = recordAttempt(next, "month", weeklyDate, "missed", now, "monthly-extra");
+  assert.equal(next.outcomes.filter((o) => o.taskId === "week").length, 1);
+  assert.equal(next.outcomes.filter((o) => o.taskId === "month").length, 1);
+  const open = {
+    ...s,
+    tasks: [task("open", { repeat: "weeklyAny", repetitions: "unlimited", date: "2026-10-19", createdDate: "2026-10-19" })],
+  };
+  let tracked = recordAttempt(open, "open", weeklyDate, "missed", now, "open-miss");
+  tracked = recordAttempt(tracked, "open", weeklyDate, "completed", now, "open-done");
+  assert.equal(tracked.outcomes.filter((o) => o.taskId === "open").length, 2);
 });

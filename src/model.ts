@@ -146,6 +146,9 @@ export type Occurrence = Completion & {
   rewardRate?: number;
   rewardLimit?: number;
   timeZone?: string;
+  /** Scheduled local date for an early completion; `date` remains the actual record/jar date. */
+  scheduledDate?: string;
+  earlyBirdBonusCoins?: number;
 };
 type Settings = {
   tutorialSeen?: boolean;
@@ -514,6 +517,19 @@ function reconcileRewards(s: State, n: number): State {
         amount: difference,
         at: n,
       });
+    const bonusEntryId = o.id + ":early-bird",
+      bonusDesired =
+        o.status === "completed" && !o.deleted && o.rewardCoins > 0
+          ? o.earlyBirdBonusCoins || 0
+          : 0,
+      bonusDifference = bonusDesired - (totals.get(bonusEntryId) || 0);
+    if (bonusDifference)
+      ledger.push({
+        id: crypto.randomUUID(),
+        entryId: bonusEntryId,
+        amount: bonusDifference,
+        at: n,
+      });
   }
   return {
     ...s,
@@ -546,22 +562,23 @@ export function outcomeFor(s: State, id: string, date: string) {
   );
 }
 export const goalFor = (task: Task) =>
-  task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
-    ? 1
-    : task.repetitions === "unlimited"
-      ? 0
+  task.repetitions === "unlimited"
+    ? 0
+    : task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
+      ? 1
       : task.repetitions === "goal"
         ? Math.max(1, Math.min(100, Math.round(task.dailyGoal || 1)))
         : 1;
 export function taskCounts(s: State, id: string, date: string) {
+  const occurrenceDate = (o: Occurrence) => o.scheduledDate || o.date;
   const snapshots = s.outcomes
-    .filter((o) => o.taskId === id && !o.deleted && o.date <= date)
+    .filter((o) => o.taskId === id && !o.deleted && occurrenceDate(o) <= date)
     .filter((o) => {
       if (o.task.repeat === "weeklyAny" || o.task.repeat === "monthlyAny") {
         const period = taskPeriod(o.task, date);
-        return date >= period.start && date <= period.end;
+        return occurrenceDate(o) >= period.start && occurrenceDate(o) <= period.end;
       }
-      return o.date === date;
+      return occurrenceDate(o) === date;
     })
     .sort((a, b) => b.sequence - a.sequence);
   const task =
@@ -578,8 +595,8 @@ export function taskCounts(s: State, id: string, date: string) {
   const entries = s.outcomes.filter(
     (o) =>
       o.taskId === id &&
-      o.date >= first &&
-      o.date <= period.end &&
+      occurrenceDate(o) >= first &&
+      occurrenceDate(o) <= period.end &&
       !o.deleted,
   );
   return {
@@ -592,8 +609,10 @@ export function taskCounts(s: State, id: string, date: string) {
 }
 /** UI targets do not change recurrence minimums or funded reward limits. */
 export const taskProgressGoal = (task: Task) =>
-  task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
-    ? 1
+  task.repetitions === "unlimited"
+    ? 0
+    : task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
+      ? 1
     : task.repetitions === "multiple"
     ? Math.max(
         2,
@@ -603,11 +622,34 @@ export const taskProgressGoal = (task: Task) =>
         ),
       )
     : goalFor(task);
+/** Fixed scheduled occurrences can be completed up to one week ahead. */
+export function canCompleteEarly(
+  s: State,
+  task: Task,
+  scheduledDate: string,
+  actualDate = dateKey(),
+) {
+  const distance = calendarDays(scheduledDate, actualDate);
+  return (
+    ["once", "daily", "weekly", "monthly", "selected", "interval"].includes(
+      task.repeat,
+    ) &&
+    taskProgressGoal(task) === 1 &&
+    distance >= 1 &&
+    distance <= 7 &&
+    scheduledDate >= task.date &&
+    scheduledDate >= (task.createdDate || task.date) &&
+    taskDue(s, task, +localDate(scheduledDate)) &&
+    taskCounts(s, task.id, scheduledDate).completed +
+      taskCounts(s, task.id, scheduledDate).missed ===
+      0
+  );
+}
 export const taskFinishedToday = (s: State, task: Task, date: string) =>
   task.repeat === "weeklyAny" || task.repeat === "monthlyAny"
     ? taskCounts(s, task.id, date).completed >= 1
     : task.repetitions === "unlimited"
-    ? (s.habitEvents || [])
+      ? (s.habitEvents || [])
         .filter(
           (e) =>
             e.taskId === task.id &&
@@ -615,7 +657,7 @@ export const taskFinishedToday = (s: State, task: Task, date: string) =>
             ["finishDay", "reopenDay"].includes(e.kind),
         )
         .at(-1)?.kind === "finishDay"
-    : taskCounts(s, task.id, date).completed >= taskProgressGoal(task);
+      : taskCounts(s, task.id, date).completed >= taskProgressGoal(task);
 export const rewardKey = (c: Completion) =>
   c.ballId || c.id || occurrenceKey(c.taskId, c.date);
 export function recordAttempt(
@@ -625,16 +667,34 @@ export function recordAttempt(
   status: "completed" | "missed",
   n = Date.now(),
   id: string = crypto.randomUUID(),
+  scheduledDate?: string,
 ): State {
   s = decay(s, n);
+  const actualDate = dateKey(n),
+    isEarly = !!scheduledDate;
   if (
     s.outcomes.some((o) => o.id === id) ||
-    date > dateKey(n) ||
+    date > actualDate ||
+    (isEarly &&
+      (date !== actualDate ||
+        status !== "completed" ||
+        scheduledDate !== undefined &&
+          !s.tasks.some((t) =>
+            t.id === taskId && canCompleteEarly(s, t, scheduledDate, date),
+          ))) ||
     (status === "missed" && isVacationDay(s, date))
   )
     return s;
   const task = s.tasks.find((t) => t.id === taskId);
-  if (!task || !taskDue(s, task, +localDate(date))) return s;
+  const occurrenceDate = scheduledDate || date,
+    counts = task && taskCounts(s, taskId, occurrenceDate);
+  if (
+    !task ||
+    !taskDue(s, task, +localDate(occurrenceDate)) ||
+    (taskProgressGoal(task) > 0 &&
+      counts!.completed + counts!.missed >= taskProgressGoal(task))
+  )
+    return s;
   const entry: Occurrence = {
     id,
     ballId: "ball:" + id,
@@ -652,6 +712,9 @@ export function recordAttempt(
     rewardRate: policyFor(s).coins,
     rewardLimit: rewardLimitFor(s, task),
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    ...(scheduledDate
+      ? { scheduledDate, earlyBirdBonusCoins: 2 }
+      : {}),
     penalty: task.careLinked === false ? 0 : BALANCE.missed,
   };
   return project(
@@ -677,6 +740,16 @@ export function correctAttempt(
     (status === "missed" && isVacationDay(s, old.date))
   )
     return s;
+  if (old.status === "pending" && status !== "pending") {
+    const task = old.task,
+      occurrenceDate = old.scheduledDate || old.date,
+      counts = taskCounts(s, old.taskId, occurrenceDate);
+    if (
+      taskProgressGoal(task) > 0 &&
+      counts.completed + counts.missed >= taskProgressGoal(task)
+    )
+      return s;
+  }
   return project(
     {
       ...s,
@@ -929,8 +1002,8 @@ export function decay(s: State, n = Date.now()): State {
       const records = outcomes.filter(
         (o) =>
           o.taskId === task.id &&
-          o.date >= period.start &&
-          o.date <= period.end &&
+          (o.scheduledDate || o.date) >= period.start &&
+          (o.scheduledDate || o.date) <= period.end &&
           !o.deleted,
       );
       const recorded = records.filter((o) => o.status !== "pending").length;
@@ -1007,6 +1080,15 @@ export function setOutcome(
     (!old && status === "pending")
   )
     return s;
+  if (old?.status === "pending" && status !== "pending") {
+    const occurrenceDate = old.scheduledDate || old.date,
+      counts = taskCounts(s, id, occurrenceDate);
+    if (
+      taskProgressGoal(task) > 0 &&
+      counts.completed + counts.missed >= taskProgressGoal(task)
+    )
+      return s;
+  }
   const outcome: Occurrence = old
     ? {
         ...old,
@@ -1053,13 +1135,14 @@ export function recordTaskCompletion(
   date: string,
   n = Date.now(),
   id: string = crypto.randomUUID(),
+  scheduledDate?: string,
 ): State {
   if (s.outcomes.some((o) => o.id === id)) return s;
   const source = s.tasks.find((t) => t.id === taskId);
-  let next = recordAttempt(s, taskId, date, "completed", n, id);
+  let next = recordAttempt(s, taskId, date, "completed", n, id, scheduledDate);
   const recorded = next.outcomes.find((o) => o.id === id);
   const finished =
-    !!recorded && !!source && taskFinishedToday(next, source, date);
+    !!recorded && !!source && taskFinishedToday(next, source, scheduledDate || date);
   if (finished && source?.resumeNote)
     next = {
       ...next,
@@ -1517,7 +1600,12 @@ function validModel(x: unknown, version: number): x is State {
             o.rewardCoins >= 0 &&
             o.rewardCoins <= 100)) &&
         (o.legacy === undefined || typeof o.legacy === "boolean") &&
-        (o.legacyRetired === undefined || typeof o.legacyRetired === "boolean"),
+        (o.legacyRetired === undefined || typeof o.legacyRetired === "boolean") &&
+        (o.scheduledDate === undefined
+          ? o.earlyBirdBonusCoins === undefined
+          : isDate(o.scheduledDate) &&
+            o.scheduledDate > o.date &&
+            o.earlyBirdBonusCoins === 2),
     ) &&
     (version < 4
       ? new Set(s.outcomes.map((o) => occurrenceKey(o.taskId, o.date))).size ===
@@ -2030,7 +2118,12 @@ export function validHabitData(s: State) {
           (e.source === "daily-care"
             ? isDailyCareBonus(e)
             : e.source === undefined &&
-              s.outcomes?.some((o) => o.id === e.entryId)),
+              s.outcomes?.some(
+                (o) =>
+                  o.id === e.entryId ||
+                  (o.earlyBirdBonusCoins !== undefined &&
+                    o.id + ":early-bird" === e.entryId),
+              )),
       ) ||
       new Set(s.rewardLedger.map((e) => e.id)).size !== s.rewardLedger.length)
   )

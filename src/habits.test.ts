@@ -68,21 +68,21 @@ const roundtrip = (s: State, time = n) => {
   return restored;
 };
 
-test("default economy caps coins and balls at three while keeping all 20 positive actions", () => {
-  const s = press(make(), 20);
+test("default economy caps coins and balls at three while unlimited tracking keeps every action", () => {
+  const s = press(make({ repetitions: "unlimited" }), 20);
   assert.equal(s.coins, 15);
   assert.equal(s.completions.length, 3);
   assert.equal(taskCounts(s, "a", day).completed, 20);
   assert.equal(s.outcomes.length, 20);
   roundtrip(s);
 });
-test("custom goal rewards only its target; additional entries and negatives stay independent", () => {
+test("custom goal caps combined successful and missed attempts at its target", () => {
   let s = press(make({ repetitions: "goal", dailyGoal: 6 }), 9);
   s = press(s, 3, "missed", n, "miss");
   assert.equal(s.coins, 30);
   assert.equal(s.completions.length, 6);
-  assert.equal(taskCounts(s, "a", day).completed, 9);
-  assert.equal(taskCounts(s, "a", day).missed, 3);
+  assert.equal(taskCounts(s, "a", day).completed, 6);
+  assert.equal(taskCounts(s, "a", day).missed, 0);
   assert.equal(s.care.happy, 90);
 });
 test("unlimited has a finite currency quota and never gains automatic misses", () => {
@@ -94,7 +94,7 @@ test("unlimited has a finite currency quota and never gains automatic misses", (
 test("per-task reward cap and zero-reward tracking work", () => {
   assert.equal(press(make({ rewardCap: 1 }), 8).coins, 5);
   assert.equal(press(make({ rewardCap: 0 }), 8).coins, 0);
-  assert.equal(press(make({ rewardCap: 0 }), 8).outcomes.length, 8);
+  assert.equal(press(make({ rewardCap: 0, repetitions: "unlimited" }), 8).outcomes.length, 8);
 });
 test("same transaction ID never duplicates an action, reward or jar ball", () => {
   let s = recordAttempt(make(), "a", day, "completed", n, "same");
@@ -140,7 +140,7 @@ test("correcting funded income after purchase and consumption reserves debt and 
   roundtrip(s);
 });
 test("undoing an eligible result promotes an already tracked extra without exceeding the cap", () => {
-  let s = press(make({ rewardCap: 2 }), 3);
+  let s = press(make({ rewardCap: 2, repetitions: "unlimited" }), 3);
   s = deleteAttempt(s, "tap:0", n);
   assert.equal(s.coins, 10);
   assert.equal(s.completions.length, 2);
@@ -148,7 +148,7 @@ test("undoing an eligible result promotes an already tracked extra without excee
   roundtrip(s);
 });
 test("policy edits affect new entries and preserve old reward rate snapshots", () => {
-  let s = press(make(), 2);
+  let s = press(make({ repetitions: "unlimited" }), 2);
   s = changeRewardPolicy(s, { coins: 8, dailyCap: 3 }, n);
   s = recordAttempt(s, "a", day, "completed", n, "new");
   assert.equal(s.coins, 18);
@@ -158,7 +158,7 @@ test("policy edits affect new entries and preserve old reward rate snapshots", (
   roundtrip(s);
 });
 test("daily reward limits reset on a new local calendar date", () => {
-  let s = press(make(), 7);
+  let s = press(make({ repetitions: "unlimited" }), 7);
   s = press(s, 7, "completed", at(1), "tomorrow");
   assert.equal(s.coins, 30);
   assert.equal(s.completions.length, 6);
@@ -344,7 +344,7 @@ test("editing keeps original outcome snapshots, ledger and tiny-step history", (
   roundtrip(s);
 });
 test("older saves keep existing rewards, goods and care when the ledger is first introduced", () => {
-  let s = press(make({ rewardCap: 10 }), 10);
+  let s = press(make({ rewardCap: 10, repetitions: "unlimited" }), 10);
   s = buySupply(s, "food", n);
   const old = JSON.parse(JSON.stringify(s));
   delete old.rewardLedger;
