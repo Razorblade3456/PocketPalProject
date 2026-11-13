@@ -1,4 +1,5 @@
 import { jarBalls, normalizeJarPriority } from "./jarModel";
+import { HistoryExperience } from "./HistoryExperience";
 import { TaskCalendar } from "./TaskCalendar";
 import { CollectionsPanel, NewCollectionFields } from "./Collections";
 import { TaskTimePicker } from "./TaskTimePicker";
@@ -36,7 +37,6 @@ import {
   Bell,
   Leaf,
   ChevronRight,
-  Trophy,
   Coins,
   Home,
   ShoppingBag,
@@ -109,7 +109,7 @@ import {
   TaskPriority,
   TaskRewardNote,
 } from "./HabitTools";
-import { OutcomeControls, OutcomeHistory } from "./TaskOutcomes";
+import { OutcomeControls } from "./TaskOutcomes";
 import { Jar, RewardFlights, type JarFlight, type RewardSource } from "./Jar";
 import { LocalClock } from "./LocalClock";
 import { PetNeeds } from "./PetNeeds";
@@ -188,7 +188,7 @@ export default function App() {
     ],
     [
       "Jar & Pet Care",
-      "Completions fill the progress jar and earn eligible coins. Spend coins on supplies to care for your pet; open Mini Mochi for a floating browser companion.",
+      "Completions fill the progress jar and earn eligible coins. Spend coins on supplies to care for your pet; open Mini Mochi for a floating browser companion. Explore your daily jars, monthly activity, and progress insights in History.",
     ],
   ] as const;
   const today = dateKey(now),
@@ -1610,79 +1610,12 @@ export default function App() {
                 equipped={s.equipped}
               />
             ) : panel === "history" ? (
-              <>
-                <span className="eyebrow">A COLLECTION OF GOOD DAYS</span>
-                <h2>History</h2>
-                <div className="achievement-list">
-                  {[
-                    "First Meal",
-                    "Hydration Hero",
-                    "Best Buddies",
-                    "Full Jar",
-                    "Zombie Survivor",
-                  ].map((a) => (
-                    <div
-                      className={s.achievements.includes(a) ? "unlocked" : ""}
-                      key={a}
-                    >
-                      <Trophy size={18} />
-                      <span>
-                        {a}
-                        <small>
-                          {
-                            {
-                              "First Meal": "Complete your first task",
-                              "Hydration Hero": "Complete 10 water tasks",
-                              "Best Buddies": "Participate on 7 different days",
-                              "Full Jar": "Complete all planned tasks in a day",
-                              "Zombie Survivor":
-                                "Recover from a zombie or critical stage",
-                            }[a]
-                          }
-                        </small>
-                      </span>
-                      {s.achievements.includes(a) && <Check size={16} />}
-                    </div>
-                  ))}
-                </div>
-                <OutcomeHistory
-                  s={s}
-                  onCorrect={correct}
-                  onDelete={removeEntry}
-                />
-                <h3>Your past jars</h3>
-                <div className="history-grid">
-                  {[...new Set(s.outcomes.map((c) => c.date))]
-                    .sort()
-                    .reverse()
-                    .map((d) => {
-                      const entries = jarBalls(s, d);
-                      const rewards = s.completions.filter(
-                        (c) => c.date === d,
-                      ).length;
-                      return (
-                        <div key={d}>
-                          <Jar small balls={entries} />
-                          <b>
-                            {new Date(d + "T12:00:00").toLocaleDateString(
-                              undefined,
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              },
-                            )}
-                          </b>
-                          <span>
-                            {entries.length} jar entries · {rewards} rewards
-                            earned
-                          </span>
-                        </div>
-                      );
-                    })}
-                </div>
-                {!s.outcomes.length && <p>No history yet.</p>}
-              </>
+              <HistoryExperience
+                s={s}
+                today={today}
+                onCorrect={correct}
+                onDelete={removeEntry}
+              />
             ) : (
               <>
                 <span className="eyebrow">REWARDED COMPLETIONS</span>

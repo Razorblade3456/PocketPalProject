@@ -452,14 +452,20 @@ export function HistoricalJar({
   s,
   date,
   today,
+  small = true,
+  allowToday = false,
+  showEmptyJar = false,
 }: {
   s: State;
   date: string;
   today: string;
+  small?: boolean;
+  allowToday?: boolean;
+  showEmptyJar?: boolean;
 }) {
-  if (date >= today) return null;
+  if (date > today || (!allowToday && date === today)) return null;
   const balls = jarBalls(s, date);
-  if (!balls.length)
+  if (!balls.length && !showEmptyJar)
     return (
       <p className="historical-jar-empty">
         {s.outcomes.some((o) => o.date === date)
@@ -479,7 +485,14 @@ export function HistoricalJar({
         {balls.length - missed} completed <span aria-hidden="true">·</span>{" "}
         {missed} missed
       </p>
-      <Jar balls={balls} small staticPreview />
+      <Jar balls={balls} small={small} staticPreview />
+      {!balls.length && (
+        <p className="historical-jar-empty">
+          {s.outcomes.some((o) => o.date === date)
+            ? "No visible jar entries · task history is preserved"
+            : "No recorded activity · empty days do not earn jar balls"}
+        </p>
+      )}
     </section>
   );
 }

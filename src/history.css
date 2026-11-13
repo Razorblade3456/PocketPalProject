@@ -1,0 +1,571 @@
+.app .history-experience {
+  color: #f3edf5;
+}
+.app .history-experience > h2 {
+  margin: 0.1rem 0 0.9rem;
+}
+.app .history-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0.25rem;
+  margin-bottom: 0.85rem;
+  border: 1px solid #403547;
+  border-radius: 14px;
+  background: #17131d;
+}
+.app .history-tabs button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #b9acbf;
+  font: inherit;
+  font-size: 0.88rem;
+}
+.app .history-tabs button[aria-selected="true"] {
+  background: #392c42;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px #725784;
+}
+.app .history-view {
+  padding: 0.8rem;
+  border: 1px solid #3b3042;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #201a27, #18151d);
+}
+.app .history-view h3 {
+  margin: 0.12rem 0;
+  font-size: 1.12rem;
+}
+.app .history-kicker {
+  color: #b99bc9;
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.app .jar-shelf-heading,
+.app .history-view-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.app .history-date-controls,
+.app .history-month-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.app .history-date-controls button,
+.app .history-month-nav button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #4b3d52;
+  border-radius: 10px;
+  background: #211b28;
+  color: #f4eaf8;
+}
+.app .history-date-controls button:disabled,
+.app .history-month-nav button:disabled {
+  opacity: 0.38;
+}
+.app .history-date-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.75rem 0 0.55rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #403547;
+  border-radius: 11px;
+  color: #c9bbd0;
+  font-size: 0.78rem;
+}
+.app .history-date-picker input {
+  margin-left: auto;
+  min-width: 0;
+  color: #f3edf5;
+  color-scheme: dark;
+  background: transparent;
+  border: 0;
+  font: inherit;
+}
+.app .history-selected-date {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.app .history-jar-counts {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 0.45rem 0;
+  color: #cfc3d4;
+  font-size: 0.78rem;
+}
+.app .history-jar-counts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.app .history-experience .historical-jar {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  margin: 0.6rem auto;
+  padding: 0.7rem;
+  max-width: 250px;
+  border: 1px solid #41364a;
+  border-radius: 15px;
+  background: #17141c;
+}
+.app .history-experience .historical-jar h3 {
+  margin: 0;
+  font-size: 0.86rem;
+}
+.app .history-experience .historical-jar time {
+  margin: 0.1rem 0;
+  color: #a99aad;
+  font-size: 0.72rem;
+}
+.app .history-experience .historical-jar > p {
+  margin: 0.25rem 0;
+  font-size: 0.76rem;
+}
+.app .history-experience .historical-jar .jar {
+  margin: 0.25rem auto 0;
+}
+.app .history-inspect-jar,
+.app .history-achievements,
+.app .history-records {
+  margin-top: 0.65rem;
+  border: 1px solid #3e3446;
+  border-radius: 12px;
+  background: #1c1821;
+}
+.app .history-inspect-jar summary,
+.app .history-achievements > summary,
+.app .history-records > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  cursor: pointer;
+  list-style: none;
+  color: #f0e8f3;
+  font-size: 0.84rem;
+}
+.app .history-inspect-jar summary::-webkit-details-marker,
+.app .history-achievements > summary::-webkit-details-marker,
+.app .history-records > summary::-webkit-details-marker {
+  display: none;
+}
+.app .history-inspect-jar ul {
+  list-style: none;
+  margin: 0;
+  padding: 0.2rem 0.65rem 0.55rem;
+}
+.app .history-inspect-jar li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid #342c39;
+}
+.app .history-priority-dot {
+  width: 11px;
+  height: 11px;
+  flex: none;
+  border-radius: 50%;
+}
+.app .history-inspect-name {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+}
+.app .history-inspect-name strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+.app .history-inspect-name small,
+.app .history-early-tag {
+  color: #b8aabe;
+  font-size: 0.68rem;
+}
+.app .history-early-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: #e8c879;
+}
+.app .history-inspect-skull {
+  color: #eee;
+  flex: none;
+}
+.app .history-record-note {
+  margin: 0.1rem 0.75rem 0.65rem;
+  color: #a99eae;
+  font-size: 0.7rem;
+}
+.app .history-recent-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0.9rem 0 0.4rem;
+}
+.app .history-recent-heading h4 {
+  margin: 0;
+  font-size: 0.85rem;
+}
+.app .history-recent-heading span {
+  color: #9d91a2;
+  font-size: 0.68rem;
+}
+.app .history-recent-jars {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.35rem;
+}
+.app .history-recent-jars button {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.35rem 0.15rem;
+  border: 1px solid #3b3240;
+  border-radius: 10px;
+  background: #19161e;
+  color: #ddd2e2;
+  font-size: 0.65rem;
+}
+.app .history-recent-jars button.is-selected {
+  border-color: #a481b7;
+  background: #2b2232;
+}
+.app .history-recent-jars .jar {
+  transform: scale(0.7);
+  transform-origin: center bottom;
+  margin: -0.7rem 0 -0.45rem;
+}
+.app .history-month-nav strong {
+  min-width: 95px;
+  text-align: center;
+  font-size: 0.8rem;
+}
+.app .history-activity-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.27rem;
+  margin-top: 0.8rem;
+}
+.app .history-weekday {
+  text-align: center;
+  color: #9f93a4;
+  font-size: 0.65rem;
+}
+.app .history-day-blank {
+  aspect-ratio: 1;
+}
+.app .history-activity-day {
+  position: relative;
+  display: flex;
+  aspect-ratio: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1rem;
+  flex-direction: column;
+  padding: 0;
+  border: 1px solid #3b3340;
+  border-radius: 9px;
+  background: #211c26;
+  color: #e7dfe9;
+  font: inherit;
+  font-size: 0.74rem;
+}
+.app .history-activity-day.intensity-1 {
+  background: #263126;
+}
+.app .history-activity-day.intensity-2 {
+  background: #314432;
+}
+.app .history-activity-day.intensity-3 {
+  background: #405839;
+}
+.app .history-activity-day.intensity-4 {
+  background: #526e47;
+}
+.app .history-activity-day.has-missed {
+  box-shadow: inset 0 0 0 1px #a5a0aa;
+}
+.app .history-activity-day.is-selected {
+  outline: 2px solid #b88cc9;
+  outline-offset: 1px;
+}
+.app .history-activity-day.is-future {
+  opacity: 0.3;
+}
+.app .history-activity-day.is-vacation {
+  border-color: #73608c;
+}
+.app .history-day-markers {
+  display: flex;
+  height: 12px;
+  align-items: center;
+  gap: 2px;
+  color: #f1eafa;
+}
+.app .history-vacation-mark {
+  color: #c9a6dd;
+  font-size: 0.72rem;
+}
+.app .history-activity-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 0.7rem;
+  margin: 0.65rem 0;
+  color: #b8acbd;
+  font-size: 0.65rem;
+}
+.app .history-activity-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.app .history-activity-legend i {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid #4c4352;
+  border-radius: 3px;
+  background: #211c26;
+}
+.app .history-activity-legend i.intensity-2 {
+  background: #314432;
+}
+.app .history-activity-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  padding: 0.7rem;
+  border: 1px solid #403547;
+  border-radius: 12px;
+  background: #19161e;
+}
+.app .history-activity-summary h4 {
+  margin: 0.12rem 0;
+  font-size: 0.84rem;
+}
+.app .history-activity-summary p {
+  margin: 0.15rem 0;
+  color: #c4b9c9;
+  font-size: 0.7rem;
+}
+.app .history-activity-summary small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #bba5c7;
+  font-size: 0.68rem;
+}
+.app .history-open-jar {
+  flex: none;
+  padding: 0.48rem 0.62rem;
+  border: 1px solid #71577e;
+  border-radius: 10px;
+  background: #302438;
+  color: #f5ecf8;
+  font: inherit;
+  font-size: 0.7rem;
+}
+.app .history-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.8rem;
+}
+.app .history-metric-grid article {
+  display: flex;
+  min-height: 83px;
+  flex-direction: column;
+  padding: 0.6rem;
+  border: 1px solid #403547;
+  border-radius: 12px;
+  background: #1a161f;
+}
+.app .history-metric-grid article > span {
+  color: #c4b4cb;
+  font-size: 0.7rem;
+}
+.app .history-metric-grid strong {
+  margin: 0.12rem 0;
+  color: #f4edf5;
+  font-size: 1.25rem;
+}
+.app .history-metric-grid small {
+  color: #95899a;
+  font-size: 0.64rem;
+}
+.app .history-priority-breakdown {
+  margin-top: 0.7rem;
+  padding: 0.7rem;
+  border: 1px solid #403547;
+  border-radius: 12px;
+  background: #1a161f;
+}
+.app .history-priority-breakdown h4 {
+  margin: 0;
+  font-size: 0.82rem;
+}
+.app .history-priority-breakdown p {
+  margin: 0.18rem 0 0.55rem;
+  color: #998e9f;
+  font-size: 0.67rem;
+}
+.app .history-priority-bar {
+  display: flex;
+  overflow: hidden;
+  height: 9px;
+  border-radius: 8px;
+  background: #302a34;
+}
+.app .history-priority-legend {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+  color: #c1b6c6;
+  font-size: 0.67rem;
+}
+.app .history-priority-legend span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  text-transform: capitalize;
+}
+.app .history-priority-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.app .history-insights-empty {
+  display: flex;
+  min-height: 150px;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  color: #baa9c1;
+  text-align: center;
+}
+.app .history-insights-empty p {
+  margin: 0.5rem 0 0.15rem;
+  color: #ece4ef;
+}
+.app .history-insights-empty small {
+  color: #9f93a4;
+  font-size: 0.72rem;
+}
+.app .history-achievements > summary span,
+.app .history-records > summary span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.app .history-achievements > summary small,
+.app .history-records > summary small {
+  margin-top: 0.12rem;
+  color: #a99eae;
+  font-size: 0.68rem;
+}
+.app .history-badges {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  padding: 0 0.55rem 0.55rem;
+}
+.app .history-badge {
+  border: 1px solid #3a3240;
+  border-radius: 10px;
+  background: #19161e;
+}
+.app .history-badge > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem;
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.72rem;
+}
+.app .history-badge > summary span {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+.app .history-badge > summary small {
+  color: #94899a;
+  font-size: 0.62rem;
+}
+.app .history-badge.is-earned {
+  border-color: #735f45;
+  color: #efd391;
+}
+.app .history-badge p {
+  margin: 0.1rem 0.45rem 0.45rem;
+  color: #b9adbf;
+  font-size: 0.67rem;
+}
+.app .history-records > .history-outcomes,
+.app .history-records > div {
+  max-height: 45vh;
+  overflow: auto;
+  padding: 0.2rem 0.55rem 0.6rem;
+}
+.app .history-records .outcome-history {
+  max-height: 45vh;
+  overflow: auto;
+}
+@media (max-width: 430px) {
+  .app .history-view {
+    padding: 0.6rem;
+  }
+  .app .history-month-nav {
+    gap: 0.15rem;
+  }
+  .app .history-month-nav strong {
+    min-width: 80px;
+    font-size: 0.72rem;
+  }
+  .app .history-recent-jars {
+    gap: 0.2rem;
+  }
+  .app .history-recent-jars button {
+    font-size: 0.58rem;
+  }
+  .app .history-activity-calendar {
+    gap: 0.18rem;
+  }
+  .app .history-activity-day {
+    border-radius: 7px;
+    font-size: 0.68rem;
+  }
+  .app .history-activity-summary {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .app .history-open-jar {
+    align-self: stretch;
+  }
+  .app .history-activity-legend {
+    gap: 0.3rem 0.45rem;
+  }
+  .app .history-activity-legend > span {
+    font-size: 0.6rem;
+  }
+}
