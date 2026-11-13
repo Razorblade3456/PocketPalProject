@@ -5,14 +5,26 @@ import { Clock3 } from "lucide-react";
 export function LocalClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    const tick = () => setNow(new Date());
-    const timer = window.setInterval(tick, 1000);
+    let timer = 0;
+    const schedule = () => {
+      window.clearTimeout(timer);
+      // The display is minute-precision, so wake once at the next minute edge.
+      timer = window.setTimeout(tick, 60000 - (Date.now() % 60000) + 10);
+    };
+    const tick = () => {
+      setNow(new Date());
+      schedule();
+    };
+    schedule();
     window.addEventListener("focus", tick);
-    document.addEventListener("visibilitychange", tick);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
-      window.clearInterval(timer);
+      window.clearTimeout(timer);
       window.removeEventListener("focus", tick);
-      document.removeEventListener("visibilitychange", tick);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);
   const time = now.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });

@@ -25,6 +25,7 @@ import {
   calendarMonth,
   calendarDaysForMonth,
   calendarTasks,
+  calendarTasksForDates,
   type CalendarTask,
 } from "./calendarModel";
 const dayLabel = (date: string) =>
@@ -74,10 +75,10 @@ export function TaskCalendar({
   const days = useMemo(() => calendarDaysForMonth(month), [month]);
   const byDate = useMemo(
     () =>
-      new Map(
-        days
-          .filter((day): day is string => !!day)
-          .map((day) => [day, calendarTasks(s, day, today)]),
+      calendarTasksForDates(
+        s,
+        days.filter((day): day is string => !!day),
+        today,
       ),
     [s, days, today],
   );

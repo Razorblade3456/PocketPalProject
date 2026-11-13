@@ -4,6 +4,7 @@ import {
   shiftDate,
   taskDue,
   taskCounts,
+  taskCountsFromOutcomes,
   taskFinishedToday,
   taskProgressGoal,
   taskPeriod,
@@ -36,11 +37,14 @@ export type CalendarTask = {
   deadline?: string;
 };
 /** A read-only projection. Recorded snapshots retain historical names and goals. */
-export function calendarTasks(
+function calendarTasksIndexed(
   s: State,
   date: string,
   today = dateKey(),
+  outcomesByTask?: Map<string, State["outcomes"]>,
 ): CalendarTask[] {
+  const forTask = (id: string) =>
+    outcomesByTask?.get(id) || s.outcomes.filter((o) => o.taskId === id);
   const planned = new Map(
     s.tasks
       .filter((t) => date >= t.date && taskDue(s, t, +localDate(date)))
@@ -62,16 +66,19 @@ export function calendarTasks(
       first = [period.start, task.date, task.createdDate || task.date]
         .sort()
         .at(-1)!,
+      taskOutcomes = forTask(task.id),
+      occurrenceDate = (o: State["outcomes"][number]) => o.scheduledDate || o.date,
       entries = flexible
-        ? s.outcomes.filter(
+        ? taskOutcomes.filter(
             (o) =>
-              o.taskId === task.id &&
-              o.date >= first &&
-              o.date <= date &&
+              occurrenceDate(o) >= first &&
+              occurrenceDate(o) <= date &&
               !o.deleted,
           )
         : undefined,
-      allCounts = taskCounts(s, task.id, date),
+      allCounts = outcomesByTask
+        ? taskCountsFromOutcomes(s, task.id, date, taskOutcomes)
+        : taskCounts(s, task.id, date),
       counts = entries
         ? {
             completed: entries.filter((o) => o.status === "completed").length,
@@ -79,7 +86,7 @@ export function calendarTasks(
           }
         : allCounts,
       goal = taskProgressGoal(task),
-      earlyForOccurrence = s.outcomes.find(
+      earlyForOccurrence = taskOutcomes.find(
         (o) =>
           o.taskId === task.id &&
           o.scheduledDate === date &&
@@ -120,4 +127,27 @@ export function calendarTasks(
       deadline: taskDeadlineLabel(task, date),
     };
   });
+}
+export function calendarTasks(
+  s: State,
+  date: string,
+  today = dateKey(),
+): CalendarTask[] {
+  return calendarTasksIndexed(s, date, today);
+}
+/** Project a month from one outcome index instead of rescanning full history for every date. */
+export function calendarTasksForDates(
+  s: State,
+  dates: string[],
+  today = dateKey(),
+) {
+  const outcomesByTask = new Map<string, State["outcomes"]>();
+  for (const outcome of s.outcomes) {
+    const rows = outcomesByTask.get(outcome.taskId);
+    if (rows) rows.push(outcome);
+    else outcomesByTask.set(outcome.taskId, [outcome]);
+  }
+  return new Map(
+    dates.map((date) => [date, calendarTasksIndexed(s, date, today, outcomesByTask)]),
+  );
 }

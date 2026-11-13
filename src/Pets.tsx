@@ -992,6 +992,18 @@ export function Pet({
   care?: Care;
 }) {
   const [look, setLook] = useState({ x: 0, y: 0 });
+  const lookRef = useRef(look);
+  const pointerFrame = useRef<number | null>(null);
+  const pendingLook = useRef(look);
+  const updateLook = (next: { x: number; y: number }) => {
+    const previous = lookRef.current;
+    if (Math.abs(next.x - previous.x) < 0.08 && Math.abs(next.y - previous.y) < 0.08) return;
+    lookRef.current = next;
+    setLook(next);
+  };
+  useEffect(() => () => {
+    if (pointerFrame.current !== null) cancelAnimationFrame(pointerFrame.current);
+  }, []);
   const excited = !!incoming?.near && level !== 5;
   const previousCare = useRef(care);
   const [recovering, setRecovering] = useState<Category[]>([]);
@@ -1012,7 +1024,7 @@ export function Pet({
     const el = document.querySelector(".room .pet-button");
     const r = el?.getBoundingClientRect();
     if (r)
-      setLook({
+      updateLook({
         x: (incoming.x - r.left - r.width / 2) / 35,
         y: (incoming.y - r.top - r.height / 2) / 45,
       });
@@ -1059,12 +1071,23 @@ export function Pet({
       onPointerMove={(e) => {
         if (preview || level === 5) return;
         const r = e.currentTarget.getBoundingClientRect();
-        setLook({
+        pendingLook.current = {
           x: (e.clientX - r.left - r.width / 2) / 35,
           y: (e.clientY - r.top - r.height / 2) / 45,
-        });
+        };
+        if (pointerFrame.current === null) {
+          pointerFrame.current = requestAnimationFrame(() => {
+            pointerFrame.current = null;
+            updateLook(pendingLook.current);
+          });
+        }
       }}
-      onPointerLeave={() => setLook({ x: 0, y: 0 })}
+      onPointerLeave={() => {
+        if (pointerFrame.current !== null) cancelAnimationFrame(pointerFrame.current);
+        pointerFrame.current = null;
+        pendingLook.current = { x: 0, y: 0 };
+        updateLook(pendingLook.current);
+      }}
       onClick={onPet}
       animate={
         animated

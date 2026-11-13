@@ -569,10 +569,15 @@ export const goalFor = (task: Task) =>
       : task.repetitions === "goal"
         ? Math.max(1, Math.min(100, Math.round(task.dailyGoal || 1)))
         : 1;
-export function taskCounts(s: State, id: string, date: string) {
+export function taskCountsFromOutcomes(
+  s: State,
+  id: string,
+  date: string,
+  taskOutcomes: Occurrence[],
+) {
   const occurrenceDate = (o: Occurrence) => o.scheduledDate || o.date;
-  const snapshots = s.outcomes
-    .filter((o) => o.taskId === id && !o.deleted && occurrenceDate(o) <= date)
+  const snapshots = taskOutcomes
+    .filter((o) => !o.deleted && occurrenceDate(o) <= date)
     .filter((o) => {
       if (o.task.repeat === "weeklyAny" || o.task.repeat === "monthlyAny") {
         const period = taskPeriod(o.task, date);
@@ -592,9 +597,8 @@ export function taskCounts(s: State, id: string, date: string) {
   const first = task
     ? [period.start, task.date, task.createdDate || task.date].sort().at(-1)!
     : date;
-  const entries = s.outcomes.filter(
+  const entries = taskOutcomes.filter(
     (o) =>
-      o.taskId === id &&
       occurrenceDate(o) >= first &&
       occurrenceDate(o) <= period.end &&
       !o.deleted,
@@ -606,6 +610,14 @@ export function taskCounts(s: State, id: string, date: string) {
       .filter((o) => o.status !== "pending")
       .sort((a, b) => b.sequence - a.sequence)[0],
   };
+}
+export function taskCounts(s: State, id: string, date: string) {
+  return taskCountsFromOutcomes(
+    s,
+    id,
+    date,
+    s.outcomes.filter((o) => o.taskId === id),
+  );
 }
 /** UI targets do not change recurrence minimums or funded reward limits. */
 export const taskProgressGoal = (task: Task) =>

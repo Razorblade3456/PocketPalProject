@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BookOpen,
   Briefcase,
@@ -225,6 +225,38 @@ export function CollectionsPanel({
   const [color, setColor] = useState<CollectionColor | "">("purple");
   const collections = s.collections || [];
   const monthKey = dateKey(now).slice(0, 7);
+  const tasksByCollection = useMemo(() => {
+    const grouped = new Map<string, Task[]>();
+    for (const task of s.tasks) {
+      if (!task.collectionId) continue;
+      const tasks = grouped.get(task.collectionId);
+      if (tasks) tasks.push(task);
+      else grouped.set(task.collectionId, [task]);
+    }
+    return grouped;
+  }, [s.tasks]);
+  const completedByCollection = useMemo(() => {
+    const collectionForTask = new Map(
+      s.tasks
+        .filter((task) => task.collectionId)
+        .map((task) => [task.id, task.collectionId!]),
+    );
+    const completed = new Map<string, Set<string>>();
+    for (const outcome of s.outcomes) {
+      if (
+        outcome.status !== "completed" ||
+        outcome.deleted ||
+        (outcome.scheduledDate || outcome.date).slice(0, 7) !== monthKey
+      )
+        continue;
+      const collectionId = collectionForTask.get(outcome.taskId);
+      if (!collectionId) continue;
+      const taskIds = completed.get(collectionId);
+      if (taskIds) taskIds.add(outcome.taskId);
+      else completed.set(collectionId, new Set([outcome.taskId]));
+    }
+    return completed;
+  }, [s.tasks, s.outcomes, monthKey]);
   const resetForm = () => {
     setName("");
     setIcon("folder");
@@ -311,18 +343,9 @@ export function CollectionsPanel({
           </p>
         ) : (
           collections.map((collection) => {
-            const tasks = s.tasks.filter((task) => task.collectionId === collection.id);
-            const completedTaskIds = new Set(
-              s.outcomes
-                .filter(
-                  (outcome) =>
-                    (outcome.scheduledDate || outcome.date).slice(0, 7) === monthKey &&
-                    outcome.status === "completed" &&
-                    !outcome.deleted &&
-                    tasks.some((task) => task.id === outcome.taskId),
-                )
-                .map((outcome) => outcome.taskId),
-            );
+            const tasks = tasksByCollection.get(collection.id) || [];
+            const completedTaskIds =
+              completedByCollection.get(collection.id) || new Set<string>();
             const completed = completedTaskIds.size;
             const percent = tasks.length
               ? Math.round((completed / tasks.length) * 100)

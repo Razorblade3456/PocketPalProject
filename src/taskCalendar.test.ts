@@ -19,6 +19,7 @@ import {
 } from "./model";
 import {
   calendarTasks,
+  calendarTasksForDates,
   calendarMonth,
   calendarDaysForMonth,
 } from "./calendarModel";
@@ -35,6 +36,19 @@ const task = (patch: Partial<Task> = {}): Task => ({
   category: "happy",
   careLinked: false,
   ...patch,
+});
+test("indexed month projection matches individual calendar dates without mutating history", () => {
+  let s = initial(now);
+  s = saveTask(s, task({ id: "daily", repetitions: "goal", dailyGoal: 2 }), now);
+  s = saveTask(s, task({ id: "flex", repeat: "weeklyAny", date: "2026-10-26" }), now);
+  s = recordAttempt(s, "daily", "2026-11-01", "completed", now, "daily-done");
+  s = recordAttempt(s, "flex", "2026-10-29", "completed", now, "flex-done");
+  const dates = ["2026-10-31", "2026-11-01", "2026-11-02", "2026-11-08"];
+  const before = JSON.stringify(s);
+  const indexed = calendarTasksForDates(s, dates, "2026-11-02");
+  for (const date of dates)
+    assert.deepEqual(indexed.get(date), calendarTasks(s, date, "2026-11-02"));
+  assert.equal(JSON.stringify(s), before);
 });
 test("flexible calendar tasks stay singular across their window and show the deadline", () => {
   let s = saveTask(

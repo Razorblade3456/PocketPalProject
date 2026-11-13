@@ -303,24 +303,6 @@ export default function App() {
       setS((v) => decay(v));
     };
     const i = setInterval(tick, 30000);
-    let lastDay = dateKey(),
-      offset = new Date().getTimezoneOffset(),
-      minute = Math.floor(Date.now() / 60000);
-    const calendarWatch = setInterval(() => {
-      const nextDay = dateKey(),
-        nextOffset = new Date().getTimezoneOffset();
-      const nextMinute = Math.floor(Date.now() / 60000);
-      if (
-        nextDay !== lastDay ||
-        nextOffset !== offset ||
-        nextMinute !== minute
-      ) {
-        lastDay = nextDay;
-        offset = nextOffset;
-        minute = nextMinute;
-        tick();
-      }
-    }, 1000);
     window.addEventListener("focus", tick);
     const onVisible = () => {
       if (document.visibilityState === "visible") tick();
@@ -328,7 +310,6 @@ export default function App() {
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       clearInterval(i);
-      clearInterval(calendarWatch);
       window.removeEventListener("focus", tick);
       document.removeEventListener("visibilitychange", onVisible);
     };

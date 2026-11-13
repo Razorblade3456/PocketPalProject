@@ -102,7 +102,12 @@ export function DesktopSync({ s, level, alarms }: { s: State; level: number; ala
     token.current = localStorage.getItem(tokenKey) || "";
     if (token.current) setStatus("disconnected");
     void check(!!token.current);
-    const heartbeat = window.setInterval(() => void check(), 12000);
+    // An unpaired desktop has no live data to synchronize; avoid probing localhost
+    // every few seconds until the user starts pairing.
+    const heartbeat = window.setInterval(() => {
+      if (!document.hidden && (token.current || localStorage.getItem(tokenKey)))
+        void check();
+    }, 30000);
     const wake = () => { if (!document.hidden) void check(); };
     window.addEventListener("focus", wake);
     document.addEventListener("visibilitychange", wake);
