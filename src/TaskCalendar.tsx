@@ -458,6 +458,7 @@ export function HistoricalJar({
   interactive = false,
   motionEnabled = true,
   soundEnabled = false,
+  showJarLabel = true,
 }: {
   s: State;
   date: string;
@@ -468,6 +469,7 @@ export function HistoricalJar({
   interactive?: boolean;
   motionEnabled?: boolean;
   soundEnabled?: boolean;
+  showJarLabel?: boolean;
 }) {
   if (date > today || (!allowToday && date === today)) return null;
   const balls = jarBalls(s, date);
@@ -482,23 +484,30 @@ export function HistoricalJar({
   const missed = balls.filter((b) => b.missed).length;
   return (
     <section
-      className="historical-jar"
+      className={`historical-jar${interactive ? " interactive-historical-jar" : ""}`}
       aria-label={"Historical progress jar for " + dayLabel(date)}
     >
-      <h3>Historical progress jar</h3>
-      <time dateTime={date}>{dayLabel(date)}</time>
-      <p>
-        {balls.length - missed} completed <span aria-hidden="true">·</span>{" "}
-        {missed} missed
-      </p>
-      <Jar
-        balls={balls}
-        small={small}
-        staticPreview={!interactive}
-        interactive={interactive}
-        motionEnabled={motionEnabled}
-        soundEnabled={soundEnabled}
-      />
+      {!interactive && (
+        <>
+          <h3>Historical progress jar</h3>
+          <time dateTime={date}>{dayLabel(date)}</time>
+          <p>
+            {balls.length - missed} completed <span aria-hidden="true">·</span>{" "}
+            {missed} missed
+          </p>
+        </>
+      )}
+      <div className={`historical-jar-stage${interactive ? " is-interactive" : ""}`}>
+        <Jar
+          balls={balls}
+          small={small}
+          staticPreview={!interactive}
+          interactive={interactive}
+          motionEnabled={motionEnabled}
+          soundEnabled={soundEnabled}
+          showLabel={showJarLabel}
+        />
+      </div>
       {!balls.length && (
         <p className="historical-jar-empty">
           {s.outcomes.some((o) => o.date === date)

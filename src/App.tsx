@@ -1,5 +1,6 @@
 import { jarBalls, normalizeJarPriority } from "./jarModel";
 import { HistoryExperience } from "./HistoryExperience";
+import { lockBackgroundScroll } from "./modalScrollLock";
 import { TaskCalendar } from "./TaskCalendar";
 import { CollectionsPanel, NewCollectionFields } from "./Collections";
 import { TaskTimePicker } from "./TaskTimePicker";
@@ -162,6 +163,7 @@ export default function App() {
   const reminded = useRef(new Set<string>());
   const file = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  const modalOpen = panel !== null || edit !== undefined;
   const [draftName, setDraftName] = useState(s.name || "Mochi");
   const [demo, setDemo] = useState(true);
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -343,11 +345,19 @@ export default function App() {
       });
   }, [now, s.settings, s.name, today, s.tasks, s.outcomes, s.vacationDays]);
   useEffect(() => {
-    if (panel || edit !== undefined) {
-      dialog.current?.showModal();
-      if (dialog.current) dialog.current.scrollTop = 0;
-    } else dialog.current?.close();
-  }, [panel, edit]);
+    const node = dialog.current;
+    if (!modalOpen || !node) return;
+    const unlock = lockBackgroundScroll(node);
+    if (!node.open) node.showModal();
+    node.scrollTop = 0;
+    return () => {
+      if (node.open) node.close();
+      unlock();
+    };
+  }, [modalOpen]);
+  useEffect(() => {
+    if (modalOpen && dialog.current) dialog.current.scrollTop = 0;
+  }, [modalOpen, panel, edit]);
   useEffect(() => {
     if (!message) return;
     const i = setTimeout(() => setMessage(""), 6500);
@@ -1233,9 +1243,11 @@ export default function App() {
         )}
         <dialog
           className={
-            panel === "shop" || panel === "wardrobe" || panel === "health"
-              ? "boutique-dialog"
-              : ""
+            panel === "history"
+              ? "history-dialog"
+              : panel === "shop" || panel === "wardrobe" || panel === "health"
+                ? "boutique-dialog"
+                : ""
           }
           ref={dialog}
           onCancel={(e) => {

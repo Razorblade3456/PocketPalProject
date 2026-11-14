@@ -1,6 +1,45 @@
 .app .history-experience {
   color: #f3edf5;
 }
+.app dialog.history-dialog {
+  width: min(800px, 94vw);
+  max-width: 800px;
+  max-height: 90dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 18px;
+  border-color: #51415c;
+  background: #1b1722;
+  color: #f3edf5;
+}
+.app dialog.history-dialog .modal {
+  padding: 26px clamp(18px, 3vw, 32px) 30px;
+}
+.app dialog.history-dialog .modal-close {
+  position: sticky;
+  z-index: 5;
+  top: 6px;
+  display: flex;
+  width: 38px;
+  height: 38px;
+  margin: 0 0 -38px auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #594765;
+  border-radius: 11px;
+  background: #2a2232;
+  color: #f3edf5;
+}
+.app dialog.history-dialog .modal > .history-experience {
+  clear: both;
+}
+.app dialog {
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: 16px;
+}
 .app .history-experience > h2 {
   margin: 0.1rem 0 0.9rem;
 }
@@ -121,6 +160,31 @@
   border-radius: 15px;
   background: #17141c;
 }
+.app .history-experience .historical-jar.interactive-historical-jar {
+  width: 100%;
+  max-width: none;
+  margin: 0.65rem auto 0.2rem;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+.app .history-experience .historical-jar-stage.is-interactive {
+  display: flex;
+  width: 295px;
+  height: 390px;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 0 auto;
+  overflow: visible;
+}
+.app .history-experience .historical-jar-stage.is-interactive .jar {
+  flex: none;
+  width: 174px;
+  height: 228px;
+  transform: scale(1.68);
+  transform-origin: center top;
+}
 .app .history-experience .historical-jar h3 {
   margin: 0;
   font-size: 0.86rem;
@@ -158,6 +222,25 @@
 @media (prefers-reduced-motion: reduce) {
   .app .history-jar-interaction-hint {
     display: none;
+  }
+}
+@media (max-width: 700px) {
+  .app dialog.history-dialog {
+    width: calc(100% - 20px);
+    max-width: none;
+    max-height: calc(
+      100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+    );
+  }
+  .app dialog.history-dialog .modal {
+    padding: 20px 14px max(20px, env(safe-area-inset-bottom));
+  }
+  .app .history-experience .historical-jar-stage.is-interactive {
+    width: 226px;
+    height: 298px;
+  }
+  .app .history-experience .historical-jar-stage.is-interactive .jar {
+    transform: scale(1.3);
   }
 }
 .app .history-inspect-jar,

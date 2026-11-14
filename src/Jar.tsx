@@ -7,8 +7,31 @@ import { playJarClink } from "./audioFeedback";
 export { jarBalls };
 
 export const canDragJarBalls = (count: number) => count <= 32;
-export const clampJarDrag = (value: number, limit = 8) =>
-  Math.max(-limit, Math.min(limit, value));
+type JarDragRect = Pick<DOMRect, "left" | "right" | "top" | "bottom">;
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(max, value));
+export function boundedJarDrag(
+  dx: number,
+  dy: number,
+  ball: JarDragRect,
+  glass: JarDragRect,
+  scale = 1,
+  padding = 4,
+) {
+  const factor = Math.max(0.1, scale);
+  return {
+    x: clamp(
+      dx / factor,
+      (glass.left + padding - ball.left) / factor,
+      (glass.right - padding - ball.right) / factor,
+    ),
+    y: clamp(
+      dy / factor,
+      (glass.top + padding - ball.top) / factor,
+      (glass.bottom - padding - ball.bottom) / factor,
+    ),
+  };
+}
 export function jarNeighborNudge(index: number, selected: number) {
   const distance = index - selected;
   if (!distance || Math.abs(distance) > 2) return { x: 0, y: 0 };
@@ -23,6 +46,9 @@ type JarGesture = {
   startY: number;
   x: number;
   y: number;
+  ball: JarDragRect;
+  glass: JarDragRect;
+  scale: number;
 };
 type JarNudge = { index: number; tapped: boolean };
 const ballStyle = (b: Pick<JarBall, "priority" | "missed">) =>
@@ -52,6 +78,7 @@ export function Jar({
   interactive = false,
   motionEnabled = true,
   soundEnabled = false,
+  showLabel = true,
 }: {
   balls: JarBall[];
   small?: boolean;
@@ -63,6 +90,7 @@ export function Jar({
   interactive?: boolean;
   motionEnabled?: boolean;
   soundEnabled?: boolean;
+  showLabel?: boolean;
 }) {
   const controls = useAnimationControls();
   const reduce = useReducedMotion();
@@ -101,7 +129,12 @@ export function Jar({
     const balls = event.currentTarget;
     const index = target ? Number(target.dataset.ballIndex) : -1;
     const key = target?.dataset.ballKey;
-    if (!key || index < 0) return;
+    const glass = target?.closest<HTMLElement>(".jar-glass");
+    const jar = target?.closest<HTMLElement>(".jar");
+    if (!key || index < 0 || !glass || !jar) return;
+    const ballRect = target.getBoundingClientRect();
+    const glassRect = glass.getBoundingClientRect();
+    const jarRect = jar.getBoundingClientRect();
     event.preventDefault();
     gesture.current = {
       pointerId: event.pointerId,
@@ -111,6 +144,9 @@ export function Jar({
       startY: event.clientY,
       x: 0,
       y: 0,
+      ball: ballRect,
+      glass: glassRect,
+      scale: jar.offsetWidth ? jarRect.width / jar.offsetWidth : 1,
     };
     balls.setPointerCapture(event.pointerId);
   };
@@ -126,8 +162,15 @@ export function Jar({
       !canDragJarBalls(balls.length)
     )
       return;
-    active.x = clampJarDrag(event.clientX - active.startX);
-    active.y = clampJarDrag(event.clientY - active.startY, 6);
+    const offset = boundedJarDrag(
+      event.clientX - active.startX,
+      event.clientY - active.startY,
+      active.ball,
+      active.glass,
+      active.scale,
+    );
+    active.x = offset.x;
+    active.y = offset.y;
     if (Math.hypot(active.x, active.y) >= 2) setDrag({ ...active });
   };
   const keyboardNudge = () => {
@@ -190,7 +233,9 @@ export function Jar({
           tabIndex={canAnimate ? 0 : undefined}
           aria-label={
             canAnimate
-              ? "Jar balls. Tap or lightly drag a ball to jiggle the jar."
+              ? balls.length <= 32
+                ? "Jar balls. Tap or lightly drag a ball to jiggle the jar."
+                : "Jar balls. Tap a ball to gently nudge nearby pieces."
               : undefined
           }
           onPointerDown={canAnimate ? startInteraction : undefined}
@@ -270,9 +315,11 @@ export function Jar({
             );
           })}
         </div>
-        <span className="jar-label">
-          {balls.some((b) => b.missed) ? "recorded" : "completed"}
-        </span>
+        {showLabel && (
+          <span className="jar-label">
+            {balls.some((b) => b.missed) ? "recorded" : "completed"}
+          </span>
+        )}
       </div>
     </motion.div>
   );

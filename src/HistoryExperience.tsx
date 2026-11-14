@@ -315,10 +315,13 @@ export function HistoryExperience({
             interactive
             motionEnabled={s.settings.motion}
             soundEnabled={s.settings.sound}
+            showJarLabel={false}
           />
           {selectedBalls.length > 0 && s.settings.motion && (
             <p className="history-jar-interaction-hint">
-              Tap or lightly drag a ball to nudge the jar.
+              {selectedBalls.length <= 32
+                ? "Tap or lightly drag a ball to nudge the jar."
+                : "Tap a ball to gently nudge nearby pieces."}
             </p>
           )}
 
