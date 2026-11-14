@@ -653,7 +653,7 @@ function Pippin({
             strokeWidth="2"
           />
           <path
-            d="M115 237q45 25 90 0M101 124q23-18 43-14"
+            d="M115 237q45 25 90 0M101 124q23-18 43-14M219 124q-23-18-43-14"
             stroke="#faf3dd"
             fill="none"
             strokeWidth="3"

@@ -137,6 +137,29 @@
 .app .history-experience .historical-jar .jar {
   margin: 0.25rem auto 0;
 }
+.app .history-experience .jar-balls-interactive {
+  touch-action: none;
+  cursor: grab;
+}
+.app .history-experience .jar-balls-interactive:active {
+  cursor: grabbing;
+}
+.app .history-experience .jar-balls-interactive:focus-visible {
+  outline: 2px solid #b88cc9;
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+.app .history-jar-interaction-hint {
+  margin: 0.35rem 0 0.5rem;
+  color: #a99eae;
+  font-size: 0.68rem;
+  text-align: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app .history-jar-interaction-hint {
+    display: none;
+  }
+}
 .app .history-inspect-jar,
 .app .history-achievements,
 .app .history-records {

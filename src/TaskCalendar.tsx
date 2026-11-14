@@ -455,6 +455,9 @@ export function HistoricalJar({
   small = true,
   allowToday = false,
   showEmptyJar = false,
+  interactive = false,
+  motionEnabled = true,
+  soundEnabled = false,
 }: {
   s: State;
   date: string;
@@ -462,6 +465,9 @@ export function HistoricalJar({
   small?: boolean;
   allowToday?: boolean;
   showEmptyJar?: boolean;
+  interactive?: boolean;
+  motionEnabled?: boolean;
+  soundEnabled?: boolean;
 }) {
   if (date > today || (!allowToday && date === today)) return null;
   const balls = jarBalls(s, date);
@@ -485,7 +491,14 @@ export function HistoricalJar({
         {balls.length - missed} completed <span aria-hidden="true">·</span>{" "}
         {missed} missed
       </p>
-      <Jar balls={balls} small={small} staticPreview />
+      <Jar
+        balls={balls}
+        small={small}
+        staticPreview={!interactive}
+        interactive={interactive}
+        motionEnabled={motionEnabled}
+        soundEnabled={soundEnabled}
+      />
       {!balls.length && (
         <p className="historical-jar-empty">
           {s.outcomes.some((o) => o.date === date)

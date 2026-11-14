@@ -333,6 +333,18 @@ test("species-specific cues and hunger shape preserve compatible clothing layers
     assert.ok(html.indexOf("care-shape") < html.indexOf("worn-outfits"));
   }
 });
+test("Pippin's chest stitch is balanced on both sides without changing other pet designs", () => {
+  const pippin = render("pippin", excellentCare);
+  assert.ok(
+    pippin.includes(
+      'd="M115 237q45 25 90 0M101 124q23-18 43-14M219 124q-23-18-43-14"',
+    ),
+  );
+  for (const kind of ["mochi", "crumb", "rattle"] as const) {
+    const html = render(kind, excellentCare);
+    assert.ok(!html.includes("M219 124q-23-18-43-14"));
+  }
+});
 test("gallery and simulator render with five real previews and four accessible sliders", () => {
   const html = renderToStaticMarkup(
     createElement(CareGuide, {

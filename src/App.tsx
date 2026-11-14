@@ -188,7 +188,7 @@ export default function App() {
     ],
     [
       "Jar & Pet Care",
-      "Completions fill the progress jar and earn eligible coins. Spend coins on supplies to care for your pet; open Mini Mochi for a floating browser companion. Explore your daily jars, monthly activity, and progress insights in History.",
+      "Completions fill the progress jar and earn eligible coins. Spend coins on supplies to care for your pet; open Mini Mochi for a floating browser companion. Explore your daily jars, monthly activity, and progress insights in History. Tap a ball in a large jar to nudge it.",
     ],
   ] as const;
   const today = dateKey(now),

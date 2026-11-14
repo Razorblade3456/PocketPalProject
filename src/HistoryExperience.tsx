@@ -312,7 +312,15 @@ export function HistoryExperience({
             small={false}
             allowToday
             showEmptyJar
+            interactive
+            motionEnabled={s.settings.motion}
+            soundEnabled={s.settings.sound}
           />
+          {selectedBalls.length > 0 && s.settings.motion && (
+            <p className="history-jar-interaction-hint">
+              Tap or lightly drag a ball to nudge the jar.
+            </p>
+          )}
 
           {selectedBallRecords.length > 0 && (
             <details className="history-inspect-jar">
